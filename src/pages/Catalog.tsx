@@ -46,13 +46,13 @@ const Catalog = () => {
     onChange: (v: string) => void,
     options: { id: string; name: string }[] | undefined
   ) => (
-    <div className="space-y-1.5">
+    <div className="space-y-1.5 font-display">
       <label className="text-sm font-medium text-foreground">{label}</label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="bg-card border-border text-sm">
+        <SelectTrigger className="bg-card border-border text-sm font-display">
           <SelectValue placeholder={`All ${label}s`} />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="font-display">
           <SelectItem value="__all__">{`All ${label}s`}</SelectItem>
           {options?.map((o) => (
             <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
@@ -105,7 +105,7 @@ const Catalog = () => {
 
       {/* Filter Drawer */}
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetContent side="right" className="w-80">
+        <SheetContent side="right" className="w-80 font-display">
           <SheetHeader>
             <SheetTitle className="font-display lowercase font-bold">filters</SheetTitle>
           </SheetHeader>
@@ -117,11 +117,20 @@ const Catalog = () => {
             {filterSelect('Period', periodId, (v) => setPeriodId(v === '__all__' ? '' : v), filterOptions?.periods)}
             {filterSelect('Country', countryId, (v) => setCountryId(v === '__all__' ? '' : v), filterOptions?.countries)}
           </div>
-          {activeFilterCount > 0 && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="mt-6 gap-1 text-muted-foreground">
-              <X size={14} /> Clear all filters
+          <div className="mt-6 flex items-center gap-3">
+            {activeFilterCount > 0 && (
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-muted-foreground font-display">
+                <X size={14} /> Clear all filters
+              </Button>
+            )}
+            <Button
+              size="sm"
+              onClick={() => setDrawerOpen(false)}
+              className="ml-auto font-display"
+            >
+              View Products{products ? ` (${products.length})` : ''}
             </Button>
-          )}
+          </div>
         </SheetContent>
       </Sheet>
 
