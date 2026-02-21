@@ -1,52 +1,52 @@
 
 
-# Switch Site Background to White, Keep Header Black
+# Catalog: Filter Drawer + Sticky Toolbar
 
 ## Overview
 
-Flip the main site theme from dark to light (white background, dark text) while preserving the dark header/navbar.
+Move the filter dropdowns into a slide-out Sheet (side drawer) triggered by a "Filter" button. Add a sticky toolbar at the top of the catalog page containing the search input, filter button, and a "back to catalog" link that stays visible while scrolling.
 
 ## Changes
 
-### 1. Update CSS Variables (`src/index.css`)
+### 1. Modify `src/pages/Catalog.tsx`
 
-Swap the `:root` color variables to a light theme:
+- **Sticky toolbar**: Wrap the search input, filter button, and active filter count in a `sticky top-16 z-40 bg-background` bar (top-16 accounts for the fixed navbar). Add a bottom border for visual separation.
+- **Filter drawer**: Use the existing `Sheet` component (from `src/components/ui/sheet.tsx`) opening from the right side. Move all six Select dropdowns (Designer, Maker, Category, Style, Period, Country) into the Sheet body, stacked vertically with labels. Include a "Clear Filters" and "Close" button inside the drawer.
+- **Filter badge**: Show an active filter count badge on the filter button when filters are applied.
+- **Back to top**: The page title "Catalog" stays in the sticky bar as a clickable element that scrolls to the top, serving as the "back to catalog" anchor.
 
-- `--background`: white/near-white (e.g., `0 0% 100%`)
-- `--foreground`: dark/near-black (e.g., `220 15% 10%`)
-- `--card`: light gray (e.g., `220 10% 96%`)
-- `--card-foreground`: dark
-- `--secondary`: light warm gray
-- `--secondary-foreground`: dark text
-- `--muted`: light gray
-- `--muted-foreground`: medium gray for subdued text
-- `--border` / `--input`: light gray borders
-- Keep `--primary` (brass/gold) as-is since it works on both light and dark
+### Layout of sticky bar
 
-### 2. Add Navbar-Specific Dark Styling (`src/components/Navbar.tsx`)
+```text
++-----------------------------------------------------------+
+|  Catalog (title/anchor)   [Search input...]   [Filter (3)] |
++-----------------------------------------------------------+
+```
 
-Replace `bg-background/90` with explicit dark colors so the header stays black regardless of the site theme:
+### Drawer contents (right side sheet)
 
-- Header: `bg-[hsl(220,15%,8%)]/90` (the original dark background)
-- Mobile nav dropdown: same dark background
-- Text colors: use explicit light text (`text-white`, `text-white/60`) instead of theme tokens
-
-### 3. Review Page Content for Contrast
-
-Several pages use `text-foreground`, `text-muted-foreground`, `bg-secondary`, etc. which will automatically adapt via the CSS variable changes. A few spots may need attention:
-
-- **About page hero overlay card**: currently `bg-card/95` -- will become light, which works well on the image
-- **About page "Buying & Selling" section**: uses `text-foreground/80` over an image with `bg-background/50` overlay -- the overlay needs to stay dark so text remains readable. Will change to an explicit dark overlay (`bg-black/50`)
-- **Index hero**: similar overlay treatment, keep dark
-- **Footer**: should stay dark to match header -- add explicit dark background colors
-
-### 4. Footer Dark Override (`src/components/Footer.tsx`)
-
-Similar to the navbar, override the footer to use explicit dark colors so it remains black.
+```text
++-----------------------------+
+|  Filters              [X]   |
+|-----------------------------|
+|  Designer      [Select v]   |
+|  Maker         [Select v]   |
+|  Category      [Select v]   |
+|  Style         [Select v]   |
+|  Period        [Select v]   |
+|  Country       [Select v]   |
+|                              |
+|  [Clear Filters]             |
++-----------------------------+
+```
 
 ## Technical Details
 
-- No new dependencies
-- No structural changes to components
-- Only CSS variable values and a few explicit color overrides in Navbar, Footer, and image overlay sections
+- Import `Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger` from `@/components/ui/sheet`
+- Import `SlidersHorizontal` icon from lucide-react for the filter button
+- Add `useState<boolean>` for drawer open state
+- The sticky bar uses `sticky top-16 z-40 bg-background border-b border-border py-4` -- `top-16` aligns it below the fixed 64px navbar
+- Active filter count is computed from the existing `hasFilters` logic, counting non-empty filter values
+- No new files or dependencies needed
+- The product grid scrolls normally below the sticky bar
 
