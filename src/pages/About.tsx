@@ -21,7 +21,7 @@ const About = () => {
             className="w-full h-full object-cover"
           />
         </div>
-        <div className="absolute inset-0 bg-background/40" />
+        <div className="absolute inset-0 bg-black/40" />
         <RevealSection className="relative z-10 mx-4">
           <div className="bg-card/95 backdrop-blur-sm p-10 md:p-16 max-w-2xl text-center">
             <p className="font-body text-xs tracking-[0.3em] uppercase text-muted-foreground mb-6">
@@ -161,20 +161,20 @@ const About = () => {
             className="w-full h-full object-cover"
           />
         </div>
-        <div className="absolute inset-0 bg-background/50" />
+        <div className="absolute inset-0 bg-black/50" />
         <div className="relative z-10 container mx-auto px-4 text-center">
           <RevealSection>
-            <h2 className="font-display text-4xl md:text-5xl lg:text-6xl text-foreground mb-6">
+            <h2 className="font-display text-4xl md:text-5xl lg:text-6xl text-white mb-6">
               buying &amp; selling
             </h2>
-            <p className="font-body text-foreground/80 max-w-xl mx-auto mb-8">
+            <p className="font-body text-white/80 max-w-xl mx-auto mb-8">
               Have a piece you'd like to sell or consign? We're always looking
               for exceptional items to add to our collection. Get in touch and
               let's talk.
             </p>
             <Link
               to="/contact"
-              className="inline-block font-display text-sm tracking-[0.2em] uppercase border border-foreground text-foreground px-8 py-3 hover:bg-foreground hover:text-background transition-colors"
+              className="inline-block font-display text-sm tracking-[0.2em] uppercase border border-white text-white px-8 py-3 hover:bg-white hover:text-black transition-colors"
             >
               Send Email
             </Link>
