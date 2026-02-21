@@ -36,7 +36,7 @@ const ProductDetail = () => {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-12">
+      <div className="container mx-auto px-5 py-12">
         <div className="grid md:grid-cols-2 gap-12">
           <div className="aspect-square bg-muted animate-pulse rounded-sm" />
           <div className="space-y-4">
@@ -49,7 +49,7 @@ const ProductDetail = () => {
   }
 
   if (!product) {
-    return <div className="container mx-auto px-4 py-20 text-center text-muted-foreground">Product not found.</div>;
+    return <div className="container mx-auto px-5 py-20 text-center text-muted-foreground">Product not found.</div>;
   }
 
   const detailRows = [
@@ -67,7 +67,7 @@ const ProductDetail = () => {
   return (
     <div className="pb-24">
       {/* Hero: Gallery + Basic Info */}
-      <div className="container mx-auto px-4 py-6 md:py-12">
+      <div className="container mx-auto px-5 py-6 md:py-12">
         <div className="grid md:grid-cols-2 gap-6 md:gap-12">
           {/* Gallery */}
           <div>
@@ -137,7 +137,7 @@ const ProductDetail = () => {
 
       {/* About This Piece */}
       {(product.short_description || product.long_description) && (
-        <section className="container mx-auto px-4 py-12 border-t border-border">
+        <section className="container mx-auto px-5 py-12 border-t border-border">
           <div className="grid md:grid-cols-[200px_1fr] gap-6 md:gap-16">
             <h2 className="font-display text-sm tracking-[0.2em] uppercase text-muted-foreground pt-1">about this piece</h2>
             <div
@@ -150,7 +150,7 @@ const ProductDetail = () => {
 
       {/* Image Row */}
       {allImages.length > 1 && (
-        <section className="container mx-auto px-4 py-8">
+        <section className="container mx-auto px-5 py-8">
           <div className="flex gap-3 overflow-x-auto">
             {allImages.map((img) => (
               <div key={img.id} className="flex-shrink-0 w-[calc(25%-9px)] min-w-[200px] aspect-square overflow-hidden rounded-sm bg-muted">
@@ -163,7 +163,7 @@ const ProductDetail = () => {
 
       {/* Product Details */}
       {detailRows.length > 0 && (
-        <section className="container mx-auto px-4 py-12 border-t border-border">
+        <section className="container mx-auto px-5 py-12 border-t border-border">
           <div className="grid md:grid-cols-2 gap-6 md:gap-16">
             <div className="hidden md:block">
               {/* On desktop, show featured image next to details */}
@@ -188,7 +188,7 @@ const ProductDetail = () => {
 
       {/* Similar Products */}
       {similar && similar.length > 0 && (
-        <section className="container mx-auto px-4 py-16 border-t border-border">
+        <section className="container mx-auto px-5 py-16 border-t border-border">
           <h2 className="font-display text-xl tracking-[0.2em] uppercase text-foreground mb-8">similar pieces</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {similar.map((p) => (
@@ -200,7 +200,7 @@ const ProductDetail = () => {
 
       {/* Sticky Action Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50">
-        <div className="container mx-auto px-4 py-3">
+        <div className="container mx-auto px-5 py-3">
           <div className="grid grid-cols-4 gap-2">
             {product.status === 'available' ? (
               <>
