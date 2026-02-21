@@ -1,27 +1,16 @@
-import { Link } from 'react-router-dom';
+import { Facebook, Instagram } from 'lucide-react';
+import firstdibsLogo from '@/assets/1stdibs-logo.png';
+import chairishLogo from '@/assets/chairish-logo.png';
+import ebayLogo from '@/assets/ebay-logo.png';
 
 const Footer = () => {
-  const socialLinks = [
-    { label: 'facebook', href: '#' },
-    { label: 'instagram', href: '#' },
-    { label: '1stdibs', href: '#' },
-    { label: 'chairish', href: '#' },
-    { label: 'ebay', href: '#' },
-  ];
-
-  const navLinks = [
-    { to: '/catalog', label: 'catalog' },
-    { to: '/about', label: 'about' },
-    { to: '/contact', label: 'contact' },
-  ];
-
   return (
     <footer className="border-t border-white/10 bg-[hsl(220,15%,8%)] mt-auto">
       <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
           {/* Brand */}
           <div>
-            <h3 className="font-display text-lg tracking-[0.3em] uppercase text-white mb-4">
+            <h3 className="font-display text-lg tracking-[0.3em] uppercase text-white mb-2">
               Warehouse 414
             </h3>
             <p className="text-sm text-white/50 leading-relaxed">
@@ -29,38 +18,23 @@ const Footer = () => {
             </p>
           </div>
 
-          {/* Nav */}
-          <div>
-            <h4 className="text-xs tracking-[0.2em] uppercase text-white/50 mb-4">navigate</h4>
-            <nav className="flex flex-col gap-2">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.to}
-                  to={link.to}
-                  className="text-sm lowercase text-white/50 hover:text-primary transition-colors"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
-
-          {/* Social */}
-          <div>
-            <h4 className="text-xs tracking-[0.2em] uppercase text-white/50 mb-4">follow</h4>
-            <div className="flex flex-wrap gap-3">
-              {socialLinks.map((link) => (
-                <a
-                  key={link.label}
-                  href={link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm lowercase text-white/50 hover:text-primary transition-colors"
-                >
-                  {link.label}
-                </a>
-              ))}
-            </div>
+          {/* Social Icons */}
+          <div className="flex items-center gap-4">
+            <a href="#" target="_blank" rel="noopener noreferrer" className="text-white/50 hover:text-primary transition-colors" aria-label="Facebook">
+              <Facebook size={20} />
+            </a>
+            <a href="#" target="_blank" rel="noopener noreferrer" className="text-white/50 hover:text-primary transition-colors" aria-label="Instagram">
+              <Instagram size={20} />
+            </a>
+            <a href="#" target="_blank" rel="noopener noreferrer" className="opacity-50 hover:opacity-100 transition-opacity" aria-label="1stDibs">
+              <img src={firstdibsLogo} alt="1stDibs" className="h-5 w-auto brightness-0 invert" />
+            </a>
+            <a href="#" target="_blank" rel="noopener noreferrer" className="opacity-50 hover:opacity-100 transition-opacity" aria-label="Chairish">
+              <img src={chairishLogo} alt="Chairish" className="h-5 w-auto brightness-0 invert" />
+            </a>
+            <a href="#" target="_blank" rel="noopener noreferrer" className="opacity-50 hover:opacity-100 transition-opacity" aria-label="eBay">
+              <img src={ebayLogo} alt="eBay" className="h-5 w-auto brightness-0 invert" />
+            </a>
           </div>
         </div>
 
