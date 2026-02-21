@@ -11,7 +11,11 @@ export function useCollections() {
         .select('*')
         .order('name');
       if (error) throw error;
-      return (data ?? []).map((d: any) => ({ ...d, cover_image: d['cover-image'] ?? d.cover_image }));
+      return (data ?? []).map((d: any) => ({
+        ...d,
+        cover_image: d['cover-image'] ?? d.cover_image,
+        slug: (d.slug || '').replace(/^collection\//, ''),
+      }));
     },
   });
 }
@@ -21,13 +25,21 @@ export function useCollectionBySlug(slug: string | undefined) {
     queryKey: ['collection', slug],
     enabled: !!slug,
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Try with and without the collection/ prefix
+      let { data, error } = await supabase
         .from('collections')
         .select('*')
         .eq('slug', slug!)
-        .single();
+        .maybeSingle();
+      if (!data) {
+        ({ data, error } = await supabase
+          .from('collections')
+          .select('*')
+          .eq('slug', `collection/${slug}`)
+          .single());
+      }
       if (error) throw error;
-      return data ? { ...data, cover_image: (data as any)['cover-image'] ?? data.cover_image } as Collection : null;
+      return data ? { ...data, cover_image: (data as any)['cover-image'] ?? data.cover_image, slug: (data.slug || '').replace(/^collection\//, '') } as Collection : null;
     },
   });
 }
