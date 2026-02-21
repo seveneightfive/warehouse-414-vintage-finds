@@ -27,15 +27,8 @@ export function useInfiniteProducts(filters?: ProductFilters) {
       let query = supabase
         .from('products')
         .select(`
-          *,
-          designer:designers(*),
-          maker:makers(*),
-          category:categories(*),
-          style:styles(*),
-          period:periods(*),
-          country:countries(*),
-          product_images(*),
-          product_colors(*, color:colors(*))
+          id, name, slug, price, status, featured_image_url, created_at,
+          designer:designers(id, name)
         `)
         .order('created_at', { ascending: false })
         .order('id', { ascending: false })
@@ -67,7 +60,7 @@ export function useInfiniteProducts(filters?: ProductFilters) {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as Product[];
+      return data as unknown as Product[];
     },
     initialPageParam: undefined as Cursor | undefined,
     getNextPageParam: (lastPage) => {
