@@ -36,7 +36,7 @@ export function useProducts(filters?: {
       if (filters?.status) {
         query = query.eq('status', filters.status);
       } else {
-        query = query.in('status', ['available', 'on_hold']);
+        query = query.in('status', ['available', 'on_hold', 'sold']);
       }
 
       if (filters?.designer_id) query = query.eq('designer_id', filters.designer_id);
