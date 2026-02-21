@@ -76,7 +76,7 @@ const Catalog = () => {
             Catalog
           </button>
 
-          <div className="relative flex-1 max-w-md">
+          <div className="relative flex-1 max-w-md min-w-0">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
             <Input
               placeholder="Search products..."
