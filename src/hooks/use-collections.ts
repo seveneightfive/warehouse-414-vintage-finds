@@ -53,7 +53,7 @@ export function useCollectionProducts(collectionId: string | undefined) {
         .from('collection_products')
         .select('*, product:products(*, designer:designers(*), product_images(*))')
         .eq('collection_id', collectionId!)
-        .order('sort_order');
+        ;
       if (error) throw error;
       return (data ?? []) as unknown as CollectionProduct[];
     },

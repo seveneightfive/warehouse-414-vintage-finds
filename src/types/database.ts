@@ -177,6 +177,5 @@ export type CollectionProduct = {
   id: string;
   collection_id: string;
   product_id: string;
-  sort_order: number;
   product?: Product;
 };
