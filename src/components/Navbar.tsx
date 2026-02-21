@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { Menu, X, ArrowLeft } from 'lucide-react';
 import logoTop from '@/assets/logo-top.png';
@@ -7,6 +7,7 @@ import logoBottom from '@/assets/logo-bottom.png';
 const Navbar = () => {
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const isProductPage = location.pathname.startsWith('/product/');
 
   const links = [
@@ -23,9 +24,9 @@ const Navbar = () => {
         <div className="container mx-auto hidden md:grid grid-cols-3 items-center h-14 px-4">
           <div className="justify-self-start">
             {isProductPage && (
-              <Link to="/catalog" className="text-white hover:opacity-70 transition-opacity">
+              <button onClick={() => navigate(-1)} className="text-white hover:opacity-70 transition-opacity">
                 <ArrowLeft size={20} />
-              </Link>
+              </button>
             )}
           </div>
           <Link to="/" className="justify-self-center hover:opacity-80 transition-opacity">
@@ -49,9 +50,9 @@ const Navbar = () => {
         <div className="container mx-auto flex md:hidden items-center justify-between h-14 px-4">
           <div className="flex items-center gap-3">
             {isProductPage && (
-              <Link to="/catalog" className="text-white hover:opacity-70 transition-opacity">
+              <button onClick={() => navigate(-1)} className="text-white hover:opacity-70 transition-opacity">
                 <ArrowLeft size={20} />
-              </Link>
+              </button>
             )}
             <Link to="/" className="hover:opacity-80 transition-opacity">
               <img src={logoTop} alt="Warehouse 414" className="h-10 w-auto" />
