@@ -39,7 +39,7 @@ const ProductCard = ({ product }: { product: Product }) => {
         <p className="text-xs text-muted-foreground mt-0.5">{designerName}</p>
       )}
       {product.price && (
-        <p className="text-sm text-foreground mt-1 font-medium">
+        <p className="text-sm text-foreground mt-1 font-display">
           ${product.price.toLocaleString()}
         </p>
       )}
