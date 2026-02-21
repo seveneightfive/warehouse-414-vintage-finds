@@ -18,13 +18,13 @@ const Navbar = () => {
     <header className="fixed top-0 left-0 right-0 z-50">
       {/* Black top row */}
       <div className="bg-black">
-        <div className="container mx-auto flex items-center justify-between h-14 px-4">
-          <Link to="/" className="hover:opacity-80 transition-opacity">
+        {/* Desktop: 3-column grid for centered logo */}
+        <div className="container mx-auto hidden md:grid grid-cols-3 items-center h-14 px-4">
+          <div /> {/* Left spacer */}
+          <Link to="/" className="justify-self-center hover:opacity-80 transition-opacity">
             <img src={logoTop} alt="Warehouse 414" className="h-10 w-auto" />
           </Link>
-
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-8">
+          <nav className="justify-self-end flex items-center gap-8">
             {links.map((link) => (
               <Link
                 key={link.to}
@@ -37,9 +37,13 @@ const Navbar = () => {
               </Link>
             ))}
           </nav>
-
-          {/* Mobile toggle */}
-          <button className="md:hidden text-white" onClick={() => setOpen(!open)}>
+        </div>
+        {/* Mobile: flex layout */}
+        <div className="container mx-auto flex md:hidden items-center justify-between h-14 px-4">
+          <Link to="/" className="hover:opacity-80 transition-opacity">
+            <img src={logoTop} alt="Warehouse 414" className="h-10 w-auto" />
+          </Link>
+          <button className="text-white" onClick={() => setOpen(!open)}>
             {open ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
