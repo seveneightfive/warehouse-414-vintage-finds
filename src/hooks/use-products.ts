@@ -45,7 +45,7 @@ export function useProducts(filters?: {
       if (filters?.style_id) query = query.eq('style_id', filters.style_id);
       if (filters?.period_id) query = query.eq('period_id', filters.period_id);
       if (filters?.country_id) query = query.eq('country_id', filters.country_id);
-      if (filters?.search) query = query.ilike('title', `%${filters.search}%`);
+      if (filters?.search) query = query.ilike('name', `%${filters.search}%`);
       if (filters?.year_min) query = query.gte('year', filters.year_min);
       if (filters?.year_max) query = query.lte('year', filters.year_max);
 

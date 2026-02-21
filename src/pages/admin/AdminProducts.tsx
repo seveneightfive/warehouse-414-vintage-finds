@@ -69,17 +69,19 @@ const AdminProducts = () => {
           </TableHeader>
           <TableBody>
             {products?.map((p) => {
-              const thumb = p.product_images?.sort((a, b) => a.position - b.position)?.[0];
+              const thumb = p.product_images?.sort((a, b) => a.sort_order - b.sort_order)?.[0];
               return (
                 <TableRow key={p.id}>
                   <TableCell>
                     {thumb ? (
-                      <img src={thumb.url} alt="" className="w-12 h-12 rounded-sm object-cover" />
+                      <img src={thumb.image_url} alt="" className="w-12 h-12 rounded-sm object-cover" />
+                    ) : p.featured_image_url ? (
+                      <img src={p.featured_image_url} alt="" className="w-12 h-12 rounded-sm object-cover" />
                     ) : (
                       <div className="w-12 h-12 rounded-sm bg-muted" />
                     )}
                   </TableCell>
-                  <TableCell className="font-medium">{p.title}</TableCell>
+                  <TableCell className="font-medium">{p.name}</TableCell>
                   <TableCell className="text-muted-foreground">{p.designer?.name || '—'}</TableCell>
                   <TableCell className="text-muted-foreground">{p.category?.name || '—'}</TableCell>
                   <TableCell><Badge variant={statusColor(p.status)}>{p.status}</Badge></TableCell>

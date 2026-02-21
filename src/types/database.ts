@@ -1,7 +1,10 @@
 export type Product = {
   id: string;
-  title: string;
-  description: string | null;
+  name: string;
+  slug: string | null;
+  sku: string | null;
+  short_description: string | null;
+  long_description: string | null;
   price: number | null;
   status: 'available' | 'on_hold' | 'sold' | 'inventory';
   designer_id: string | null;
@@ -11,10 +14,21 @@ export type Product = {
   style_id: string | null;
   period_id: string | null;
   country_id: string | null;
-  year: number | null;
-  dimensions: string | null;
+  year_created: string | null;
+  product_dimensions: string | null;
+  box_dimensions: string | null;
+  dimension_notes: string | null;
   materials: string | null;
   condition: string | null;
+  tags: string[] | null;
+  featured_image_url: string | null;
+  notes: string | null;
+  designer_attribution: string | null;
+  maker_attribution: string | null;
+  period_attribution: string | null;
+  firstdibs_url: string | null;
+  chairish_url: string | null;
+  ebay_url: string | null;
   created_at: string;
   updated_at: string;
   designer?: Designer | null;
@@ -30,20 +44,23 @@ export type Product = {
 export type Designer = {
   id: string;
   name: string;
-  bio: string | null;
-  image_url: string | null;
+  slug: string | null;
+  about: string | null;
   created_at: string;
 };
 
 export type Maker = {
   id: string;
   name: string;
+  slug: string | null;
+  about: string | null;
   created_at: string;
 };
 
 export type Category = {
   id: string;
   name: string;
+  slug: string | null;
   created_at: string;
 };
 
@@ -57,18 +74,22 @@ export type Subcategory = {
 export type Style = {
   id: string;
   name: string;
+  slug: string | null;
   created_at: string;
 };
 
 export type Period = {
   id: string;
   name: string;
+  slug: string | null;
   created_at: string;
 };
 
 export type Country = {
   id: string;
   name: string;
+  slug: string | null;
+  code: string | null;
   created_at: string;
 };
 
@@ -82,8 +103,9 @@ export type Color = {
 export type ProductImage = {
   id: string;
   product_id: string;
-  url: string;
-  position: number;
+  image_url: string;
+  alt_text: string | null;
+  sort_order: number;
   created_at: string;
 };
 

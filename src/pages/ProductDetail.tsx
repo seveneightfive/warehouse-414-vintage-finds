@@ -36,8 +36,9 @@ const ProductDetail = () => {
     return <div className="container mx-auto px-4 py-20 text-center text-muted-foreground">Product not found.</div>;
   }
 
-  const images = product.product_images?.sort((a, b) => a.position - b.position) || [];
+  const images = product.product_images?.sort((a, b) => a.sort_order - b.sort_order) || [];
   const currentImage = images[selectedImage];
+  const displayImageUrl = currentImage?.image_url || product.featured_image_url;
 
   return (
     <div>
@@ -46,8 +47,8 @@ const ProductDetail = () => {
           {/* Image Gallery */}
           <div>
             <div className="aspect-square overflow-hidden rounded-sm bg-muted mb-3">
-              {currentImage ? (
-                <img src={currentImage.url} alt={product.title} className="w-full h-full object-cover" />
+              {displayImageUrl ? (
+                <img src={displayImageUrl} alt={product.name} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">No Image</div>
               )}
@@ -62,7 +63,7 @@ const ProductDetail = () => {
                       i === selectedImage ? 'border-primary' : 'border-transparent'
                     }`}
                   >
-                    <img src={img.url} alt="" className="w-full h-full object-cover" />
+                    <img src={img.image_url} alt="" className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>
@@ -71,7 +72,7 @@ const ProductDetail = () => {
 
           {/* Details */}
           <div>
-            <h1 className="font-display text-3xl tracking-wide text-foreground mb-2">{product.title}</h1>
+            <h1 className="font-display text-3xl tracking-wide text-foreground mb-2">{product.name}</h1>
             {product.designer && (
               <p className="text-muted-foreground text-sm mb-1">
                 Designer: <a href={`/designer/${product.designer.id}`} className="hover:text-primary transition-colors">{product.designer.name}</a>
@@ -81,27 +82,27 @@ const ProductDetail = () => {
             {product.price && <p className="text-2xl text-foreground font-medium mt-4">${product.price.toLocaleString()}</p>}
 
             <div className="mt-6 space-y-2 text-sm text-muted-foreground">
-              {product.dimensions && <p><span className="text-foreground">Dimensions:</span> {product.dimensions}</p>}
+              {product.product_dimensions && <p><span className="text-foreground">Dimensions:</span> {product.product_dimensions}</p>}
               {product.materials && <p><span className="text-foreground">Materials:</span> {product.materials}</p>}
               {product.condition && <p><span className="text-foreground">Condition:</span> {product.condition}</p>}
-              {product.year && <p><span className="text-foreground">Year:</span> {product.year}</p>}
+              {product.year_created && <p><span className="text-foreground">Year:</span> {product.year_created}</p>}
               {product.period && <p><span className="text-foreground">Period:</span> {product.period.name}</p>}
               {product.country && <p><span className="text-foreground">Country:</span> {product.country.name}</p>}
               {product.category && <p><span className="text-foreground">Category:</span> {product.category.name}</p>}
               {product.style && <p><span className="text-foreground">Style:</span> {product.style.name}</p>}
             </div>
 
-            {product.description && (
-              <p className="mt-6 text-sm text-muted-foreground leading-relaxed">{product.description}</p>
+            {product.short_description && (
+              <p className="mt-6 text-sm text-muted-foreground leading-relaxed">{product.short_description}</p>
             )}
 
             {/* Action Buttons */}
             <div className="mt-8 flex flex-wrap gap-3">
               {product.status === 'available' && (
                 <>
-                  <InquiryDialog type="hold" productId={product.id} productTitle={product.title} />
-                  <InquiryDialog type="offer" productId={product.id} productTitle={product.title} />
-                  <InquiryDialog type="inquiry" productId={product.id} productTitle={product.title} />
+                  <InquiryDialog type="hold" productId={product.id} productTitle={product.name} />
+                  <InquiryDialog type="offer" productId={product.id} productTitle={product.name} />
+                  <InquiryDialog type="inquiry" productId={product.id} productTitle={product.name} />
                 </>
               )}
               <Button
