@@ -69,4 +69,14 @@
     font-family: 'Kabel', sans-serif;
     text-transform: lowercase;
   }
+
+  .stripe-pattern {
+    background: repeating-linear-gradient(
+      0deg,
+      hsl(var(--foreground)) 0px,
+      hsl(var(--foreground)) 2px,
+      transparent 2px,
+      transparent 6px
+    );
+  }
 }
