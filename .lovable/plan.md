@@ -1,46 +1,50 @@
 
 
-# Center-Align Split Logo in Header
+# Make All Pages Mobile-Friendly
 
-## Overview
+## Problem
 
-Restructure the header so the top "Warehouse" logo and bottom "414" logo are always vertically centered/aligned as one visual unit, while keeping the nav links in the black bar.
+The site has horizontal scrolling on mobile due to two root causes:
+1. **Leftover Vite template CSS** in `App.css` -- the `#root` rule adds `padding: 2rem` and `max-width: 1280px`, pushing content beyond the viewport
+2. **No overflow protection** on the root/body elements
 
-## Current Problem
-
-The top logo is left-aligned (flex `justify-between` pushes it left, nav right), while the bottom logo is center-aligned. They don't stack as one cohesive logo.
-
-## Solution
-
-Use a three-column layout in the black top row so the logo sits in the center column, with an empty left spacer and the nav on the right. The bottom row already centers its logo, so both will align.
-
-```text
-+========================================================+
-| BLACK:  [spacer]    [WAREHOUSE logo]    catalog about   |
-+========================================================+
-| WHITE:              [414 logo]                          |
-+========================================================+
-```
+The page layouts themselves are mostly already responsive (using `md:grid-cols-2`, `container mx-auto px-4`, etc.), so the fix is primarily about removing conflicting styles and adding overflow guards.
 
 ## Changes
 
-### 1. Update `src/components/Navbar.tsx`
+### 1. Clean up `src/App.css`
+Remove or neutralize the `#root` styles that conflict with the full-width layout:
+- Remove `max-width: 1280px`, `padding: 2rem`, `margin: 0 auto`, and `text-align: center` from the `#root` rule
+- The remaining styles (`.logo`, `.card`, `.read-the-docs`, keyframes) are unused Vite boilerplate and can also be removed, leaving the file essentially empty or deletable
 
-**Black top row** -- change the inner container from `flex justify-between` to a 3-column grid:
-- Left column: empty spacer (matches nav width for balance) on desktop; logo on mobile (keep mobile as-is with flex)
-- Center column: top logo image, centered
-- Right column: nav links on desktop, hamburger on mobile
+### 2. Add overflow protection in `src/index.css`
+Add `overflow-x: hidden` to the `html` and `body` elements to prevent any edge-case horizontal scroll caused by full-bleed sections (parallax images, hero sections, etc.):
+```css
+html, body {
+  overflow-x: hidden;
+}
+```
 
-**Desktop approach**: Use `grid grid-cols-3` with the logo in the center cell (`justify-self-center`) and nav in the right cell (`justify-self-end`). The left cell is an empty div that balances the layout.
+### 3. Minor mobile refinements in `src/pages/ProductDetail.tsx`
+- Reduce padding on mobile: change `py-12` to `py-6 md:py-12` and `gap-12` to `gap-6 md:gap-12`
+- Make the product title smaller on mobile: `text-2xl md:text-3xl`
+- Reduce price size on mobile: `text-xl md:text-2xl`
 
-**Mobile approach**: Keep the current flex layout (logo left, hamburger right) since the three-column centering matters less on small screens.
+### 4. Catalog toolbar mobile fix (`src/pages/Catalog.tsx`)
+- The sticky toolbar search bar has `max-w-md` which is fine, but the flex container could overflow on very small screens. Add `min-w-0` to the search container to allow it to shrink properly.
 
-**Bottom row**: No changes needed -- already centered.
+### 5. About page -- no changes needed
+Already uses responsive classes (`md:grid-cols-2`, `md:text-5xl`, etc.)
 
-## Technical Details
+### 6. Contact page -- no changes needed
+Already uses `max-w-xl` with `px-4`, works well on mobile
 
-- Only `src/components/Navbar.tsx` is modified
-- Desktop: `hidden md:grid md:grid-cols-3 items-center h-14 px-4` with logo in center cell
-- Mobile: `flex md:hidden items-center justify-between h-14 px-4` keeping current behavior
-- No new dependencies or files
+### 7. Footer -- no changes needed
+Already responsive with `grid-cols-1 md:grid-cols-3`
+
+## Summary of Files Modified
+- `src/App.css` -- gut the conflicting `#root` styles
+- `src/index.css` -- add `overflow-x: hidden` guard
+- `src/pages/ProductDetail.tsx` -- tighten spacing on mobile
+- `src/pages/Catalog.tsx` -- minor flex shrink fix
 
