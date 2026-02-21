@@ -17,6 +17,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminProducts from "./pages/admin/AdminProducts";
 import AdminCrudList from "./pages/admin/AdminCrudList";
 import AdminInbox from "./pages/admin/AdminInbox";
+import CollectionDetail from "./pages/CollectionDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +36,7 @@ const App = () => (
               <Route path="/catalog" element={<Catalog />} />
               <Route path="/product/:id" element={<ProductDetail />} />
               <Route path="/designer/:id" element={<DesignerDetail />} />
+              <Route path="/collection/:slug" element={<CollectionDetail />} />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
             </Route>
