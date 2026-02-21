@@ -67,7 +67,7 @@ const Catalog = () => {
   return (
     <div>
       {/* Sticky toolbar */}
-      <div className="sticky top-16 z-40 bg-background border-b border-border">
+      <div className="sticky top-[6.5rem] z-40 bg-background border-b border-border">
         <div className="container mx-auto px-4 py-4 flex items-center gap-4">
           <button
             onClick={scrollToTop}
