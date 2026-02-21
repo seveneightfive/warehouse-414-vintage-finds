@@ -14,7 +14,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['Josefin Sans', 'Kabel Medium', 'sans-serif'],
+        display: ['Kabel', 'sans-serif'],
         body: ['Cormorant Garamond', 'Georgia', 'serif'],
       },
       colors: {
