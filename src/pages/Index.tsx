@@ -14,17 +14,17 @@ const Index = () => {
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${heroImage})` }}
         />
-        <div className="absolute inset-0 bg-background/70" />
+        <div className="absolute inset-0 bg-black/70" />
         <div className="relative z-10 text-center px-4">
-          <h1 className="font-display text-4xl md:text-6xl lg:text-7xl tracking-[0.4em] uppercase text-foreground mb-4">
+          <h1 className="font-display text-4xl md:text-6xl lg:text-7xl tracking-[0.4em] uppercase text-white mb-4">
             Warehouse 414
           </h1>
-          <p className="text-muted-foreground text-sm md:text-base tracking-[0.25em] uppercase mb-8">
+          <p className="text-white/60 text-sm md:text-base tracking-[0.25em] uppercase mb-8">
             Curated vintage & mid-century modern furniture
           </p>
           <Link
             to="/catalog"
-            className="inline-block border border-foreground text-foreground px-8 py-3 text-xs tracking-[0.3em] uppercase hover:bg-foreground hover:text-background transition-all duration-300"
+            className="inline-block border border-white text-white px-8 py-3 text-xs tracking-[0.3em] uppercase hover:bg-white hover:text-black transition-all duration-300"
           >
             Browse Collection
           </Link>
