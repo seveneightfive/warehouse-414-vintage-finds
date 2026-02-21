@@ -9,23 +9,19 @@ export async function generateSpecSheet(product: Product, siteUrl: string) {
   const contentW = pageW - margin * 2;
   let y = margin;
 
-  // Colors
   const dark = [30, 32, 38] as const;
   const brass = [194, 160, 82] as const;
   const gray = [140, 140, 150] as const;
   const white = [230, 225, 215] as const;
 
-  // Background
   doc.setFillColor(...dark);
   doc.rect(0, 0, pageW, doc.internal.pageSize.getHeight(), 'F');
 
-  // Header line
   doc.setDrawColor(...brass);
   doc.setLineWidth(0.5);
   doc.line(margin, y, pageW - margin, y);
   y += 8;
 
-  // Brand
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(18);
   doc.setTextColor(...white);
@@ -45,11 +41,12 @@ export async function generateSpecSheet(product: Product, siteUrl: string) {
   doc.line(margin, y, pageW - margin, y);
   y += 12;
 
-  // Product image (if available)
-  const firstImage = product.product_images?.sort((a, b) => a.position - b.position)?.[0];
-  if (firstImage) {
+  // Product image
+  const firstImage = product.product_images?.sort((a, b) => a.sort_order - b.sort_order)?.[0];
+  const imageUrl = firstImage?.image_url || product.featured_image_url;
+  if (imageUrl) {
     try {
-      const imgData = await loadImageAsBase64(firstImage.url);
+      const imgData = await loadImageAsBase64(imageUrl);
       if (imgData) {
         const imgW = contentW;
         const imgH = imgW * 0.6;
@@ -65,11 +62,10 @@ export async function generateSpecSheet(product: Product, siteUrl: string) {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(20);
   doc.setTextColor(...white);
-  const titleLines = doc.splitTextToSize(product.title, contentW);
+  const titleLines = doc.splitTextToSize(product.name, contentW);
   doc.text(titleLines, margin, y);
   y += titleLines.length * 8 + 4;
 
-  // Price
   if (product.price) {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(14);
@@ -78,7 +74,6 @@ export async function generateSpecSheet(product: Product, siteUrl: string) {
     y += 10;
   }
 
-  // Divider
   doc.setDrawColor(60, 62, 68);
   doc.line(margin, y, pageW - margin, y);
   y += 8;
@@ -91,10 +86,11 @@ export async function generateSpecSheet(product: Product, siteUrl: string) {
   if (product.style?.name) details.push(['Style', product.style.name]);
   if (product.period?.name) details.push(['Period', product.period.name]);
   if (product.country?.name) details.push(['Country of Origin', product.country.name]);
-  if (product.year) details.push(['Year', String(product.year)]);
-  if (product.dimensions) details.push(['Dimensions', product.dimensions]);
+  if (product.year_created) details.push(['Year', product.year_created]);
+  if (product.product_dimensions) details.push(['Dimensions', product.product_dimensions]);
   if (product.materials) details.push(['Materials', product.materials]);
   if (product.condition) details.push(['Condition', product.condition]);
+  if (product.sku) details.push(['SKU', product.sku]);
 
   const colW = contentW / 2;
   for (let i = 0; i < details.length; i += 2) {
@@ -116,7 +112,8 @@ export async function generateSpecSheet(product: Product, siteUrl: string) {
   }
 
   // Description
-  if (product.description) {
+  const desc = product.short_description || product.long_description;
+  if (desc) {
     y += 4;
     doc.setDrawColor(60, 62, 68);
     doc.line(margin, y, pageW - margin, y);
@@ -130,7 +127,7 @@ export async function generateSpecSheet(product: Product, siteUrl: string) {
 
     doc.setFontSize(9);
     doc.setTextColor(...white);
-    const descLines = doc.splitTextToSize(product.description, contentW);
+    const descLines = doc.splitTextToSize(desc, contentW);
     doc.text(descLines, margin, y);
     y += descLines.length * 4.5 + 6;
   }
@@ -145,15 +142,12 @@ export async function generateSpecSheet(product: Product, siteUrl: string) {
 
   const footerY = doc.internal.pageSize.getHeight() - 35;
 
-  // Footer line
   doc.setDrawColor(...brass);
   doc.line(margin, footerY - 5, pageW - margin, footerY - 5);
 
-  // QR code
   const qrSize = 22;
   doc.addImage(qrDataUrl, 'PNG', pageW - margin - qrSize, footerY, qrSize, qrSize);
 
-  // Footer text
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.setTextColor(...gray);
@@ -168,8 +162,7 @@ export async function generateSpecSheet(product: Product, siteUrl: string) {
   doc.text(siteUrl, margin, footerY + 9);
   doc.text(`Generated ${new Date().toLocaleDateString()}`, margin, footerY + 14);
 
-  // Save
-  const filename = `W414-${product.title.replace(/[^a-zA-Z0-9]/g, '-').substring(0, 40)}.pdf`;
+  const filename = `W414-${product.name.replace(/[^a-zA-Z0-9]/g, '-').substring(0, 40)}.pdf`;
   doc.save(filename);
 }
 

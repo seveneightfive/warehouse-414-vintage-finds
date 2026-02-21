@@ -19,11 +19,8 @@ const DesignerDetail = () => {
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="max-w-3xl mb-12">
-        {designer.image_url && (
-          <img src={designer.image_url} alt={designer.name} className="w-32 h-32 rounded-full object-cover mb-6" />
-        )}
         <h1 className="font-display text-3xl tracking-wide text-foreground mb-4">{designer.name}</h1>
-        {designer.bio && <p className="text-muted-foreground leading-relaxed">{designer.bio}</p>}
+        {designer.about && <p className="text-muted-foreground leading-relaxed">{designer.about}</p>}
       </div>
 
       {products && products.length > 0 && (
