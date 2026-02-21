@@ -53,6 +53,7 @@ const ProductDetail = () => {
   }
 
   const detailRows = [
+    product.sku && { label: 'SKU', value: product.sku },
     product.product_dimensions && { label: 'DIMENSIONS', value: product.product_dimensions },
     product.materials && { label: 'MATERIALS', value: product.materials },
     product.condition && { label: 'CONDITION', value: product.condition },
