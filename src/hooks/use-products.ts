@@ -1,6 +1,82 @@
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import type { Product } from '@/types/database';
+
+const PAGE_SIZE = 50;
+
+type ProductFilters = {
+  designer_id?: string;
+  maker_id?: string;
+  category_id?: string;
+  style_id?: string;
+  period_id?: string;
+  country_id?: string;
+  color_id?: string;
+  search?: string;
+  year_min?: number;
+  year_max?: number;
+  status?: string;
+};
+
+type Cursor = { created_at: string; id: string };
+
+export function useInfiniteProducts(filters?: ProductFilters) {
+  return useInfiniteQuery({
+    queryKey: ['products-infinite', filters],
+    queryFn: async ({ pageParam }: { pageParam: Cursor | undefined }) => {
+      let query = supabase
+        .from('products')
+        .select(`
+          *,
+          designer:designers(*),
+          maker:makers(*),
+          category:categories(*),
+          style:styles(*),
+          period:periods(*),
+          country:countries(*),
+          product_images(*),
+          product_colors(*, color:colors(*))
+        `)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(PAGE_SIZE);
+
+      // Status filter
+      if (filters?.status) {
+        query = query.eq('status', filters.status);
+      } else {
+        query = query.in('status', ['available', 'on_hold', 'sold']);
+      }
+
+      // Cursor-based pagination
+      if (pageParam) {
+        query = query.or(
+          `created_at.lt.${pageParam.created_at},and(created_at.eq.${pageParam.created_at},id.lt.${pageParam.id})`
+        );
+      }
+
+      if (filters?.designer_id) query = query.eq('designer_id', filters.designer_id);
+      if (filters?.maker_id) query = query.eq('maker_id', filters.maker_id);
+      if (filters?.category_id) query = query.eq('category_id', filters.category_id);
+      if (filters?.style_id) query = query.eq('style_id', filters.style_id);
+      if (filters?.period_id) query = query.eq('period_id', filters.period_id);
+      if (filters?.country_id) query = query.eq('country_id', filters.country_id);
+      if (filters?.search) query = query.ilike('name', `%${filters.search}%`);
+      if (filters?.year_min) query = query.gte('year', filters.year_min);
+      if (filters?.year_max) query = query.lte('year', filters.year_max);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data as Product[];
+    },
+    initialPageParam: undefined as Cursor | undefined,
+    getNextPageParam: (lastPage) => {
+      if (lastPage.length < PAGE_SIZE) return undefined;
+      const last = lastPage[lastPage.length - 1];
+      return { created_at: last.created_at, id: last.id };
+    },
+  });
+}
 
 export function useProducts(filters?: {
   designer_id?: string;

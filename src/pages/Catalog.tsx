@@ -1,12 +1,13 @@
 import { useSearchParams } from 'react-router-dom';
-import { useProducts, useFilterOptions } from '@/hooks/use-products';
+import { useInfiniteProducts, useFilterOptions } from '@/hooks/use-products';
+import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
 import ProductCard from '@/components/ProductCard';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Search, X, SlidersHorizontal } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 const Catalog = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -33,7 +34,15 @@ const Catalog = () => {
   };
 
   const { data: filterOptions } = useFilterOptions();
-  const { data: products, isLoading } = useProducts({
+  const {
+    data,
+    isLoading,
+    isError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+  } = useInfiniteProducts({
     search: search || undefined,
     designer_id: designerId || undefined,
     maker_id: makerId || undefined,
@@ -41,6 +50,17 @@ const Catalog = () => {
     style_id: styleId || undefined,
     period_id: periodId || undefined,
     country_id: countryId || undefined,
+  });
+
+  const products = useMemo(
+    () => data?.pages.flatMap((page) => page) ?? [],
+    [data]
+  );
+
+  const sentinelRef = useInfiniteScroll({
+    fetchNextPage,
+    hasNextPage: !!hasNextPage,
+    isFetchingNextPage,
   });
 
   const activeFilterCount = [designerId, makerId, categoryId, styleId, periodId, countryId].filter(Boolean).length;
@@ -137,7 +157,7 @@ const Catalog = () => {
               onClick={() => setDrawerOpen(false)}
               className="ml-auto font-display"
             >
-              View Products{products ? ` (${products.length})` : ''}
+              View Products{products.length > 0 ? ` (${products.length}${hasNextPage ? '+' : ''})` : ''}
             </Button>
           </div>
         </SheetContent>
@@ -151,12 +171,40 @@ const Catalog = () => {
               <div key={i} className="aspect-square bg-muted animate-pulse rounded-sm" />
             ))}
           </div>
-        ) : products && products.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {products.map((p) => (
-              <ProductCard key={p.id} product={p} />
-            ))}
+        ) : isError ? (
+          <div className="text-center py-20 space-y-4">
+            <p className="text-sm text-muted-foreground">Something went wrong loading products.</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              Try again
+            </Button>
           </div>
+        ) : products.length > 0 ? (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {products.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+
+            {/* Loading more skeletons */}
+            {isFetchingNextPage && (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-6">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="aspect-square bg-muted animate-pulse rounded-sm" />
+                ))}
+              </div>
+            )}
+
+            {/* Sentinel for infinite scroll */}
+            <div ref={sentinelRef} className="h-1" />
+
+            {/* End of results */}
+            {!hasNextPage && products.length > 0 && (
+              <p className="text-center text-muted-foreground text-xs py-8 tracking-widest uppercase">
+                You've seen all products
+              </p>
+            )}
+          </>
         ) : (
           <p className="text-center text-muted-foreground py-20 text-sm">No products found.</p>
         )}
