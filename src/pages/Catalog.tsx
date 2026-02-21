@@ -107,13 +107,13 @@ const Catalog = () => {
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
         <SheetContent side="right" className="w-80">
           <SheetHeader>
-            <SheetTitle>Filters</SheetTitle>
+            <SheetTitle className="font-display lowercase font-bold">filters</SheetTitle>
           </SheetHeader>
           <div className="mt-6 space-y-4">
-            {filterSelect('Designer', designerId, (v) => setDesignerId(v === '__all__' ? '' : v), filterOptions?.designers)}
-            {filterSelect('Maker', makerId, (v) => setMakerId(v === '__all__' ? '' : v), filterOptions?.makers)}
             {filterSelect('Category', categoryId, (v) => setCategoryId(v === '__all__' ? '' : v), filterOptions?.categories)}
             {filterSelect('Style', styleId, (v) => setStyleId(v === '__all__' ? '' : v), filterOptions?.styles)}
+            {filterSelect('Designer', designerId, (v) => setDesignerId(v === '__all__' ? '' : v), filterOptions?.designers)}
+            {filterSelect('Maker', makerId, (v) => setMakerId(v === '__all__' ? '' : v), filterOptions?.makers)}
             {filterSelect('Period', periodId, (v) => setPeriodId(v === '__all__' ? '' : v), filterOptions?.periods)}
             {filterSelect('Country', countryId, (v) => setCountryId(v === '__all__' ? '' : v), filterOptions?.countries)}
           </div>
