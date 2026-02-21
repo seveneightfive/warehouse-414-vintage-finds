@@ -15,7 +15,7 @@ export default {
     extend: {
       fontFamily: {
         display: ['Kabel', 'sans-serif'],
-        body: ['Cormorant Garamond', 'Georgia', 'serif'],
+        body: ['Jost', 'Cormorant Garamond', 'Georgia', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",

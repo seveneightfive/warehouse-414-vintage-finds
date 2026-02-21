@@ -124,6 +124,12 @@ const ProductDetail = () => {
             {product.price && (
               <p className="font-display text-xl md:text-2xl text-muted-foreground mt-4">${product.price.toLocaleString()}</p>
             )}
+            {product.short_description && (
+              <div
+                className="text-base leading-relaxed text-foreground mt-4 prose prose-sm max-w-none"
+                dangerouslySetInnerHTML={{ __html: product.short_description }}
+              />
+            )}
           </div>
         </div>
       </div>
