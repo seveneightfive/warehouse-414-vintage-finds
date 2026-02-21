@@ -1,15 +1,18 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Navbar from './Navbar';
 import Footer from './Footer';
 
 const Layout = () => {
+  const location = useLocation();
+  const isProductPage = location.pathname.startsWith('/product/');
+
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
       <main className="flex-1 pt-[6.5rem]">
         <Outlet />
       </main>
-      <Footer />
+      {!isProductPage && <Footer />}
     </div>
   );
 };
