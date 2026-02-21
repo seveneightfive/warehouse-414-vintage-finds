@@ -9,6 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { generateSpecSheet } from '@/lib/generate-spec-sheet';
+import { FileText } from 'lucide-react';
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -94,13 +96,29 @@ const ProductDetail = () => {
             )}
 
             {/* Action Buttons */}
-            {product.status === 'available' && (
-              <div className="mt-8 flex flex-wrap gap-3">
-                <InquiryDialog type="hold" productId={product.id} productTitle={product.title} />
-                <InquiryDialog type="offer" productId={product.id} productTitle={product.title} />
-                <InquiryDialog type="inquiry" productId={product.id} productTitle={product.title} />
-              </div>
-            )}
+            <div className="mt-8 flex flex-wrap gap-3">
+              {product.status === 'available' && (
+                <>
+                  <InquiryDialog type="hold" productId={product.id} productTitle={product.title} />
+                  <InquiryDialog type="offer" productId={product.id} productTitle={product.title} />
+                  <InquiryDialog type="inquiry" productId={product.id} productTitle={product.title} />
+                </>
+              )}
+              <Button
+                variant="outline"
+                className="text-xs tracking-[0.15em] uppercase"
+                onClick={async () => {
+                  try {
+                    await generateSpecSheet(product, window.location.origin);
+                    toast.success('Spec sheet downloaded!');
+                  } catch {
+                    toast.error('Failed to generate spec sheet');
+                  }
+                }}
+              >
+                <FileText size={14} className="mr-1" /> Spec Sheet
+              </Button>
+            </div>
           </div>
         </div>
       </div>
