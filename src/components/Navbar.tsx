@@ -1,12 +1,13 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, ArrowLeft } from 'lucide-react';
 import logoTop from '@/assets/logo-top.png';
 import logoBottom from '@/assets/logo-bottom.png';
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  const isProductPage = location.pathname.startsWith('/product/');
 
   const links = [
     { to: '/catalog', label: 'catalog' },
@@ -20,7 +21,13 @@ const Navbar = () => {
       <div className="bg-black">
         {/* Desktop: 3-column grid for centered logo */}
         <div className="container mx-auto hidden md:grid grid-cols-3 items-center h-14 px-4">
-          <div /> {/* Left spacer */}
+          <div className="justify-self-start">
+            {isProductPage && (
+              <Link to="/catalog" className="text-white hover:opacity-70 transition-opacity">
+                <ArrowLeft size={20} />
+              </Link>
+            )}
+          </div>
           <Link to="/" className="justify-self-center hover:opacity-80 transition-opacity">
             <img src={logoTop} alt="Warehouse 414" className="h-10 w-auto" />
           </Link>
@@ -40,9 +47,16 @@ const Navbar = () => {
         </div>
         {/* Mobile: flex layout */}
         <div className="container mx-auto flex md:hidden items-center justify-between h-14 px-4">
-          <Link to="/" className="hover:opacity-80 transition-opacity">
-            <img src={logoTop} alt="Warehouse 414" className="h-10 w-auto" />
-          </Link>
+          <div className="flex items-center gap-3">
+            {isProductPage && (
+              <Link to="/catalog" className="text-white hover:opacity-70 transition-opacity">
+                <ArrowLeft size={20} />
+              </Link>
+            )}
+            <Link to="/" className="hover:opacity-80 transition-opacity">
+              <img src={logoTop} alt="Warehouse 414" className="h-10 w-auto" />
+            </Link>
+          </div>
           <button className="text-white" onClick={() => setOpen(!open)}>
             {open ? <X size={20} /> : <Menu size={20} />}
           </button>
