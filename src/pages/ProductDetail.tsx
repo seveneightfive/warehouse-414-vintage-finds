@@ -42,8 +42,8 @@ const ProductDetail = () => {
 
   return (
     <div>
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid md:grid-cols-2 gap-12">
+      <div className="container mx-auto px-4 py-6 md:py-12">
+        <div className="grid md:grid-cols-2 gap-6 md:gap-12">
           {/* Image Gallery */}
           <div>
             <div className="aspect-square overflow-hidden rounded-sm bg-muted mb-3 relative">
@@ -82,14 +82,14 @@ const ProductDetail = () => {
 
           {/* Details */}
           <div>
-            <h1 className="font-display text-3xl tracking-wide text-foreground mb-2">{product.name}</h1>
+            <h1 className="font-display text-2xl md:text-3xl tracking-wide text-foreground mb-2">{product.name}</h1>
             {product.designer && (
               <p className="text-muted-foreground text-sm mb-1">
                 Designer: <a href={`/designer/${product.designer.id}`} className="hover:text-primary transition-colors">{product.designer.name}</a>
               </p>
             )}
             {product.maker && <p className="text-muted-foreground text-sm mb-1">Maker: {product.maker.name}</p>}
-            {product.price && <p className="text-2xl text-foreground font-medium mt-4">${product.price.toLocaleString()}</p>}
+            {product.price && <p className="text-xl md:text-2xl text-foreground font-medium mt-4">${product.price.toLocaleString()}</p>}
 
             <div className="mt-6 space-y-2 text-sm text-muted-foreground">
               {product.product_dimensions && <p><span className="text-foreground">Dimensions:</span> {product.product_dimensions}</p>}
