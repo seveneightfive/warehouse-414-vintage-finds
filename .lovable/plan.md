@@ -1,22 +1,14 @@
 
-# Add Back Arrow to Product Detail Page
 
-## What We're Doing
-Adding a back arrow in the top-left corner of the navbar (opposite the menu links) that appears only on product detail pages, allowing users to navigate back to the catalog without losing their place.
+# Show Sold Products in Catalog
 
-## Approach
-Modify the Navbar component to detect when the user is on a `/product/` route and show an `ArrowLeft` icon in the left column that navigates back to `/catalog`. This uses the existing 3-column grid on desktop (replacing the empty left spacer) and adds the arrow before the logo on mobile.
+## Change
+Update the default status filter in `src/hooks/use-products.ts` to include `sold` products.
 
 ## Technical Details
 
-### File: `src/components/Navbar.tsx`
-- Import `ArrowLeft` from `lucide-react`
-- Detect product detail pages via `location.pathname.startsWith('/product/')`
-- **Desktop**: Replace the empty `<div />` left spacer with a `<Link to="/catalog">` containing the `ArrowLeft` icon (white, hover:opacity effect), using `justify-self-start`
-- **Mobile**: Add the same back arrow link before the logo in the mobile flex layout
-- Use `useNavigate` with `navigate(-1)` as an alternative -- but linking directly to `/catalog` is more reliable since the user may have arrived from elsewhere
+### File: `src/hooks/use-products.ts`
+- Line 37: Change `.in('status', ['available', 'on_hold'])` to `.in('status', ['available', 'on_hold', 'sold'])`
 
-### Behavior
-- Arrow only visible on product detail pages (`/product/:id`)
-- Clicking navigates to `/catalog`
-- Styled white to match the black navbar bar, with hover opacity transition
+This ensures sold products appear in the catalog grid with their existing black "sold" badge overlay. No other files need changes -- the badge rendering logic in `ProductCard.tsx` is already in place.
+
