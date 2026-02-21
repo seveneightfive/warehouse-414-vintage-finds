@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useProducts, useFilterOptions } from '@/hooks/use-products';
 import ProductCard from '@/components/ProductCard';
 import { Input } from '@/components/ui/input';
@@ -6,16 +6,31 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Search, X, SlidersHorizontal } from 'lucide-react';
+import { useState } from 'react';
 
 const Catalog = () => {
-  const [search, setSearch] = useState('');
-  const [designerId, setDesignerId] = useState<string>('');
-  const [makerId, setMakerId] = useState<string>('');
-  const [categoryId, setCategoryId] = useState<string>('');
-  const [styleId, setStyleId] = useState<string>('');
-  const [periodId, setPeriodId] = useState<string>('');
-  const [countryId, setCountryId] = useState<string>('');
+  const [searchParams, setSearchParams] = useSearchParams();
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const search = searchParams.get('q') || '';
+  const designerId = searchParams.get('designer') || '';
+  const makerId = searchParams.get('maker') || '';
+  const categoryId = searchParams.get('category') || '';
+  const styleId = searchParams.get('style') || '';
+  const periodId = searchParams.get('period') || '';
+  const countryId = searchParams.get('country') || '';
+
+  const setParam = (key: string, value: string) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (value) {
+        next.set(key, value);
+      } else {
+        next.delete(key);
+      }
+      return next;
+    }, { replace: true });
+  };
 
   const { data: filterOptions } = useFilterOptions();
   const { data: products, isLoading } = useProducts({
@@ -31,24 +46,18 @@ const Catalog = () => {
   const activeFilterCount = [designerId, makerId, categoryId, styleId, periodId, countryId].filter(Boolean).length;
 
   const clearFilters = () => {
-    setSearch('');
-    setDesignerId('');
-    setMakerId('');
-    setCategoryId('');
-    setStyleId('');
-    setPeriodId('');
-    setCountryId('');
+    setSearchParams({}, { replace: true });
   };
 
   const filterSelect = (
     label: string,
+    paramKey: string,
     value: string,
-    onChange: (v: string) => void,
     options: { id: string; name: string }[] | undefined
   ) => (
     <div className="space-y-1.5 font-display">
       <label className="text-sm font-medium text-foreground">{label}</label>
-      <Select value={value} onValueChange={onChange}>
+      <Select value={value} onValueChange={(v) => setParam(paramKey, v === '__all__' ? '' : v)}>
         <SelectTrigger className="bg-card border-border text-sm font-display">
           <SelectValue placeholder={`All ${label}s`} />
         </SelectTrigger>
@@ -81,7 +90,7 @@ const Catalog = () => {
             <Input
               placeholder="Search products..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => setParam('q', e.target.value)}
               className="pl-10 bg-card border-border"
             />
           </div>
@@ -110,12 +119,12 @@ const Catalog = () => {
             <SheetTitle className="font-display lowercase font-bold">filters</SheetTitle>
           </SheetHeader>
           <div className="mt-6 space-y-4">
-            {filterSelect('Category', categoryId, (v) => setCategoryId(v === '__all__' ? '' : v), filterOptions?.categories)}
-            {filterSelect('Style', styleId, (v) => setStyleId(v === '__all__' ? '' : v), filterOptions?.styles)}
-            {filterSelect('Designer', designerId, (v) => setDesignerId(v === '__all__' ? '' : v), filterOptions?.designers)}
-            {filterSelect('Maker', makerId, (v) => setMakerId(v === '__all__' ? '' : v), filterOptions?.makers)}
-            {filterSelect('Period', periodId, (v) => setPeriodId(v === '__all__' ? '' : v), filterOptions?.periods)}
-            {filterSelect('Country', countryId, (v) => setCountryId(v === '__all__' ? '' : v), filterOptions?.countries)}
+            {filterSelect('Category', 'category', categoryId, filterOptions?.categories)}
+            {filterSelect('Style', 'style', styleId, filterOptions?.styles)}
+            {filterSelect('Designer', 'designer', designerId, filterOptions?.designers)}
+            {filterSelect('Maker', 'maker', makerId, filterOptions?.makers)}
+            {filterSelect('Period', 'period', periodId, filterOptions?.periods)}
+            {filterSelect('Country', 'country', countryId, filterOptions?.countries)}
           </div>
           <div className="mt-6 flex items-center gap-3">
             {activeFilterCount > 0 && (
