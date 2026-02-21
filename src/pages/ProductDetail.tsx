@@ -7,12 +7,15 @@ import { generateSpecSheet } from '@/lib/generate-spec-sheet';
 import { Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import InquiryDialog from '@/components/InquiryDialog';
+import ImageLightbox from '@/components/ImageLightbox';
 
 const ProductDetail = () => {
   const { id } = useParams();
   const { data: product, isLoading } = useProduct(id);
   const { data: similar } = useSimilarProducts(id, product?.category_id);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
   const touchStart = useRef<number | null>(null);
 
   const images = product?.product_images?.sort((a, b) => a.sort_order - b.sort_order) || [];
@@ -77,7 +80,7 @@ const ProductDetail = () => {
               onTouchEnd={onTouchEnd}
             >
               {currentImage ? (
-                <img src={currentImage.image_url} alt={product.name} className="w-full h-full object-cover" />
+                <img src={currentImage.image_url} alt={product.name} className="w-full h-full object-cover cursor-pointer" onClick={() => { setLightboxIndex(selectedImage); setLightboxOpen(true); }} />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">No Image</div>
               )}
@@ -153,7 +156,7 @@ const ProductDetail = () => {
         <section className="container mx-auto px-5 py-8">
           <div className="flex gap-3 overflow-x-auto">
             {allImages.map((img) => (
-              <div key={img.id} className="flex-shrink-0 w-[calc(25%-9px)] min-w-[200px] aspect-square overflow-hidden rounded-sm bg-muted">
+              <div key={img.id} className="flex-shrink-0 w-[calc(25%-9px)] min-w-[200px] aspect-square overflow-hidden rounded-sm bg-muted cursor-pointer" onClick={() => { setLightboxIndex(allImages.indexOf(img)); setLightboxOpen(true); }}>
                 <img src={img.image_url} alt="" className="w-full h-full object-cover" />
               </div>
             ))}
@@ -250,6 +253,12 @@ const ProductDetail = () => {
           </div>
         </div>
       </div>
+      <ImageLightbox
+        images={allImages}
+        initialIndex={lightboxIndex}
+        open={lightboxOpen}
+        onOpenChange={setLightboxOpen}
+      />
     </div>
   );
 };
