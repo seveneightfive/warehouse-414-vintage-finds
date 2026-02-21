@@ -1,52 +1,25 @@
 
 
-# Catalog: Filter Drawer + Sticky Toolbar
+# Swap Header Logo
 
 ## Overview
 
-Move the filter dropdowns into a slide-out Sheet (side drawer) triggered by a "Filter" button. Add a sticky toolbar at the top of the catalog page containing the search input, filter button, and a "back to catalog" link that stays visible while scrolling.
+Replace the current logo asset with the new one from the provided URL and remove the `invert` CSS class since this logo is already light-colored and will display correctly on the black header.
 
 ## Changes
 
-### 1. Modify `src/pages/Catalog.tsx`
+### 1. Download new logo asset
 
-- **Sticky toolbar**: Wrap the search input, filter button, and active filter count in a `sticky top-16 z-40 bg-background` bar (top-16 accounts for the fixed navbar). Add a bottom border for visual separation.
-- **Filter drawer**: Use the existing `Sheet` component (from `src/components/ui/sheet.tsx`) opening from the right side. Move all six Select dropdowns (Designer, Maker, Category, Style, Period, Country) into the Sheet body, stacked vertically with labels. Include a "Clear Filters" and "Close" button inside the drawer.
-- **Filter badge**: Show an active filter count badge on the filter button when filters are applied.
-- **Back to top**: The page title "Catalog" stays in the sticky bar as a clickable element that scrolls to the top, serving as the "back to catalog" anchor.
+Save the image from `https://aevfqaltuiumvnzusmkg.supabase.co/storage/v1/object/public/site-images/logo-545.jpg` as `src/assets/logo.jpg` (replacing the existing file).
 
-### Layout of sticky bar
+### 2. Update `src/components/Navbar.tsx`
 
-```text
-+-----------------------------------------------------------+
-|  Catalog (title/anchor)   [Search input...]   [Filter (3)] |
-+-----------------------------------------------------------+
-```
-
-### Drawer contents (right side sheet)
-
-```text
-+-----------------------------+
-|  Filters              [X]   |
-|-----------------------------|
-|  Designer      [Select v]   |
-|  Maker         [Select v]   |
-|  Category      [Select v]   |
-|  Style         [Select v]   |
-|  Period        [Select v]   |
-|  Country       [Select v]   |
-|                              |
-|  [Clear Filters]             |
-+-----------------------------+
-```
+- Remove the `invert` class from the `<img>` tag on line 20 since this logo is already light/white and doesn't need color inversion
+- The import path stays the same (`@/assets/logo.jpg`)
 
 ## Technical Details
 
-- Import `Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger` from `@/components/ui/sheet`
-- Import `SlidersHorizontal` icon from lucide-react for the filter button
-- Add `useState<boolean>` for drawer open state
-- The sticky bar uses `sticky top-16 z-40 bg-background border-b border-border py-4` -- `top-16` aligns it below the fixed 64px navbar
-- Active filter count is computed from the existing `hasFilters` logic, counting non-empty filter values
-- No new files or dependencies needed
-- The product grid scrolls normally below the sticky bar
+- Single file modification: `Navbar.tsx` line 20 changes from `className="h-10 w-auto invert"` to `className="h-10 w-auto"`
+- One asset replacement: `src/assets/logo.jpg`
+- No new dependencies
 
