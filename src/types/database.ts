@@ -163,3 +163,20 @@ export type Settings = {
   value: string;
   created_at: string;
 };
+
+export type Collection = {
+  id: string;
+  name: string;
+  slug: string | null;
+  description: string | null;
+  cover_image: string | null;
+  created_at: string;
+};
+
+export type CollectionProduct = {
+  id: string;
+  collection_id: string;
+  product_id: string;
+  sort_order: number;
+  product?: Product;
+};

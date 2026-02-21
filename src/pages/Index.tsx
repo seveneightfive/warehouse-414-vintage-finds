@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useFeaturedProducts } from '@/hooks/use-products';
 import ProductCard from '@/components/ProductCard';
+import FeaturedCollections from '@/components/FeaturedCollections';
 import heroImage from '@/assets/hero-warehouse.jpg';
 
 const Index = () => {
@@ -30,6 +31,9 @@ const Index = () => {
           </Link>
         </div>
       </section>
+
+      {/* Collections */}
+      <FeaturedCollections />
 
       {/* Featured Products */}
       <section className="container mx-auto px-4 py-20">
