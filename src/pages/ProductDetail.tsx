@@ -46,11 +46,21 @@ const ProductDetail = () => {
         <div className="grid md:grid-cols-2 gap-12">
           {/* Image Gallery */}
           <div>
-            <div className="aspect-square overflow-hidden rounded-sm bg-muted mb-3">
+            <div className="aspect-square overflow-hidden rounded-sm bg-muted mb-3 relative">
               {displayImageUrl ? (
                 <img src={displayImageUrl} alt={product.name} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">No Image</div>
+              )}
+              {product.status === 'sold' && (
+                <span className="absolute top-3 left-3 bg-black text-white font-display text-xs tracking-[0.15em] px-3 py-1.5">
+                  sold
+                </span>
+              )}
+              {product.status === 'on_hold' && (
+                <span className="absolute top-3 left-3 bg-white text-black font-display text-xs tracking-[0.15em] px-3 py-1.5">
+                  on hold
+                </span>
               )}
             </div>
             {images.length > 1 && (

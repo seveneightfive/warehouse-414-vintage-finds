@@ -8,7 +8,7 @@ const ProductCard = ({ product }: { product: Product }) => {
 
   return (
     <Link to={`/product/${product.id}`} className="group block">
-      <div className="aspect-square overflow-hidden rounded-sm bg-muted mb-3">
+      <div className="aspect-square overflow-hidden rounded-sm bg-muted mb-3 relative">
         {imageUrl ? (
           <img
             src={imageUrl}
@@ -21,6 +21,16 @@ const ProductCard = ({ product }: { product: Product }) => {
             No Image
           </div>
         )}
+        {product.status === 'sold' && (
+          <span className="absolute top-2 left-2 bg-black text-white font-display text-[10px] tracking-[0.15em] px-2.5 py-1">
+            sold
+          </span>
+        )}
+        {product.status === 'on_hold' && (
+          <span className="absolute top-2 left-2 bg-white text-black font-display text-[10px] tracking-[0.15em] px-2.5 py-1">
+            on hold
+          </span>
+        )}
       </div>
       <h3 className="text-sm font-display tracking-wide text-foreground group-hover:text-primary transition-colors line-clamp-2">
         {product.name}
@@ -32,11 +42,6 @@ const ProductCard = ({ product }: { product: Product }) => {
         <p className="text-sm text-foreground mt-1 font-medium">
           ${product.price.toLocaleString()}
         </p>
-      )}
-      {product.status === 'on_hold' && (
-        <span className="inline-block mt-1 text-[10px] tracking-[0.15em] uppercase text-primary">
-          on hold
-        </span>
       )}
     </Link>
   );
