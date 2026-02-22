@@ -7,12 +7,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Search, X, SlidersHorizontal, EyeOff, Eye } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 
 const Catalog = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [hideSold, setHideSold] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (searchOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [searchOpen]);
 
   const search = searchParams.get('q') || '';
   const designerId = searchParams.get('designer') || '';
@@ -99,48 +107,122 @@ const Catalog = () => {
     <div>
       {/* Sticky toolbar */}
       <div className="sticky top-[6.5rem] z-40 bg-background border-b border-border">
-        <div className="container mx-auto px-4 py-4 flex items-center gap-4">
-          <button
-            onClick={scrollToTop}
-            className="font-display text-lg tracking-[0.3em] uppercase text-foreground shrink-0 hover:text-primary transition-colors"
-          >
-            Catalog
-          </button>
+        <div className="container mx-auto px-4 md:px-4 px-5 py-3 md:py-4">
+          {/* Desktop layout */}
+          <div className="hidden md:flex items-center gap-4">
+            <button
+              onClick={scrollToTop}
+              className="font-display text-lg tracking-[0.3em] uppercase text-foreground shrink-0 hover:text-primary transition-colors"
+            >
+              Catalog
+            </button>
 
-          <div className="relative flex-1 max-w-md min-w-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-            <Input
-              placeholder="Search products..."
-              value={search}
-              onChange={(e) => setParam('q', e.target.value)}
-              className="pl-10 bg-card border-border"
-            />
+            <div className="relative flex-1 max-w-md min-w-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+              <Input
+                placeholder="Search products..."
+                value={search}
+                onChange={(e) => setParam('q', e.target.value)}
+                className="pl-10 bg-card border-border"
+              />
+            </div>
+
+            <Button
+              variant={hideSold ? "default" : "outline"}
+              size="sm"
+              onClick={() => setHideSold(!hideSold)}
+              className="shrink-0 gap-2"
+            >
+              {hideSold ? <EyeOff size={16} /> : <Eye size={16} />}
+              {hideSold ? 'Sold Hidden' : 'Hide Sold'}
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDrawerOpen(true)}
+              className="shrink-0 gap-2"
+            >
+              <SlidersHorizontal size={16} />
+              Filter
+              {activeFilterCount > 0 && (
+                <span className="ml-1 bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+            </Button>
           </div>
 
-          <Button
-            variant={hideSold ? "default" : "outline"}
-            size="sm"
-            onClick={() => setHideSold(!hideSold)}
-            className="shrink-0 gap-2"
-          >
-            {hideSold ? <EyeOff size={16} /> : <Eye size={16} />}
-            <span className="hidden sm:inline">{hideSold ? 'Sold Hidden' : 'Hide Sold'}</span>
-          </Button>
+          {/* Mobile layout */}
+          <div className="flex md:hidden items-center gap-2">
+            <button
+              onClick={scrollToTop}
+              className="font-display text-sm tracking-[0.2em] uppercase text-foreground shrink-0 hover:text-primary transition-colors"
+            >
+              Catalog
+            </button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setDrawerOpen(true)}
-            className="shrink-0 gap-2"
-          >
-            <SlidersHorizontal size={16} />
-            <span className="hidden sm:inline">Filter</span>
-            {activeFilterCount > 0 && (
-              <span className="ml-1 bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                {activeFilterCount}
-              </span>
-            )}
-          </Button>
+            <div className="flex-1" />
+
+            <Button
+              variant={search ? "default" : "ghost"}
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => {
+                setSearchOpen(!searchOpen);
+                if (searchOpen && search) setParam('q', '');
+              }}
+            >
+              {searchOpen ? <X size={16} /> : <Search size={16} />}
+            </Button>
+
+            <Button
+              variant={hideSold ? "default" : "ghost"}
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setHideSold(!hideSold)}
+            >
+              {hideSold ? <EyeOff size={16} /> : <Eye size={16} />}
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 relative"
+              onClick={() => setDrawerOpen(true)}
+            >
+              <SlidersHorizontal size={16} />
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+            </Button>
+          </div>
+
+          {/* Mobile collapsible search */}
+          {searchOpen && (
+            <div className="md:hidden mt-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+                <Input
+                  ref={searchInputRef}
+                  placeholder="Search products..."
+                  value={search}
+                  onChange={(e) => setParam('q', e.target.value)}
+                  className="pl-9 h-9 bg-card border-border text-sm"
+                />
+                {search && (
+                  <button
+                    onClick={() => setParam('q', '')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
