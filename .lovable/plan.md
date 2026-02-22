@@ -1,27 +1,23 @@
 
 
-## Fix Mobile Layout Overflow on Product Detail Page
+## Fix Mobile Layout - Product Detail Image Gallery
 
 ### Problem
-On mobile, the product detail page has two overflow issues:
-1. The hero image gallery extends beyond the right edge of the screen
-2. Text content may also overflow past the screen width
+The hero image gallery on the product detail page extends beyond the phone screen width on mobile. The image and its container are not properly constrained within the CSS grid, causing horizontal overflow.
 
 ### Root Cause
-The outer page wrapper (`div.pb-24`) lacks `overflow-x-hidden`, allowing child elements to extend beyond the viewport. Additionally, the horizontal image row has `min-w-[200px]` items that can push content wider than the screen.
+CSS Grid children default to `min-width: auto`, which means they won't shrink below their content size. The gallery's `aspect-square` container calculates its width based on content rather than being constrained by the grid column. Adding `min-w-0` forces grid children to respect the column boundary.
 
 ### Changes
 
 **File: `src/pages/ProductDetail.tsx`**
 
-1. Add `overflow-x-hidden` to the root wrapper div (line 71) to prevent any content from spilling past the screen edge:
-   - Change `<div className="pb-24">` to `<div className="pb-24 overflow-x-hidden">`
+1. Add `min-w-0` to the gallery wrapper (line 76) so the grid child shrinks to fit:
+   - Change: `<div className="max-w-full overflow-hidden">`
+   - To: `<div className="w-full min-w-0 overflow-hidden">`
 
-2. Ensure the gallery container properly constrains on mobile by adding `max-w-full` to the gallery wrapper div (line 76):
-   - Change `<div>` to `<div className="max-w-full overflow-hidden">`
+2. Add `min-w-0` to the "Basic Info" column (line 120) to prevent text overflow on mobile:
+   - Change: `<div>`
+   - To: `<div className="min-w-0">`
 
-3. Fix the horizontal image row items (line 161) to use a smaller `min-w` on mobile:
-   - Change `min-w-[200px]` to `min-w-[150px] md:min-w-[200px]`
-
-These three small changes will ensure the entire page stays within the viewport width on mobile devices.
-
+These two small additions ensure both grid columns respect the viewport boundary on mobile.
