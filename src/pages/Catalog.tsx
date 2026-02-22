@@ -106,8 +106,8 @@ const Catalog = () => {
   return (
     <div>
       {/* Sticky toolbar */}
-      <div className="sticky top-14 md:top-[6.5rem] z-40 bg-background border-b border-border">
-        <div className="container mx-auto px-4 md:px-4 px-5 py-3 md:py-4">
+        <div className="fixed top-14 md:top-[6.5rem] left-0 right-0 z-40 bg-background border-b border-border">
+        <div className="container mx-auto px-5 md:px-4 py-3 md:py-4">
           {/* Desktop layout */}
           <div className="hidden md:flex items-center gap-4">
             <button
@@ -258,7 +258,7 @@ const Catalog = () => {
       </Sheet>
 
       {/* Product Grid */}
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 mt-14 md:mt-16">
         {isLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {Array.from({ length: 12 }).map((_, i) => (
