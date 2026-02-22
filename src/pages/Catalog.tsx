@@ -6,12 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Search, X, SlidersHorizontal } from 'lucide-react';
+import { Search, X, SlidersHorizontal, EyeOff, Eye } from 'lucide-react';
 import { useState, useMemo } from 'react';
 
 const Catalog = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [hideSold, setHideSold] = useState(false);
 
   const search = searchParams.get('q') || '';
   const designerId = searchParams.get('designer') || '';
@@ -50,6 +51,7 @@ const Catalog = () => {
     style_id: styleId || undefined,
     period_id: periodId || undefined,
     country_id: countryId || undefined,
+    status: hideSold ? 'available' : undefined,
   });
 
   const products = useMemo(
@@ -116,13 +118,23 @@ const Catalog = () => {
           </div>
 
           <Button
+            variant={hideSold ? "default" : "outline"}
+            size="sm"
+            onClick={() => setHideSold(!hideSold)}
+            className="shrink-0 gap-2"
+          >
+            {hideSold ? <EyeOff size={16} /> : <Eye size={16} />}
+            <span className="hidden sm:inline">{hideSold ? 'Sold Hidden' : 'Hide Sold'}</span>
+          </Button>
+
+          <Button
             variant="outline"
             size="sm"
             onClick={() => setDrawerOpen(true)}
             className="shrink-0 gap-2"
           >
             <SlidersHorizontal size={16} />
-            Filter
+            <span className="hidden sm:inline">Filter</span>
             {activeFilterCount > 0 && (
               <span className="ml-1 bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center">
                 {activeFilterCount}
