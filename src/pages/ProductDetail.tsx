@@ -2,11 +2,8 @@ import { useParams } from 'react-router-dom';
 import { useState, useRef, useCallback } from 'react';
 import { useProduct, useSimilarProducts } from '@/hooks/use-products';
 import ProductCard from '@/components/ProductCard';
-import { Button } from '@/components/ui/button';
-import { generateSpecSheet } from '@/lib/generate-spec-sheet';
-import { Download, ChevronLeft, ChevronRight } from 'lucide-react';
-import { toast } from 'sonner';
-import InquiryDialog from '@/components/InquiryDialog';
+import ProductActions from '@/components/ProductActions';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import ImageLightbox from '@/components/ImageLightbox';
 
 const ProductDetail = () => {
@@ -169,7 +166,6 @@ const ProductDetail = () => {
         <section className="container mx-auto px-5 py-12 border-t border-border">
           <div className="grid md:grid-cols-2 gap-6 md:gap-16">
             <div className="hidden md:block">
-              {/* On desktop, show featured image next to details */}
               {product.featured_image_url && (
                 <img src={product.featured_image_url} alt={product.name} className="w-full h-auto object-cover rounded-sm" />
               )}
@@ -203,56 +199,23 @@ const ProductDetail = () => {
 
       {/* Sticky Action Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50">
-        <div className="container mx-auto px-5 py-3">
-          <div className="grid grid-cols-4 gap-2">
-            {product.status === 'available' ? (
-              <>
-                <InquiryDialog
-                  type="inquiry"
-                  productId={product.id}
-                  productTitle={product.name}
-                  triggerVariant="default"
-                  triggerClassName="w-full text-xs tracking-[0.15em] uppercase h-11"
-                />
-                <InquiryDialog
-                  type="offer"
-                  productId={product.id}
-                  productTitle={product.name}
-                  triggerVariant="outline"
-                  triggerClassName="w-full text-xs tracking-[0.15em] uppercase h-11"
-                />
-                <InquiryDialog
-                  type="hold"
-                  productId={product.id}
-                  productTitle={product.name}
-                  triggerVariant="outline"
-                  triggerClassName="w-full text-xs tracking-[0.15em] uppercase h-11"
-                />
-              </>
-            ) : (
-              <>
-                <div />
-                <div />
-                <div />
-              </>
+        <div className="container mx-auto px-5 py-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <p className="font-display text-sm tracking-wide text-foreground truncate hidden sm:block">
+              {product.name}
+            </p>
+            {product.price && (
+              <p className="font-display text-sm text-muted-foreground shrink-0">
+                ${product.price.toLocaleString()}
+              </p>
             )}
-            <Button
-              variant="outline"
-              className="w-full text-xs tracking-[0.15em] uppercase h-11"
-              onClick={async () => {
-                try {
-                  await generateSpecSheet(product, window.location.origin);
-                  toast.success('Spec sheet downloaded!');
-                } catch {
-                  toast.error('Failed to generate spec sheet');
-                }
-              }}
-            >
-              <Download size={14} className="mr-1.5" /> spec sheet
-            </Button>
+          </div>
+          <div className="shrink-0">
+            <ProductActions product={product} />
           </div>
         </div>
       </div>
+
       <ImageLightbox
         images={allImages}
         initialIndex={lightboxIndex}
