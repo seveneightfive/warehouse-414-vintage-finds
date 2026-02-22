@@ -1,23 +1,29 @@
 
 
-## Fix Mobile Layout - Product Detail Image Gallery
+## Persist "Hide Sold" Filter via URL Query Parameter
 
 ### Problem
-The hero image gallery on the product detail page extends beyond the phone screen width on mobile. The image and its container are not properly constrained within the CSS grid, causing horizontal overflow.
+The "Hide Sold" toggle uses local React state (`useState`), so it resets when navigating away and back. All other filters already use URL search params and persist correctly.
 
-### Root Cause
-CSS Grid children default to `min-width: auto`, which means they won't shrink below their content size. The gallery's `aspect-square` container calculates its width based on content rather than being constrained by the grid column. Adding `min-w-0` forces grid children to respect the column boundary.
+### Solution
+Move `hideSold` from `useState` to a URL search parameter (`sold=hidden`), matching the pattern already used by every other filter on the page.
 
 ### Changes
 
-**File: `src/pages/ProductDetail.tsx`**
+**File: `src/pages/Catalog.tsx`**
 
-1. Add `min-w-0` to the gallery wrapper (line 76) so the grid child shrinks to fit:
-   - Change: `<div className="max-w-full overflow-hidden">`
-   - To: `<div className="w-full min-w-0 overflow-hidden">`
+1. Remove the `useState` for `hideSold` and instead derive it from search params:
+   - Remove: `const [hideSold, setHideSold] = useState(false);`
+   - Add: `const hideSold = searchParams.get('sold') === 'hidden';`
 
-2. Add `min-w-0` to the "Basic Info" column (line 120) to prevent text overflow on mobile:
-   - Change: `<div>`
-   - To: `<div className="min-w-0">`
+2. Update the toggle handler to use `setParam` instead of `setHideSold`:
+   - Desktop button `onClick`: change from `() => setHideSold(!hideSold)` to `() => setParam('sold', hideSold ? '' : 'hidden')`
+   - Mobile button `onClick`: same change
 
-These two small additions ensure both grid columns respect the viewport boundary on mobile.
+3. No other changes needed -- the existing `status: hideSold ? 'available' : undefined` query logic and `clearFilters` (which resets all params) already work correctly with this approach.
+
+### Why this works
+- Browser back button restores the previous URL including `?sold=hidden`, so the filter persists naturally
+- `clearFilters` already calls `setSearchParams({})`, which will also clear this param
+- Consistent with how every other filter on the page works
+
