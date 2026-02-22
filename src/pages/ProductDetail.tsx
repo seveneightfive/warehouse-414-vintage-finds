@@ -73,7 +73,7 @@ const ProductDetail = () => {
       <div className="container mx-auto px-5 py-6 md:py-12">
         <div className="grid md:grid-cols-2 gap-6 md:gap-12">
           {/* Gallery */}
-          <div className="max-w-full overflow-hidden">
+          <div className="w-full min-w-0 overflow-hidden">
             <div
               className="aspect-square overflow-hidden rounded-sm bg-muted mb-3 relative select-none"
               onTouchStart={onTouchStart}
@@ -117,7 +117,7 @@ const ProductDetail = () => {
           </div>
 
           {/* Basic Info */}
-          <div>
+          <div className="min-w-0">
             <h1 className="font-display text-2xl md:text-3xl tracking-wide text-foreground mb-2">{product.name}</h1>
             {product.designer && (
               <p className="text-muted-foreground text-base mb-1">
