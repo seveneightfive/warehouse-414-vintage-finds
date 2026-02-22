@@ -68,12 +68,12 @@ const ProductDetail = () => {
   ].filter(Boolean) as { label: string; value: string }[];
 
   return (
-    <div className="pb-24">
+    <div className="pb-24 overflow-x-hidden">
       {/* Hero: Gallery + Basic Info */}
       <div className="container mx-auto px-5 py-6 md:py-12">
         <div className="grid md:grid-cols-2 gap-6 md:gap-12">
           {/* Gallery */}
-          <div>
+          <div className="max-w-full overflow-hidden">
             <div
               className="aspect-square overflow-hidden rounded-sm bg-muted mb-3 relative select-none"
               onTouchStart={onTouchStart}
@@ -158,7 +158,7 @@ const ProductDetail = () => {
         <section className="container mx-auto px-5 py-8">
           <div className="flex gap-3 overflow-x-auto">
             {allImages.map((img) => (
-              <div key={img.id} className="flex-shrink-0 w-[calc(25%-9px)] min-w-[200px] aspect-square overflow-hidden rounded-sm bg-muted cursor-pointer" onClick={() => { setLightboxIndex(allImages.indexOf(img)); setLightboxOpen(true); }}>
+              <div key={img.id} className="flex-shrink-0 w-[calc(25%-9px)] min-w-[150px] md:min-w-[200px] aspect-square overflow-hidden rounded-sm bg-muted cursor-pointer" onClick={() => { setLightboxIndex(allImages.indexOf(img)); setLightboxOpen(true); }}>
                 <img src={img.image_url} alt="" className="w-full h-full object-cover" />
               </div>
             ))}
