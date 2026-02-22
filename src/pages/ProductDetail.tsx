@@ -198,9 +198,16 @@ const ProductDetail = () => {
       )}
 
       {/* Sticky Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50">
-        <div className="container mx-auto px-5 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
+      <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-40">
+        <div className="container mx-auto px-5 py-3 flex items-center gap-3">
+          {/* Spec Sheet — far left */}
+          <ProductActions product={product} mode="specsheet" />
+
+          {/* Divider */}
+          <div className="w-px h-6 bg-border shrink-0" />
+
+          {/* Product name + price */}
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <p className="font-display text-sm tracking-wide text-foreground truncate hidden sm:block">
               {product.name}
             </p>
@@ -210,9 +217,9 @@ const ProductDetail = () => {
               </p>
             )}
           </div>
-          <div className="shrink-0">
-            <ProductActions product={product} />
-          </div>
+
+          {/* Inquire / Purchase — far right */}
+          <ProductActions product={product} mode="actions" />
         </div>
       </div>
 
