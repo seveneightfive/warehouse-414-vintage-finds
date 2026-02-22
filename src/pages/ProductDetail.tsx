@@ -3,8 +3,11 @@ import { useState, useRef, useCallback } from 'react';
 import { useProduct, useSimilarProducts } from '@/hooks/use-products';
 import ProductCard from '@/components/ProductCard';
 import ProductActions from '@/components/ProductActions';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import ImageLightbox from '@/components/ImageLightbox';
+import firstdibsLogo from '@/assets/1stdibs-logo.png';
+import ebayLogo from '@/assets/ebay-logo.png';
+import chairishLogo from '@/assets/chairish-logo.png';
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -183,6 +186,33 @@ const ProductDetail = () => {
                 ))}
               </div>
             </div>
+          </div>
+        </section>
+      )}
+
+      {/* Also Listed On */}
+      {(product.firstdibs_url || product.ebay_url || product.chairish_url) && (
+        <section className="container mx-auto px-5 py-10 border-t border-border">
+          <div className="flex items-center gap-6 flex-wrap">
+            <p className="text-muted-foreground text-sm italic">Also listed on:</p>
+            {product.firstdibs_url && (
+              <a href={product.firstdibs_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
+                <img src={firstdibsLogo} alt="1stDibs" className="h-5 object-contain" />
+                <ExternalLink size={14} className="text-muted-foreground" />
+              </a>
+            )}
+            {product.ebay_url && (
+              <a href={product.ebay_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
+                <img src={ebayLogo} alt="eBay" className="h-5 object-contain" />
+                <ExternalLink size={14} className="text-muted-foreground" />
+              </a>
+            )}
+            {product.chairish_url && (
+              <a href={product.chairish_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
+                <img src={chairishLogo} alt="Chairish" className="h-5 object-contain" />
+                <ExternalLink size={14} className="text-muted-foreground" />
+              </a>
+            )}
           </div>
         </section>
       )}
