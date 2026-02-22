@@ -12,7 +12,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 const Catalog = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [hideSold, setHideSold] = useState(false);
+  const hideSold = searchParams.get('sold') === 'hidden';
   const [searchOpen, setSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -130,7 +130,7 @@ const Catalog = () => {
             <Button
               variant={hideSold ? "default" : "outline"}
               size="sm"
-              onClick={() => setHideSold(!hideSold)}
+              onClick={() => setParam('sold', hideSold ? '' : 'hidden')}
               className="shrink-0 gap-2"
             >
               {hideSold ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -180,7 +180,7 @@ const Catalog = () => {
               variant={hideSold ? "default" : "ghost"}
               size="icon"
               className="h-8 w-8"
-              onClick={() => setHideSold(!hideSold)}
+              onClick={() => setParam('sold', hideSold ? '' : 'hidden')}
             >
               {hideSold ? <EyeOff size={16} /> : <Eye size={16} />}
             </Button>
