@@ -37,28 +37,36 @@ export async function generateSpecSheet(product: Product, siteUrl: string) {
   doc.line(margin, y, pageW - margin, y);
   y += 8;
 
-  // Featured image
+  // Featured image (small square)
   const imageUrl = product.featured_image_url;
+  let imgPlaced = false;
+  let imgData: string | null = null;
   if (imageUrl) {
     try {
-      const imgData = await loadImageAsBase64(imageUrl);
+      imgData = await loadImageAsBase64(imageUrl);
       if (imgData) {
-        const imgW = contentW;
-        const imgH = imgW * 0.55;
-        doc.addImage(imgData, 'JPEG', margin, y, imgW, imgH);
-        y += imgH + 8;
+        imgPlaced = true;
       }
     } catch {
       // skip
     }
   }
 
-  // Title
+  const imgSize = 45; // small square
+  const textStartX = imgPlaced ? margin + imgSize + 8 : margin;
+  const textW = imgPlaced ? contentW - imgSize - 8 : contentW;
+  const imgStartY = y;
+
+  if (imgPlaced && imgData) {
+    doc.addImage(imgData, 'JPEG', margin, y, imgSize, imgSize);
+  }
+
+  // Title (beside image if present)
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(18);
   doc.setTextColor(...black);
-  const titleLines = doc.splitTextToSize(product.name, contentW);
-  doc.text(titleLines, margin, y);
+  const titleLines = doc.splitTextToSize(product.name, textW);
+  doc.text(titleLines, textStartX, y + 5);
   y += titleLines.length * 7 + 3;
 
   // Price
@@ -66,8 +74,13 @@ export async function generateSpecSheet(product: Product, siteUrl: string) {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(13);
     doc.setTextColor(...darkGray);
-    doc.text(`$${product.price.toLocaleString()}`, margin, y);
+    doc.text(`$${product.price.toLocaleString()}`, textStartX, y);
     y += 8;
+  }
+
+  // Ensure y is past the image
+  if (imgPlaced) {
+    y = Math.max(y, imgStartY + imgSize + 6);
   }
 
   doc.setDrawColor(...lineGray);
