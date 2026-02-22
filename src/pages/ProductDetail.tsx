@@ -127,7 +127,7 @@ const ProductDetail = () => {
             )}
             {product.short_description && (
               <div
-                className="text-base leading-relaxed text-foreground mt-4 prose prose-sm max-w-none"
+                className="text-base leading-relaxed text-foreground mt-4 prose prose-sm max-w-none md:pr-10"
                 dangerouslySetInnerHTML={{ __html: product.short_description }}
               />
             )}
@@ -137,13 +137,15 @@ const ProductDetail = () => {
 
       {/* About This Piece */}
       {(product.short_description || product.long_description) && (
-        <section className="container mx-auto px-5 py-12 border-t border-border">
-          <div className="grid md:grid-cols-[200px_1fr] gap-6 md:gap-16">
-            <h2 className="font-display text-sm tracking-[0.2em] uppercase text-muted-foreground pt-1">about this piece</h2>
-            <div
-              className="text-base leading-relaxed text-foreground prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: product.long_description || product.short_description || '' }}
-            />
+        <section className="bg-secondary/50 border-t border-border">
+          <div className="container mx-auto px-5 md:pr-16 py-14 md:py-20">
+            <div className="grid md:grid-cols-[200px_1fr] gap-6 md:gap-16">
+              <h2 className="font-display text-sm tracking-[0.2em] uppercase text-muted-foreground pt-1">about this piece</h2>
+              <div
+                className="text-lg leading-[1.9] text-foreground prose max-w-none"
+                dangerouslySetInnerHTML={{ __html: product.long_description || product.short_description || '' }}
+              />
+            </div>
           </div>
         </section>
       )}
