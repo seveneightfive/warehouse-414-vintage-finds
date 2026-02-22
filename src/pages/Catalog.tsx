@@ -106,7 +106,7 @@ const Catalog = () => {
   return (
     <div>
       {/* Sticky toolbar */}
-      <div className="sticky top-[6.5rem] z-40 bg-background border-b border-border">
+      <div className="sticky top-14 md:top-[6.5rem] z-40 bg-background border-b border-border">
         <div className="container mx-auto px-4 md:px-4 px-5 py-3 md:py-4">
           {/* Desktop layout */}
           <div className="hidden md:flex items-center gap-4">

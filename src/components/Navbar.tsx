@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Menu, X, ArrowLeft } from 'lucide-react';
 import logoTop from '@/assets/logo-top.png';
 import logoBottom from '@/assets/logo-bottom.png';
+import logoWhiteFull from '@/assets/warehouse414-white.png';
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
@@ -55,7 +56,7 @@ const Navbar = () => {
               </button>
             )}
             <Link to="/" className="hover:opacity-80 transition-opacity">
-              <img src={logoTop} alt="Warehouse 414" className="h-10 w-auto" />
+              <img src={logoWhiteFull} alt="Warehouse 414" className="h-8 w-auto" />
             </Link>
           </div>
           <button className="text-white" onClick={() => setOpen(!open)}>
@@ -64,8 +65,8 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* White bottom row */}
-      <div className="bg-white border-b border-border">
+      {/* White bottom row - desktop only */}
+      <div className="hidden md:block bg-white border-b border-border">
         <div className="container mx-auto flex justify-center py-2 px-4">
           <Link to="/" className="hover:opacity-80 transition-opacity">
             <img src={logoBottom} alt="Warehouse 414" className="h-8 w-auto" />
