@@ -73,15 +73,21 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* Mobile Nav */}
+      {/* Mobile Nav - Full screen overlay */}
       {open && (
-        <nav className="md:hidden bg-black border-b border-white/10 px-4 pb-4 flex flex-col gap-3">
+        <nav className="md:hidden fixed inset-0 top-0 bg-black z-50 flex flex-col items-center justify-center gap-10">
+          <button
+            className="absolute top-4 right-4 text-white p-2"
+            onClick={() => setOpen(false)}
+          >
+            <X size={28} />
+          </button>
           {links.map((link) => (
             <Link
               key={link.to}
               to={link.to}
               onClick={() => setOpen(false)}
-              className="font-display text-sm tracking-[0.15em] text-white/60 hover:text-primary transition-colors"
+              className="font-display text-2xl tracking-[0.25em] uppercase text-white/70 hover:text-primary transition-colors"
             >
               {link.label}
             </Link>
