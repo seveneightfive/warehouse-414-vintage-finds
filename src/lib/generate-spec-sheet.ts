@@ -3,91 +3,87 @@ import QRCode from 'qrcode';
 import type { Product } from '@/types/database';
 
 export async function generateSpecSheet(product: Product, siteUrl: string) {
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
   const pageW = doc.internal.pageSize.getWidth();
-  const margin = 20;
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 18;
   const contentW = pageW - margin * 2;
   let y = margin;
 
-  const dark = [30, 32, 38] as const;
-  const brass = [194, 160, 82] as const;
-  const gray = [140, 140, 150] as const;
-  const white = [230, 225, 215] as const;
+  const black = [0, 0, 0] as const;
+  const darkGray = [60, 60, 60] as const;
+  const medGray = [130, 130, 130] as const;
+  const lineGray = [200, 200, 200] as const;
 
-  doc.setFillColor(...dark);
-  doc.rect(0, 0, pageW, doc.internal.pageSize.getHeight(), 'F');
+  // Logo
+  try {
+    const logoData = await loadImageAsBase64(`${siteUrl}/images/logo-545.jpg`);
+    if (logoData) {
+      const logoH = 18;
+      const logoW = logoH * 2.5;
+      doc.addImage(logoData, 'JPEG', margin, y, logoW, logoH);
+      y += logoH + 4;
+    }
+  } catch {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.setTextColor(...black);
+    doc.text('WAREHOUSE 414', margin, y + 8);
+    y += 14;
+  }
 
-  doc.setDrawColor(...brass);
+  doc.setDrawColor(...lineGray);
   doc.setLineWidth(0.5);
   doc.line(margin, y, pageW - margin, y);
   y += 8;
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(18);
-  doc.setTextColor(...white);
-  doc.text('WAREHOUSE 414', margin, y);
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(...gray);
-  doc.text('SPEC SHEET', pageW - margin, y, { align: 'right' });
-  y += 4;
-
-  doc.setFontSize(7);
-  doc.text('Curated Vintage & Mid-Century Modern Furniture', margin, y);
-  y += 8;
-
-  doc.setDrawColor(...brass);
-  doc.line(margin, y, pageW - margin, y);
-  y += 12;
-
-  // Product image
-  const firstImage = product.product_images?.sort((a, b) => a.sort_order - b.sort_order)?.[0];
-  const imageUrl = firstImage?.image_url || product.featured_image_url;
+  // Featured image
+  const imageUrl = product.featured_image_url;
   if (imageUrl) {
     try {
       const imgData = await loadImageAsBase64(imageUrl);
       if (imgData) {
         const imgW = contentW;
-        const imgH = imgW * 0.6;
+        const imgH = imgW * 0.55;
         doc.addImage(imgData, 'JPEG', margin, y, imgW, imgH);
-        y += imgH + 10;
+        y += imgH + 8;
       }
     } catch {
-      // Skip image if it fails to load
+      // skip
     }
   }
 
   // Title
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
-  doc.setTextColor(...white);
+  doc.setFontSize(18);
+  doc.setTextColor(...black);
   const titleLines = doc.splitTextToSize(product.name, contentW);
   doc.text(titleLines, margin, y);
-  y += titleLines.length * 8 + 4;
+  y += titleLines.length * 7 + 3;
 
+  // Price
   if (product.price) {
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(14);
-    doc.setTextColor(...brass);
+    doc.setFontSize(13);
+    doc.setTextColor(...darkGray);
     doc.text(`$${product.price.toLocaleString()}`, margin, y);
-    y += 10;
+    y += 8;
   }
 
-  doc.setDrawColor(60, 62, 68);
+  doc.setDrawColor(...lineGray);
   doc.line(margin, y, pageW - margin, y);
-  y += 8;
+  y += 6;
 
-  // Details grid
+  // Details table
   const details: [string, string][] = [];
   if (product.designer?.name) details.push(['Designer', product.designer.name]);
   if (product.maker?.name) details.push(['Maker', product.maker.name]);
-  if (product.category?.name) details.push(['Category', product.category.name]);
   if (product.style?.name) details.push(['Style', product.style.name]);
   if (product.period?.name) details.push(['Period', product.period.name]);
   if (product.country?.name) details.push(['Country of Origin', product.country.name]);
   if (product.year_created) details.push(['Year', product.year_created]);
-  if (product.product_dimensions) details.push(['Dimensions', product.product_dimensions]);
+  if (product.product_dimensions) details.push(['Product Dimensions', product.product_dimensions]);
+  if ((product as any).box_dimensions) details.push(['Box Dimensions', (product as any).box_dimensions]);
   if (product.materials) details.push(['Materials', product.materials]);
   if (product.condition) details.push(['Condition', product.condition]);
   if (product.sku) details.push(['SKU', product.sku]);
@@ -100,67 +96,74 @@ export async function generateSpecSheet(product: Product, siteUrl: string) {
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(7);
-      doc.setTextColor(...gray);
+      doc.setTextColor(...medGray);
       doc.text(label.toUpperCase(), x, y);
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
-      doc.setTextColor(...white);
-      doc.text(value, x, y + 5);
+      doc.setTextColor(...black);
+      doc.text(value, x, y + 4.5);
     }
-    y += 14;
+    y += 13;
   }
 
   // Description
-  const desc = product.short_description || product.long_description;
+  const desc = product.short_description;
   if (desc) {
-    y += 4;
-    doc.setDrawColor(60, 62, 68);
+    y += 2;
+    doc.setDrawColor(...lineGray);
     doc.line(margin, y, pageW - margin, y);
-    y += 8;
+    y += 6;
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
-    doc.setTextColor(...gray);
+    doc.setTextColor(...medGray);
     doc.text('DESCRIPTION', margin, y);
-    y += 6;
+    y += 5;
 
+    // Strip HTML tags for PDF
+    const plainDesc = desc.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
     doc.setFontSize(9);
-    doc.setTextColor(...white);
-    const descLines = doc.splitTextToSize(desc, contentW);
+    doc.setTextColor(...darkGray);
+    const descLines = doc.splitTextToSize(plainDesc, contentW);
     doc.text(descLines, margin, y);
-    y += descLines.length * 4.5 + 6;
   }
 
-  // QR Code + footer
+  // QR Code + footer (anchored to bottom)
   const productUrl = `${siteUrl}/product/${product.id}`;
   const qrDataUrl = await QRCode.toDataURL(productUrl, {
     width: 200,
     margin: 1,
-    color: { dark: '#e6e1d7', light: '#1e2026' },
+    color: { dark: '#000000', light: '#ffffff' },
   });
 
-  const footerY = doc.internal.pageSize.getHeight() - 35;
+  const footerY = pageH - 30;
 
-  doc.setDrawColor(...brass);
+  doc.setDrawColor(...lineGray);
   doc.line(margin, footerY - 5, pageW - margin, footerY - 5);
 
-  const qrSize = 22;
+  const qrSize = 20;
   doc.addImage(qrDataUrl, 'PNG', pageW - margin - qrSize, footerY, qrSize, qrSize);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.setTextColor(...gray);
-  doc.text('Scan to view online', pageW - margin - qrSize, footerY + qrSize + 4);
+  doc.setFontSize(6.5);
+  doc.setTextColor(...medGray);
+  doc.text('Scan to view online', pageW - margin - qrSize, footerY + qrSize + 3.5);
 
-  doc.setFontSize(8);
-  doc.setTextColor(...white);
-  doc.text('WAREHOUSE 414', margin, footerY + 4);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.setTextColor(...black);
+  doc.text('WAREHOUSE 414', margin, footerY + 3);
 
-  doc.setFontSize(7);
-  doc.setTextColor(...gray);
-  doc.text(siteUrl, margin, footerY + 9);
-  doc.text(`Generated ${new Date().toLocaleDateString()}`, margin, footerY + 14);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(...darkGray);
+  doc.text('785.232.8008', margin, footerY + 8);
+  doc.text('sales@warehouse414.com', margin, footerY + 12.5);
+
+  doc.setFontSize(6.5);
+  doc.setTextColor(...medGray);
+  doc.text(`Generated ${new Date().toLocaleDateString()}`, margin, footerY + 17);
 
   const filename = `W414-${product.name.replace(/[^a-zA-Z0-9]/g, '-').substring(0, 40)}.pdf`;
   doc.save(filename);
