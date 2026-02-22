@@ -138,7 +138,7 @@ const ProductDetail = () => {
       {/* About This Piece */}
       {(product.short_description || product.long_description) && (
         <section className="bg-secondary/50 border-t border-border">
-          <div className="container mx-auto px-5 md:pr-16 py-14 md:py-20">
+          <div className="container mx-auto px-5 md:pr-24 py-14 md:py-20">
             <div className="grid md:grid-cols-[200px_1fr] gap-6 md:gap-16">
               <h2 className="font-display text-sm tracking-[0.2em] uppercase text-muted-foreground pt-1">about this piece</h2>
               <div
