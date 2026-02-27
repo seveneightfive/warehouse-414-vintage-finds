@@ -27,12 +27,21 @@ const AdminInbox = ({ title, tableName, showAmount }: AdminInboxProps) => {
   });
 
   const updateStatus = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+    mutationFn: async ({ id, status, productId }: { id: string; status: string; productId?: string }) => {
       const { error } = await supabase.from(tableName).update({ status }).eq('id', id);
       if (error) throw error;
+      // Sync product status for holds
+      if (tableName === 'product_holds' && productId) {
+        if (status === 'approved') {
+          await supabase.from('products').update({ status: 'on_hold' }).eq('id', productId);
+        } else if (status === 'released') {
+          await supabase.from('products').update({ status: 'available' }).eq('id', productId);
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [tableName] });
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       toast.success('Updated');
     },
   });
@@ -68,13 +77,18 @@ const AdminInbox = ({ title, tableName, showAmount }: AdminInboxProps) => {
                   <div className="flex gap-1">
                     {item.status === 'pending' && (
                       <>
-                        <Button size="sm" variant="outline" onClick={() => updateStatus.mutate({ id: item.id as string, status: 'approved' })}>
+                        <Button size="sm" variant="outline" onClick={() => updateStatus.mutate({ id: item.id as string, status: 'approved', productId: item.product_id as string })}>
                           Approve
                         </Button>
                         <Button size="sm" variant="ghost" onClick={() => updateStatus.mutate({ id: item.id as string, status: 'declined' })}>
                           Decline
                         </Button>
                       </>
+                    )}
+                    {tableName === 'product_holds' && item.status === 'approved' && (
+                      <Button size="sm" variant="outline" onClick={() => updateStatus.mutate({ id: item.id as string, status: 'released', productId: item.product_id as string })}>
+                        Release Hold
+                      </Button>
                     )}
                   </div>
                 </TableCell>

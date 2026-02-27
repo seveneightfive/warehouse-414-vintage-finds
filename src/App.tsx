@@ -15,6 +15,7 @@ import AdminLogin from "./pages/AdminLogin";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminProducts from "./pages/admin/AdminProducts";
+import AdminProductForm from "./pages/admin/AdminProductForm";
 import AdminCrudList from "./pages/admin/AdminCrudList";
 import AdminInbox from "./pages/admin/AdminInbox";
 import CollectionDetail from "./pages/CollectionDetail";
@@ -46,6 +47,8 @@ const App = () => (
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
               <Route path="products" element={<AdminProducts />} />
+              <Route path="products/new" element={<AdminProductForm />} />
+              <Route path="products/:id" element={<AdminProductForm />} />
               <Route path="holds" element={<AdminInbox title="Holds" tableName="product_holds" />} />
               <Route path="offers" element={<AdminInbox title="Offers" tableName="offers" showAmount />} />
               <Route path="inquiries" element={<AdminInbox title="Inquiries" tableName="purchase_inquiries" />} />
