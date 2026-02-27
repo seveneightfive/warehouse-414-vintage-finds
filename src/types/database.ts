@@ -29,6 +29,7 @@ export type Product = {
   firstdibs_url: string | null;
   chairish_url: string | null;
   ebay_url: string | null;
+  sold_on: string | null;
   created_at: string;
   updated_at: string;
   designer?: Designer | null;
