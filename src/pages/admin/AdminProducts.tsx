@@ -1,15 +1,18 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Link } from 'react-router-dom';
-import { Pencil, Eye, Trash2 } from 'lucide-react';
+import { Pencil, Eye, Trash2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Product } from '@/types/database';
 
 const AdminProducts = () => {
   const queryClient = useQueryClient();
+  const [search, setSearch] = useState('');
   const { data: products, isLoading } = useQuery({
     queryKey: ['admin-products'],
     queryFn: async () => {
@@ -43,13 +46,28 @@ const AdminProducts = () => {
     }
   };
 
+  const filtered = products?.filter((p) =>
+    !search || p.name.toLowerCase().includes(search.toLowerCase()) ||
+    p.sku?.toLowerCase().includes(search.toLowerCase()) ||
+    p.designer?.name?.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <h1 className="font-display text-2xl tracking-wide text-foreground">Products</h1>
         <Link to="/admin/products/new">
           <Button className="text-xs tracking-[0.1em] uppercase">Add Product</Button>
         </Link>
+      </div>
+      <div className="relative mb-4">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Filter by name, SKU, or designer…"
+          className="pl-9 max-w-sm"
+        />
       </div>
 
       {isLoading ? (
@@ -68,7 +86,7 @@ const AdminProducts = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {products?.map((p) => {
+            {filtered?.map((p) => {
               const thumb = p.product_images?.sort((a, b) => a.sort_order - b.sort_order)?.[0];
               return (
                 <TableRow key={p.id}>
