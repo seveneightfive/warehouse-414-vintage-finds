@@ -2,7 +2,6 @@ import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { LayoutDashboard, Package, Users, Palette, LogOut, Tag, Globe, Clock, Layers, ShoppingBag, MessageSquare, HandCoins } from 'lucide-react';
-import AdminSearch from '@/components/admin/AdminSearch';
 
 const AdminLayout = () => {
   const { user, isAdmin, loading, signOut } = useAuth();
@@ -62,9 +61,6 @@ const AdminLayout = () => {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
-        <div className="border-b border-border px-6 py-3 flex items-center">
-          <AdminSearch />
-        </div>
         <div className="p-6">
           <Outlet />
         </div>
