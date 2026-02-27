@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,7 +11,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Save } from 'lucide-react';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
+import { ArrowLeft, Save, Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const SOLD_ON_OPTIONS = ['1stDibs', 'Chairish', 'eBay', 'Website', 'Direct', 'Other'];
 const STATUS_OPTIONS = [
@@ -149,6 +152,51 @@ const AdminProductForm = () => {
     )} />
   );
 
+  const ComboboxField = ({ name, label, options }: { name: keyof FormValues; label: string; options?: { id: string; name: string }[] }) => {
+    const [open, setOpen] = useState(false);
+    return (
+      <FormField control={form.control} name={name} render={({ field }) => {
+        const selectedName = options?.find((o) => o.id === field.value)?.name;
+        return (
+          <FormItem className="flex flex-col">
+            <FormLabel>{label}</FormLabel>
+            <Popover open={open} onOpenChange={setOpen}>
+              <PopoverTrigger asChild>
+                <FormControl>
+                  <Button variant="outline" role="combobox" aria-expanded={open} className={cn("w-full justify-between font-normal", !field.value && "text-muted-foreground")}>
+                    {selectedName || `Select ${label.toLowerCase()}`}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </FormControl>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <Command>
+                  <CommandInput placeholder={`Search ${label.toLowerCase()}…`} />
+                  <CommandList>
+                    <CommandEmpty>No results.</CommandEmpty>
+                    <CommandGroup>
+                      <CommandItem value="__none" onSelect={() => { field.onChange(null); setOpen(false); }}>
+                        <Check className={cn("mr-2 h-4 w-4", !field.value ? "opacity-100" : "opacity-0")} />
+                        None
+                      </CommandItem>
+                      {options?.map((o) => (
+                        <CommandItem key={o.id} value={o.name} onSelect={() => { field.onChange(o.id); setOpen(false); }}>
+                          <Check className={cn("mr-2 h-4 w-4", field.value === o.id ? "opacity-100" : "opacity-0")} />
+                          {o.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            <FormMessage />
+          </FormItem>
+        );
+      }} />
+    );
+  };
+
   return (
     <div className="max-w-4xl">
       <div className="flex items-center gap-3 mb-8">
@@ -207,7 +255,7 @@ const AdminProductForm = () => {
               <FormItem><FormLabel>Short Description</FormLabel><FormControl><Textarea rows={2} {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
             )} />
             <FormField control={form.control} name="long_description" render={({ field }) => (
-              <FormItem><FormLabel>Long Description</FormLabel><FormControl><Textarea rows={4} {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+              <FormItem><FormLabel>Long Description</FormLabel><FormControl><Textarea rows={7} {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
             )} />
           </section>
 
@@ -215,8 +263,8 @@ const AdminProductForm = () => {
           <section className="space-y-4">
             <h2 className="text-lg font-semibold text-foreground border-b border-border pb-2">Taxonomy</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <SelectField name="designer_id" label="Designer" options={taxonomy.designers} />
-              <SelectField name="maker_id" label="Maker" options={taxonomy.makers} />
+              <ComboboxField name="designer_id" label="Designer" options={taxonomy.designers} />
+              <ComboboxField name="maker_id" label="Maker" options={taxonomy.makers} />
               <SelectField name="category_id" label="Category" options={taxonomy.categories} />
               <SelectField name="style_id" label="Style" options={taxonomy.styles} />
               <SelectField name="period_id" label="Period" options={taxonomy.periods} />
@@ -227,6 +275,7 @@ const AdminProductForm = () => {
           {/* Attribution */}
           <section className="space-y-4">
             <h2 className="text-lg font-semibold text-foreground border-b border-border pb-2">Attribution</h2>
+            <p className="text-sm text-muted-foreground">Type in attribution that precedes the maker/designer/period. Examples: by, in the style of, attributed to</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField control={form.control} name="designer_attribution" render={({ field }) => (
                 <FormItem><FormLabel>Designer Attribution</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
@@ -245,10 +294,10 @@ const AdminProductForm = () => {
             <h2 className="text-lg font-semibold text-foreground border-b border-border pb-2">Dimensions & Condition</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField control={form.control} name="product_dimensions" render={({ field }) => (
-                <FormItem><FormLabel>Product Dimensions</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Product Dimensions</FormLabel><FormControl><Textarea rows={4} {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="box_dimensions" render={({ field }) => (
-                <FormItem><FormLabel>Box Dimensions</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Box Dimensions</FormLabel><FormControl><Textarea rows={4} {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="dimension_notes" render={({ field }) => (
                 <FormItem className="md:col-span-2"><FormLabel>Dimension Notes</FormLabel><FormControl><Textarea rows={2} {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
