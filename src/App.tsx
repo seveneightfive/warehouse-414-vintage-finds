@@ -50,8 +50,8 @@ const App = () => (
               <Route path="products/new" element={<AdminProductForm />} />
               <Route path="products/:id" element={<AdminProductForm />} />
               <Route path="holds" element={<AdminInbox title="Holds" tableName="product_holds" />} />
-              <Route path="offers" element={<AdminInbox title="Offers" tableName="offers" showAmount />} />
-              <Route path="inquiries" element={<AdminInbox title="Inquiries" tableName="purchase_inquiries" />} />
+              <Route path="offers" element={<AdminInbox title="Offers" tableName="purchase_inquiries" filterType="offer" showAmount />} />
+              <Route path="inquiries" element={<AdminInbox title="Inquiries" tableName="purchase_inquiries" filterType="non-offer" />} />
               <Route path="designers" element={<AdminCrudList title="Designers" tableName="designers" columns={[{ key: 'name', label: 'Name' }, { key: 'bio', label: 'Bio' }]} />} />
               <Route path="makers" element={<AdminCrudList title="Makers" tableName="makers" />} />
               <Route path="categories" element={<AdminCrudList title="Categories" tableName="categories" />} />

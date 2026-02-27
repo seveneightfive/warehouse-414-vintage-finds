@@ -20,7 +20,7 @@ interface InquiryDialogProps {
 
 const config = {
   hold: { title: 'Place a Hold', button: 'HOLD', table: 'product_holds', icon: Clock },
-  offer: { title: 'Make an Offer', button: 'MAKE OFFER', table: 'offers', icon: DollarSign },
+  offer: { title: 'Make an Offer', button: 'MAKE OFFER', table: 'purchase_inquiries', icon: DollarSign },
   inquiry: { title: 'Purchase Inquiry', button: 'BUY', table: 'purchase_inquiries', icon: ShoppingCart },
 };
 
@@ -43,9 +43,9 @@ export default function InquiryDialog({ type, productId, productTitle, triggerCl
         customer_phone: form.phone || null,
         status: 'pending',
       };
-      if (type === 'offer') record.amount = parseFloat(form.amount);
+      if (type === 'offer') { record.offer_amount = parseFloat(form.amount); record.inquiry_type = 'offer'; }
+      if (type === 'inquiry') { record.inquiry_type = 'purchase'; }
       if (type === 'offer' || type === 'inquiry') record.message = form.message || null;
-      if (type === 'hold') record.notes = form.message || null;
 
       const { error } = await supabase.from(cfg.table).insert(record);
       if (error) throw error;

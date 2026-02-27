@@ -10,8 +10,8 @@ const AdminDashboard = () => {
       const [products, holds, offers, inquiries] = await Promise.all([
         supabase.from('products').select('id', { count: 'exact', head: true }),
         supabase.from('product_holds').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('offers').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('purchase_inquiries').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('purchase_inquiries').select('id', { count: 'exact', head: true }).eq('status', 'pending').eq('inquiry_type', 'offer'),
+        supabase.from('purchase_inquiries').select('id', { count: 'exact', head: true }).eq('status', 'pending').neq('inquiry_type', 'offer'),
       ]);
       if (products.error) throw products.error;
       if (holds.error) throw holds.error;
