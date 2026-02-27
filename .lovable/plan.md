@@ -1,45 +1,35 @@
 
 
-## Fix: Missing `offers` Table Causing Dashboard Failure
+## Admin Product Form Improvements
 
-### Root Cause
+Four changes to `src/pages/admin/AdminProductForm.tsx`:
 
-The `offers` table does not exist in the database. All customer actions (questions, offers, purchases) are stored in the `purchase_inquiries` table with an `inquiry_type` column to distinguish them. Only `product_holds` is a separate table. However, the admin dashboard and inbox code incorrectly reference a non-existent `offers` table.
+### 1. Product Dimensions and Box Dimensions -- Change to Textarea (4 rows)
+Currently these are `<Input>` fields. Change both to `<Textarea rows={4}>` so they are 4 lines tall.
 
-### Changes
+### 2. Long Description -- Increase rows
+Change `rows={4}` to `rows={7}` for a couple more lines of space.
 
-**1. `src/pages/admin/AdminDashboard.tsx`**
-- Replace the query on `offers` table with a query on `purchase_inquiries` filtered by `inquiry_type = 'offer'`
-- The "Pending Offers" card will count offers from `purchase_inquiries` where `inquiry_type = 'offer'` and `status = 'pending'`
-- The "Pending Inquiries" card will count non-offer entries from `purchase_inquiries` where `inquiry_type != 'offer'` and `status = 'pending'`
+### 3. Attribution helper text
+Add a descriptive paragraph below the "Attribution" heading:
+> Type in attribution that precedes the maker/designer/period. Examples: by, in the style of, attributed to
 
-**2. `src/App.tsx`**
-- Change the offers admin route from `tableName="offers"` to `tableName="purchase_inquiries"` with appropriate filtering
+### 4. Searchable Combobox for Designer and Maker
+Replace the standard `<Select>` dropdowns for Designer and Maker with a searchable combobox using the existing `cmdk` + `Popover` components (already installed). This will create a new `ComboboxField` component inline in the form file that:
+- Opens a popover with a search input
+- Filters the options list as you type
+- Shows a "None" option to clear the selection
+- Displays the selected name on the trigger button
 
-**3. `src/pages/admin/AdminInbox.tsx`**
-- Add support for an optional `filter` prop so the Offers page can filter `purchase_inquiries` by `inquiry_type = 'offer'` and the Inquiries page can exclude offers
-- The `showAmount` prop will read `offer_amount` from `purchase_inquiries` instead of `amount` from a non-existent `offers` table
+### Technical Details
 
-**4. `src/components/InquiryDialog.tsx`**
-- Update the config for `offer` to use `purchase_inquiries` table instead of `offers` (though this component may not be actively used since ProductActions handles submissions directly)
+**File: `src/pages/admin/AdminProductForm.tsx`**
 
-### Summary
-
-| File | Change |
-|------|--------|
-| `AdminDashboard.tsx` | Query `purchase_inquiries` with `inquiry_type` filter instead of `offers` table |
-| `App.tsx` | Update offers route to use `purchase_inquiries` table |
-| `AdminInbox.tsx` | Add `inquiry_type` filter support; read `offer_amount` instead of `amount` |
-| `InquiryDialog.tsx` | Fix table name from `offers` to `purchase_inquiries` |
-
-### RLS Policy
-
-After the code fix, you only need to add policies for tables that actually exist:
-
-```sql
-CREATE POLICY "Authenticated users can read product_holds"
-ON public.product_holds FOR SELECT TO authenticated USING (true);
-
-CREATE POLICY "Authenticated users can read purchase_inquiries"
-ON public.purchase_inquiries FOR SELECT TO authenticated USING (true);
-```
+- Import `Popover`, `PopoverTrigger`, `PopoverContent` from `@/components/ui/popover`
+- Import `Command`, `CommandInput`, `CommandList`, `CommandEmpty`, `CommandGroup`, `CommandItem` from `@/components/ui/command`
+- Import `Check`, `ChevronsUpDown` from `lucide-react`
+- Add a `ComboboxField` component that wraps `FormField` with a Popover+Command combobox pattern
+- Replace `<SelectField>` usage for `designer_id` and `maker_id` with `<ComboboxField>`
+- Change `product_dimensions` and `box_dimensions` from `<Input>` to `<Textarea rows={4}>`
+- Change `long_description` from `rows={4}` to `rows={7}`
+- Add helper text `<p>` after the Attribution `<h2>`
