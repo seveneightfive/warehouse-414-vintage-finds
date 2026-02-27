@@ -1,34 +1,45 @@
 
 
-## Fix: Admin Panel Not Loading
+## Fix: Missing `offers` Table Causing Dashboard Failure
 
-### Root Cause Analysis
+### Root Cause
 
-After reviewing the code and console logs, I identified two issues:
+The `offers` table does not exist in the database. All customer actions (questions, offers, purchases) are stored in the `purchase_inquiries` table with an `inquiry_type` column to distinguish them. Only `product_holds` is a separate table. However, the admin dashboard and inbox code incorrectly reference a non-existent `offers` table.
 
-1. **AdminInbox query references wrong column**: Line 22 of `AdminInbox.tsx` selects `product:products(title)` but the products table uses `name`, not `title`. This causes a Supabase error when the component renders (holds, offers, inquiries pages). While this doesn't directly affect the `/admin` dashboard route, it could cause issues during component initialization.
+### Changes
 
-2. **Missing error handling in AdminDashboard**: The dashboard queries (`product_holds`, `offers`, `purchase_inquiries`) have no error handling. If any query fails (e.g., due to RLS policies or missing tables), the component silently fails and may show a blank page.
+**1. `src/pages/admin/AdminDashboard.tsx`**
+- Replace the query on `offers` table with a query on `purchase_inquiries` filtered by `inquiry_type = 'offer'`
+- The "Pending Offers" card will count offers from `purchase_inquiries` where `inquiry_type = 'offer'` and `status = 'pending'`
+- The "Pending Inquiries" card will count non-offer entries from `purchase_inquiries` where `inquiry_type != 'offer'` and `status = 'pending'`
 
-3. **React Router ref warning**: The console shows "Function components cannot be given refs" for `AdminLayout`. This is a known React Router v6 issue but is only a warning -- not a crash.
+**2. `src/App.tsx`**
+- Change the offers admin route from `tableName="offers"` to `tableName="purchase_inquiries"` with appropriate filtering
 
-### Fixes
+**3. `src/pages/admin/AdminInbox.tsx`**
+- Add support for an optional `filter` prop so the Offers page can filter `purchase_inquiries` by `inquiry_type = 'offer'` and the Inquiries page can exclude offers
+- The `showAmount` prop will read `offer_amount` from `purchase_inquiries` instead of `amount` from a non-existent `offers` table
 
-**File: `src/pages/admin/AdminInbox.tsx` (line 22)**
-- Change `product:products(title)` to `product:products(name)` to match the actual column name
-- Update line 70 to display `item.product.name` instead of `item.product.title`
-
-**File: `src/pages/admin/AdminDashboard.tsx`**
-- Add try/catch error handling around the stats queries
-- Add an error state display so failures are visible instead of showing a blank page
-
-**File: `src/pages/admin/AdminLayout.tsx`**
-- No changes needed -- the ref warning is cosmetic and does not prevent rendering
+**4. `src/components/InquiryDialog.tsx`**
+- Update the config for `offer` to use `purchase_inquiries` table instead of `offers` (though this component may not be actively used since ProductActions handles submissions directly)
 
 ### Summary
 
 | File | Change |
 |------|--------|
-| `src/pages/admin/AdminInbox.tsx` | Fix `products(title)` to `products(name)`, add error handling |
-| `src/pages/admin/AdminDashboard.tsx` | Add try/catch and error state for robustness |
+| `AdminDashboard.tsx` | Query `purchase_inquiries` with `inquiry_type` filter instead of `offers` table |
+| `App.tsx` | Update offers route to use `purchase_inquiries` table |
+| `AdminInbox.tsx` | Add `inquiry_type` filter support; read `offer_amount` instead of `amount` |
+| `InquiryDialog.tsx` | Fix table name from `offers` to `purchase_inquiries` |
 
+### RLS Policy
+
+After the code fix, you only need to add policies for tables that actually exist:
+
+```sql
+CREATE POLICY "Authenticated users can read product_holds"
+ON public.product_holds FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Authenticated users can read purchase_inquiries"
+ON public.purchase_inquiries FOR SELECT TO authenticated USING (true);
+```
