@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, Clock, HandCoins, MessageSquare } from 'lucide-react';
 
 const AdminDashboard = () => {
-  const { data: stats } = useQuery({
+  const { data: stats, isError } = useQuery({
     queryKey: ['admin-stats'],
     queryFn: async () => {
       const [products, holds, offers, inquiries] = await Promise.all([
@@ -13,6 +13,10 @@ const AdminDashboard = () => {
         supabase.from('offers').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
         supabase.from('purchase_inquiries').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
       ]);
+      if (products.error) throw products.error;
+      if (holds.error) throw holds.error;
+      if (offers.error) throw offers.error;
+      if (inquiries.error) throw inquiries.error;
       return {
         products: products.count || 0,
         holds: holds.count || 0,
@@ -20,6 +24,7 @@ const AdminDashboard = () => {
         inquiries: inquiries.count || 0,
       };
     },
+    retry: 1,
   });
 
   const cards = [
@@ -28,6 +33,15 @@ const AdminDashboard = () => {
     { label: 'Pending Offers', value: stats?.offers ?? '—', icon: HandCoins },
     { label: 'Pending Inquiries', value: stats?.inquiries ?? '—', icon: MessageSquare },
   ];
+
+  if (isError) {
+    return (
+      <div>
+        <h1 className="font-display text-2xl tracking-wide text-foreground mb-6">Dashboard</h1>
+        <p className="text-destructive">Failed to load dashboard stats. Check your database connection and RLS policies.</p>
+      </div>
+    );
+  }
 
   return (
     <div>
