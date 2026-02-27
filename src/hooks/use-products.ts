@@ -1,6 +1,6 @@
-import { supabase } from '@/integrations/supabase/client';
-import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
-import type { Product } from '@/types/database';
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
+import type { Product } from "@/types/database";
 
 const PAGE_SIZE = 50;
 
@@ -22,41 +22,43 @@ type Cursor = { created_at: string; id: string };
 
 export function useInfiniteProducts(filters?: ProductFilters) {
   return useInfiniteQuery({
-    queryKey: ['products-infinite', filters],
+    queryKey: ["products-infinite", filters],
     queryFn: async ({ pageParam }: { pageParam: Cursor | undefined }) => {
       let query = supabase
-        .from('products')
-        .select(`
+        .from("products")
+        .select(
+          `
           id, name, slug, price, status, featured_image_url, created_at,
-          designer:designers(id, name)
-        `)
-        .order('created_at', { ascending: false })
-        .order('id', { ascending: false })
+          designer:designers(id, name), product_images(image_url, sort_order)
+        `,
+        )
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
         .limit(PAGE_SIZE);
 
       // Status filter
       if (filters?.status) {
-        query = query.eq('status', filters.status);
+        query = query.eq("status", filters.status);
       } else {
-        query = query.in('status', ['available', 'on_hold', 'sold']);
+        query = query.in("status", ["available", "on_hold", "sold"]);
       }
 
       // Cursor-based pagination
       if (pageParam) {
         query = query.or(
-          `created_at.lt.${pageParam.created_at},and(created_at.eq.${pageParam.created_at},id.lt.${pageParam.id})`
+          `created_at.lt.${pageParam.created_at},and(created_at.eq.${pageParam.created_at},id.lt.${pageParam.id})`,
         );
       }
 
-      if (filters?.designer_id) query = query.eq('designer_id', filters.designer_id);
-      if (filters?.maker_id) query = query.eq('maker_id', filters.maker_id);
-      if (filters?.category_id) query = query.eq('category_id', filters.category_id);
-      if (filters?.style_id) query = query.eq('style_id', filters.style_id);
-      if (filters?.period_id) query = query.eq('period_id', filters.period_id);
-      if (filters?.country_id) query = query.eq('country_id', filters.country_id);
-      if (filters?.search) query = query.ilike('name', `%${filters.search}%`);
-      if (filters?.year_min) query = query.gte('year', filters.year_min);
-      if (filters?.year_max) query = query.lte('year', filters.year_max);
+      if (filters?.designer_id) query = query.eq("designer_id", filters.designer_id);
+      if (filters?.maker_id) query = query.eq("maker_id", filters.maker_id);
+      if (filters?.category_id) query = query.eq("category_id", filters.category_id);
+      if (filters?.style_id) query = query.eq("style_id", filters.style_id);
+      if (filters?.period_id) query = query.eq("period_id", filters.period_id);
+      if (filters?.country_id) query = query.eq("country_id", filters.country_id);
+      if (filters?.search) query = query.ilike("name", `%${filters.search}%`);
+      if (filters?.year_min) query = query.gte("year", filters.year_min);
+      if (filters?.year_max) query = query.lte("year", filters.year_max);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -85,11 +87,12 @@ export function useProducts(filters?: {
   status?: string;
 }) {
   return useQuery({
-    queryKey: ['products', filters],
+    queryKey: ["products", filters],
     queryFn: async () => {
       let query = supabase
-        .from('products')
-        .select(`
+        .from("products")
+        .select(
+          `
           *,
           designer:designers(*),
           maker:makers(*),
@@ -99,24 +102,25 @@ export function useProducts(filters?: {
           country:countries(*),
           product_images(*),
           product_colors(*, color:colors(*))
-        `)
-        .order('created_at', { ascending: false });
+        `,
+        )
+        .order("created_at", { ascending: false });
 
       if (filters?.status) {
-        query = query.eq('status', filters.status);
+        query = query.eq("status", filters.status);
       } else {
-        query = query.in('status', ['available', 'on_hold', 'sold']);
+        query = query.in("status", ["available", "on_hold", "sold"]);
       }
 
-      if (filters?.designer_id) query = query.eq('designer_id', filters.designer_id);
-      if (filters?.maker_id) query = query.eq('maker_id', filters.maker_id);
-      if (filters?.category_id) query = query.eq('category_id', filters.category_id);
-      if (filters?.style_id) query = query.eq('style_id', filters.style_id);
-      if (filters?.period_id) query = query.eq('period_id', filters.period_id);
-      if (filters?.country_id) query = query.eq('country_id', filters.country_id);
-      if (filters?.search) query = query.ilike('name', `%${filters.search}%`);
-      if (filters?.year_min) query = query.gte('year', filters.year_min);
-      if (filters?.year_max) query = query.lte('year', filters.year_max);
+      if (filters?.designer_id) query = query.eq("designer_id", filters.designer_id);
+      if (filters?.maker_id) query = query.eq("maker_id", filters.maker_id);
+      if (filters?.category_id) query = query.eq("category_id", filters.category_id);
+      if (filters?.style_id) query = query.eq("style_id", filters.style_id);
+      if (filters?.period_id) query = query.eq("period_id", filters.period_id);
+      if (filters?.country_id) query = query.eq("country_id", filters.country_id);
+      if (filters?.search) query = query.ilike("name", `%${filters.search}%`);
+      if (filters?.year_min) query = query.gte("year", filters.year_min);
+      if (filters?.year_max) query = query.lte("year", filters.year_max);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -127,12 +131,13 @@ export function useProducts(filters?: {
 
 export function useProduct(id: string | undefined) {
   return useQuery({
-    queryKey: ['product', id],
+    queryKey: ["product", id],
     queryFn: async () => {
       if (!id) return null;
       const { data, error } = await supabase
-        .from('products')
-        .select(`
+        .from("products")
+        .select(
+          `
           *,
           designer:designers(*),
           maker:makers(*),
@@ -142,8 +147,9 @@ export function useProduct(id: string | undefined) {
           country:countries(*),
           product_images(*),
           product_colors(*, color:colors(*))
-        `)
-        .eq('id', id)
+        `,
+        )
+        .eq("id", id)
         .single();
       if (error) throw error;
       return data as Product;
@@ -154,17 +160,19 @@ export function useProduct(id: string | undefined) {
 
 export function useFeaturedProducts() {
   return useQuery({
-    queryKey: ['products', 'featured'],
+    queryKey: ["products", "featured"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('products')
-        .select(`
+        .from("products")
+        .select(
+          `
           *,
           designer:designers(*),
           product_images(*)
-        `)
-        .eq('status', 'available')
-        .order('created_at', { ascending: false })
+        `,
+        )
+        .eq("status", "available")
+        .order("created_at", { ascending: false })
         .limit(8);
       if (error) throw error;
       return data as Product[];
@@ -174,16 +182,16 @@ export function useFeaturedProducts() {
 
 export function useSimilarProducts(productId: string | undefined, categoryId: string | null | undefined) {
   return useQuery({
-    queryKey: ['products', 'similar', productId, categoryId],
+    queryKey: ["products", "similar", productId, categoryId],
     queryFn: async () => {
       if (!productId) return [];
       let query = supabase
-        .from('products')
+        .from("products")
         .select(`*, designer:designers(*), product_images(*)`)
-        .neq('id', productId)
-        .eq('status', 'available')
+        .neq("id", productId)
+        .eq("status", "available")
         .limit(4);
-      if (categoryId) query = query.eq('category_id', categoryId);
+      if (categoryId) query = query.eq("category_id", categoryId);
       const { data, error } = await query;
       if (error) throw error;
       return data as Product[];
@@ -194,16 +202,16 @@ export function useSimilarProducts(productId: string | undefined, categoryId: st
 
 export function useFilterOptions() {
   return useQuery({
-    queryKey: ['filter-options'],
+    queryKey: ["filter-options"],
     queryFn: async () => {
       const [designers, makers, categories, styles, periods, countries, colors] = await Promise.all([
-        supabase.from('designers').select('*').order('name'),
-        supabase.from('makers').select('*').order('name'),
-        supabase.from('categories').select('*').order('name'),
-        supabase.from('styles').select('*').order('name'),
-        supabase.from('periods').select('*').order('name'),
-        supabase.from('countries').select('*').order('name'),
-        supabase.from('colors').select('*').order('name'),
+        supabase.from("designers").select("*").order("name"),
+        supabase.from("makers").select("*").order("name"),
+        supabase.from("categories").select("*").order("name"),
+        supabase.from("styles").select("*").order("name"),
+        supabase.from("periods").select("*").order("name"),
+        supabase.from("countries").select("*").order("name"),
+        supabase.from("colors").select("*").order("name"),
       ]);
       return {
         designers: designers.data || [],
