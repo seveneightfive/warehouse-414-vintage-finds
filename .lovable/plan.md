@@ -1,29 +1,58 @@
 
 
-## Persist "Hide Sold" Filter via URL Query Parameter
+## Admin Product Management Dashboard
 
-### Problem
-The "Hide Sold" toggle uses local React state (`useState`), so it resets when navigating away and back. All other filters already use URL search params and persist correctly.
+### Overview
+Build a full product add/edit form page, enhance the existing admin with hold management, cross-listing URL fields, and sold-on-platform tracking. Most of the admin infrastructure (layout, sidebar, inbox views, CRUD lists) already exists -- the main gap is the product create/edit form and a database column for tracking which platform an item sold on.
 
-### Solution
-Move `hideSold` from `useState` to a URL search parameter (`sold=hidden`), matching the pattern already used by every other filter on the page.
+### Database Change
 
-### Changes
+**Add `sold_on` column to the `products` table** via migration:
+- Column: `sold_on TEXT NULL` -- stores the platform name (e.g., "1stDibs", "Chairish", "eBay", "Direct", "Website")
+- Update the `Product` type in `src/types/database.ts` to include `sold_on: string | null`
 
-**File: `src/pages/Catalog.tsx`**
+### New Page: Product Add/Edit Form
 
-1. Remove the `useState` for `hideSold` and instead derive it from search params:
-   - Remove: `const [hideSold, setHideSold] = useState(false);`
-   - Add: `const hideSold = searchParams.get('sold') === 'hidden';`
+**File: `src/pages/admin/AdminProductForm.tsx`**
 
-2. Update the toggle handler to use `setParam` instead of `setHideSold`:
-   - Desktop button `onClick`: change from `() => setHideSold(!hideSold)` to `() => setParam('sold', hideSold ? '' : 'hidden')`
-   - Mobile button `onClick`: same change
+A comprehensive form for creating and editing products with these sections:
 
-3. No other changes needed -- the existing `status: hideSold ? 'available' : undefined` query logic and `clearFilters` (which resets all params) already work correctly with this approach.
+1. **Basic Info** -- Name, SKU, short description, long description, price, status dropdown (available / on_hold / sold / inventory)
+2. **Taxonomy** -- Designer, maker, category, style, period, country (all as select dropdowns populated from their respective tables)
+3. **Attribution** -- Designer attribution, maker attribution, period attribution text fields
+4. **Dimensions & Condition** -- Product dimensions, box dimensions, dimension notes, materials, condition, year created
+5. **Cross-Listing URLs** -- Quick fields for 1stDibs URL, Chairish URL, eBay URL (these columns already exist in the database)
+6. **Sold Info** -- When status is set to "sold", show a "Sold On" dropdown with options: 1stDibs, Chairish, eBay, Website, Direct, Other
+7. **Notes** -- Internal admin notes field
+8. **Images** -- Display existing images (for edit mode); image upload will use Supabase storage
 
-### Why this works
-- Browser back button restores the previous URL including `?sold=hidden`, so the filter persists naturally
-- `clearFilters` already calls `setSearchParams({})`, which will also clear this param
-- Consistent with how every other filter on the page works
+The form will:
+- Load existing product data when editing (`/admin/products/:id`)
+- Create a new product when at `/admin/products/new`
+- Use `react-hook-form` with zod validation
+- Pre-fetch all taxonomy options (designers, makers, categories, etc.) via parallel queries
+
+### Route Updates
+
+**File: `src/App.tsx`**
+
+Add two new routes inside the admin layout:
+- `<Route path="products/new" element={<AdminProductForm />} />`
+- `<Route path="products/:id" element={<AdminProductForm />} />`
+
+### Hold Management Enhancement
+
+**File: `src/pages/admin/AdminInbox.tsx`**
+
+When viewing Holds, the "Approve" action will also update the product's status to `on_hold`. Add a "Release Hold" button that sets both the hold status to `released` and the product status back to `available`.
+
+### Changes Summary
+
+| File | Change |
+|------|--------|
+| Migration | Add `sold_on` column to `products` |
+| `src/types/database.ts` | Add `sold_on` field to Product type |
+| `src/pages/admin/AdminProductForm.tsx` | New -- full product create/edit form |
+| `src/App.tsx` | Add routes for product new/edit |
+| `src/pages/admin/AdminInbox.tsx` | Enhance hold approve/release to update product status |
 
