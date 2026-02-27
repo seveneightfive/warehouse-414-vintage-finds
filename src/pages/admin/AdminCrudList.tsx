@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Pencil, Trash2, Plus } from 'lucide-react';
+import { Pencil, Trash2, Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
 type AdminCrudListProps = {
@@ -20,6 +20,7 @@ const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Nam
   const [editItem, setEditItem] = useState<Record<string, string> | null>(null);
   const [newItem, setNewItem] = useState<Record<string, string>>({});
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { data: items, isLoading } = useQuery({
     queryKey: [tableName],
@@ -89,6 +90,16 @@ const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Nam
         </Button>
       </div>
 
+      <div className="relative mb-4">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Search..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="bg-card border-border">
           <DialogHeader>
@@ -135,7 +146,11 @@ const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Nam
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items?.map((item: Record<string, string>) => (
+            {items?.filter((item: Record<string, string>) => {
+              if (!searchQuery) return true;
+              const q = searchQuery.toLowerCase();
+              return columns.some(col => String(item[col.key] || '').toLowerCase().includes(q));
+            }).map((item: Record<string, string>) => (
               <TableRow key={item.id}>
                 {columns.map((col) => (
                   <TableCell key={col.key}>{item[col.key] || '—'}</TableCell>
