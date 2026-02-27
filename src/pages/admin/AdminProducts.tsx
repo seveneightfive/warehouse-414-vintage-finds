@@ -15,7 +15,7 @@ const AdminProducts = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('*, designer:designers(name), category:categories(name), product_images(url, position)')
+        .select('*, designer:designers(name), category:categories(name), product_images(image_url, sort_order)')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as Product[];
