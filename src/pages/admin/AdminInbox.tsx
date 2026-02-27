@@ -19,7 +19,7 @@ const AdminInbox = ({ title, tableName, showAmount }: AdminInboxProps) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from(tableName)
-        .select('*, product:products(title)')
+        .select('*, product:products(name)')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
@@ -67,7 +67,7 @@ const AdminInbox = ({ title, tableName, showAmount }: AdminInboxProps) => {
           <TableBody>
             {items?.map((item: Record<string, unknown>) => (
               <TableRow key={item.id as string}>
-                <TableCell>{(item.product as Record<string, string>)?.title || '—'}</TableCell>
+                <TableCell>{(item.product as Record<string, string>)?.name || '—'}</TableCell>
                 <TableCell>{item.customer_name as string}</TableCell>
                 <TableCell className="text-muted-foreground">{item.customer_email as string}</TableCell>
                 {showAmount && <TableCell>${Number(item.amount).toLocaleString()}</TableCell>}
