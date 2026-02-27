@@ -1,17 +1,25 @@
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, Clock, HandCoins, MessageSquare } from 'lucide-react';
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Package, Clock, HandCoins, MessageSquare } from "lucide-react";
 
 const AdminDashboard = () => {
   const { data: stats, isError } = useQuery({
-    queryKey: ['admin-stats'],
+    queryKey: ["admin-stats"],
     queryFn: async () => {
       const [products, holds, offers, inquiries] = await Promise.all([
-        supabase.from('products').select('id', { count: 'exact', head: true }),
-        supabase.from('product_holds').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('purchase_inquiries').select('id', { count: 'exact', head: true }).eq('status', 'pending').eq('inquiry_type', 'offer'),
-        supabase.from('purchase_inquiries').select('id', { count: 'exact', head: true }).eq('status', 'pending').neq('inquiry_type', 'offer'),
+        supabase.from("products").select("id", { count: "exact", head: true }),
+        supabase.from("product_holds").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        supabase
+          .from("purchase_inquiries")
+          .select("id", { count: "exact", head: true })
+          .eq("inquiry_type", "offer")
+          .eq("is_read", false),
+        supabase
+          .from("purchase_inquiries")
+          .select("id", { count: "exact", head: true })
+          .neq("inquiry_type", "offer")
+          .eq("is_read", false),
       ]);
       if (products.error) throw products.error;
       if (holds.error) throw holds.error;
@@ -28,17 +36,19 @@ const AdminDashboard = () => {
   });
 
   const cards = [
-    { label: 'Total Products', value: stats?.products ?? '—', icon: Package },
-    { label: 'Pending Holds', value: stats?.holds ?? '—', icon: Clock },
-    { label: 'Pending Offers', value: stats?.offers ?? '—', icon: HandCoins },
-    { label: 'Pending Inquiries', value: stats?.inquiries ?? '—', icon: MessageSquare },
+    { label: "Total Products", value: stats?.products ?? "—", icon: Package },
+    { label: "Pending Holds", value: stats?.holds ?? "—", icon: Clock },
+    { label: "Pending Offers", value: stats?.offers ?? "—", icon: HandCoins },
+    { label: "Pending Inquiries", value: stats?.inquiries ?? "—", icon: MessageSquare },
   ];
 
   if (isError) {
     return (
       <div>
         <h1 className="font-display text-2xl tracking-wide text-foreground mb-6">Dashboard</h1>
-        <p className="text-destructive">Failed to load dashboard stats. Check your database connection and RLS policies.</p>
+        <p className="text-destructive">
+          Failed to load dashboard stats. Check your database connection and RLS policies.
+        </p>
       </div>
     );
   }
