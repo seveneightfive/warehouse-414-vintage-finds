@@ -1,35 +1,31 @@
 
 
-## Admin Product Form Improvements
+## Add Search to Admin List Pages
 
-Four changes to `src/pages/admin/AdminProductForm.tsx`:
+Add a client-side search/filter input to the top of the Makers, Designers, Styles, and Products admin pages.
 
-### 1. Product Dimensions and Box Dimensions -- Change to Textarea (4 rows)
-Currently these are `<Input>` fields. Change both to `<Textarea rows={4}>` so they are 4 lines tall.
+### Changes
 
-### 2. Long Description -- Increase rows
-Change `rows={4}` to `rows={7}` for a couple more lines of space.
+**1. `src/pages/admin/AdminCrudList.tsx`** (covers Makers, Designers, Styles)
+- Add a `searchQuery` state variable
+- Add a search `<Input>` with a Search icon between the header row and the table
+- Filter `items` client-side: match `searchQuery` against all column values (case-insensitive)
+- This automatically covers Makers, Designers, and Styles since they all use this component
 
-### 3. Attribution helper text
-Add a descriptive paragraph below the "Attribution" heading:
-> Type in attribution that precedes the maker/designer/period. Examples: by, in the style of, attributed to
+**2. `src/pages/admin/AdminProducts.tsx`**
+- Add a `searchQuery` state variable
+- Add a search `<Input>` with a Search icon between the header row and the table
+- Filter `products` client-side by matching against `name`, `designer.name`, `category.name`, and `status` (case-insensitive)
 
-### 4. Searchable Combobox for Designer and Maker
-Replace the standard `<Select>` dropdowns for Designer and Maker with a searchable combobox using the existing `cmdk` + `Popover` components (already installed). This will create a new `ComboboxField` component inline in the form file that:
-- Opens a popover with a search input
-- Filters the options list as you type
-- Shows a "None" option to clear the selection
-- Displays the selected name on the trigger button
+### UI
+Both pages will have a simple search bar below the title/action row:
 
-### Technical Details
+```text
++------------------------------------------+
+| [Title]                      [Add Button] |
+| [Search icon] Search...                   |
++------------------------------------------+
+| Table rows (filtered)                     |
+```
 
-**File: `src/pages/admin/AdminProductForm.tsx`**
-
-- Import `Popover`, `PopoverTrigger`, `PopoverContent` from `@/components/ui/popover`
-- Import `Command`, `CommandInput`, `CommandList`, `CommandEmpty`, `CommandGroup`, `CommandItem` from `@/components/ui/command`
-- Import `Check`, `ChevronsUpDown` from `lucide-react`
-- Add a `ComboboxField` component that wraps `FormField` with a Popover+Command combobox pattern
-- Replace `<SelectField>` usage for `designer_id` and `maker_id` with `<ComboboxField>`
-- Change `product_dimensions` and `box_dimensions` from `<Input>` to `<Textarea rows={4}>`
-- Change `long_description` from `rows={4}` to `rows={7}`
-- Add helper text `<p>` after the Attribution `<h2>`
+The search input will use the existing `Input` component with a `Search` icon from lucide-react, styled consistently with the admin panel.
