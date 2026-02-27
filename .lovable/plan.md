@@ -1,31 +1,34 @@
 
 
-## Add Search to Admin List Pages
+## Update Mobile Share Preview (Open Graph) and Theme Color
 
-Add a client-side search/filter input to the top of the Makers, Designers, Styles, and Products admin pages.
+When you share your app on mobile, the preview image and colors come from meta tags in `index.html`. Currently they point to Lovable's default branding.
 
-### Changes
+### Changes to `index.html`
 
-**1. `src/pages/admin/AdminCrudList.tsx`** (covers Makers, Designers, Styles)
-- Add a `searchQuery` state variable
-- Add a search `<Input>` with a Search icon between the header row and the table
-- Filter `items` client-side: match `searchQuery` against all column values (case-insensitive)
-- This automatically covers Makers, Designers, and Styles since they all use this component
+**1. Replace the Open Graph image**
+- Change `og:image` and `twitter:image` from the Lovable URL to your logo (e.g., `/images/logo-545.jpg` which already exists in `public/images/`)
+- Update `twitter:site` from `@Lovable` to your brand or remove it
 
-**2. `src/pages/admin/AdminProducts.tsx`**
-- Add a `searchQuery` state variable
-- Add a search `<Input>` with a Search icon between the header row and the table
-- Filter `products` client-side by matching against `name`, `designer.name`, `category.name`, and `status` (case-insensitive)
+**2. Update description and author**
+- Change `meta description` from "Lovable Generated Project" to "Curated vintage & mid-century modern furniture"
+- Change `meta author` from "Lovable" to "Warehouse 414"
 
-### UI
-Both pages will have a simple search bar below the title/action row:
+**3. Set the browser theme color to black**
+- Add `<meta name="theme-color" content="#000000">` -- this controls the colored banner/bar behind the app name on mobile browsers
 
-```text
-+------------------------------------------+
-| [Title]                      [Add Button] |
-| [Search icon] Search...                   |
-+------------------------------------------+
-| Table rows (filtered)                     |
-```
+**4. Clean up TODO comments**
 
-The search input will use the existing `Input` component with a `Search` icon from lucide-react, styled consistently with the admin panel.
+### Summary of meta tag changes
+
+| Tag | Current | New |
+|-----|---------|-----|
+| `og:image` | Lovable default | `/images/logo-545.jpg` |
+| `twitter:image` | Lovable default | `/images/logo-545.jpg` |
+| `twitter:site` | `@Lovable` | removed |
+| `description` | "Lovable Generated Project" | "Curated vintage & mid-century modern furniture" |
+| `author` | "Lovable" | "Warehouse 414" |
+| `theme-color` | (missing) | `#000000` |
+
+**Note:** For the best social share preview, the Open Graph image ideally should be 1200x630px. The existing `logo-545.jpg` will work but may not look perfect in all share previews. If you have a larger banner-style image of your logo on a black background, that would be ideal to upload as a replacement.
+
