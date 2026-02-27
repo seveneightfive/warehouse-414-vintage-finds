@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Pencil, Trash2, Plus, Search } from 'lucide-react';
@@ -12,7 +13,7 @@ import { toast } from 'sonner';
 type AdminCrudListProps = {
   title: string;
   tableName: string;
-  columns?: { key: string; label: string }[];
+  columns?: { key: string; label: string; type?: 'text' | 'textarea' }[];
 };
 
 const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Name' }] }: AdminCrudListProps) => {
@@ -119,11 +120,19 @@ const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Nam
             {columns.map((col) => (
               <div key={col.key}>
                 <Label>{col.label}</Label>
-                <Input
-                  required
-                  value={currentValues[col.key] || ''}
-                  onChange={(e) => setCurrentValues({ ...currentValues, [col.key]: e.target.value })}
-                />
+                {col.type === 'textarea' ? (
+                  <Textarea
+                    rows={8}
+                    value={currentValues[col.key] || ''}
+                    onChange={(e) => setCurrentValues({ ...currentValues, [col.key]: e.target.value })}
+                  />
+                ) : (
+                  <Input
+                    required
+                    value={currentValues[col.key] || ''}
+                    onChange={(e) => setCurrentValues({ ...currentValues, [col.key]: e.target.value })}
+                  />
+                )}
               </div>
             ))}
             <Button type="submit" disabled={upsertMutation.isPending} className="w-full text-xs tracking-[0.1em] uppercase">
