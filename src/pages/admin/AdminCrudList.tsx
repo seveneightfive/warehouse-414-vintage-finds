@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Pencil, Trash2, Plus } from 'lucide-react';
+import { Pencil, Trash2, Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
 type AdminCrudListProps = {
@@ -20,6 +20,7 @@ const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Nam
   const [editItem, setEditItem] = useState<Record<string, string> | null>(null);
   const [newItem, setNewItem] = useState<Record<string, string>>({});
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [search, setSearch] = useState('');
 
   const { data: items, isLoading } = useQuery({
     queryKey: [tableName],
@@ -80,13 +81,26 @@ const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Nam
     else setNewItem(vals);
   };
 
+  const filtered = items?.filter((item: Record<string, string>) =>
+    !search || columns.some((col) => item[col.key]?.toLowerCase().includes(search.toLowerCase()))
+  );
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <h1 className="font-display text-2xl tracking-wide text-foreground">{title}</h1>
         <Button onClick={openNew} className="text-xs tracking-[0.1em] uppercase">
           <Plus size={14} className="mr-1" /> Add
         </Button>
+      </div>
+      <div className="relative mb-4">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={`Filter ${title.toLowerCase()}…`}
+          className="pl-9 max-w-sm"
+        />
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -135,7 +149,7 @@ const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Nam
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items?.map((item: Record<string, string>) => (
+            {filtered?.map((item: Record<string, string>) => (
               <TableRow key={item.id}>
                 {columns.map((col) => (
                   <TableCell key={col.key}>{item[col.key] || '—'}</TableCell>
