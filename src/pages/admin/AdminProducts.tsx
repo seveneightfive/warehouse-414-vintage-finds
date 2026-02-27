@@ -1,15 +1,18 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Link } from 'react-router-dom';
-import { Pencil, Eye, Trash2 } from 'lucide-react';
+import { Pencil, Eye, Trash2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Product } from '@/types/database';
 
 const AdminProducts = () => {
   const queryClient = useQueryClient();
+  const [searchQuery, setSearchQuery] = useState('');
   const { data: products, isLoading } = useQuery({
     queryKey: ['admin-products'],
     queryFn: async () => {
@@ -52,6 +55,16 @@ const AdminProducts = () => {
         </Link>
       </div>
 
+      <div className="relative mb-4">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          placeholder="Search products..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       {isLoading ? (
         <p className="text-muted-foreground">Loading...</p>
       ) : (
@@ -68,7 +81,12 @@ const AdminProducts = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {products?.map((p) => {
+            {products?.filter((p) => {
+              if (!searchQuery) return true;
+              const q = searchQuery.toLowerCase();
+              return [p.name, p.designer?.name, p.category?.name, p.status]
+                .some(v => v && v.toLowerCase().includes(q));
+            }).map((p) => {
               const thumb = p.product_images?.sort((a, b) => a.sort_order - b.sort_order)?.[0];
               return (
                 <TableRow key={p.id}>
