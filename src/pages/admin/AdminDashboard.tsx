@@ -9,7 +9,10 @@ const AdminDashboard = () => {
     queryFn: async () => {
       const [products, holds, offers, inquiries] = await Promise.all([
         supabase.from("products").select("id", { count: "exact", head: true }),
-        supabase.from("product_holds").select("id", { count: "exact", head: true }).eq("status", "pending"),
+        supabase
+          .from("product_holds")
+          .select("id", { count: "exact", head: true })
+          .gt("expires_at", new Date().toISOString()),
         supabase
           .from("purchase_inquiries")
           .select("id", { count: "exact", head: true })
