@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
-import { ArrowLeft, Save, Check, ChevronsUpDown } from 'lucide-react';
+import { ArrowLeft, Save, Check, ChevronsUpDown, Upload, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const SOLD_ON_OPTIONS = ['1stDibs', 'Chairish', 'eBay', 'Website', 'Direct', 'Other'];
@@ -121,18 +121,81 @@ const AdminProductForm = () => {
       if (isEditing) {
         const { error } = await supabase.from('products').update(payload).eq('id', id!);
         if (error) throw error;
+        return id!;
       } else {
-        const { error } = await supabase.from('products').insert(payload);
+        const { data, error } = await supabase.from('products').insert(payload).select('id').single();
         if (error) throw error;
+        return data.id as string;
       }
     },
-    onSuccess: () => {
+    onSuccess: (newId) => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       toast.success(isEditing ? 'Product updated' : 'Product created');
-      navigate('/admin/products');
+      if (!isEditing) {
+        // Redirect to edit mode so images can be attached
+        navigate(`/admin/products/${newId}`);
+      }
     },
     onError: (err) => toast.error(err.message),
   });
+
+  // Image upload
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
+
+  const uploadImages = async (files: FileList) => {
+    if (!id) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) { toast.error('Not authenticated'); return; }
+
+    const currentImages = product?.product_images || [];
+    let nextSort = currentImages.length;
+
+    for (const file of Array.from(files)) {
+      const tempId = `${file.name}-${Date.now()}`;
+      setUploadingFiles(prev => [...prev, tempId]);
+
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('product_id', id);
+        formData.append('sort_order', String(nextSort));
+
+        const res = await supabase.functions.invoke('upload-product-image', {
+          body: formData,
+        });
+
+        if (res.error) throw new Error(res.error.message);
+        nextSort++;
+      } catch (err: unknown) {
+        toast.error(`Failed to upload ${file.name}: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      } finally {
+        setUploadingFiles(prev => prev.filter(f => f !== tempId));
+      }
+    }
+
+    queryClient.invalidateQueries({ queryKey: ['admin-product', id] });
+    toast.success('Images uploaded');
+  };
+
+  const deleteImage = async (imageId: string, imageUrl: string) => {
+    try {
+      // Extract storage path from CDN URL
+      const urlParts = imageUrl.split('/');
+      const productsIdx = urlParts.indexOf('products');
+      const storagePath = productsIdx >= 0 ? urlParts.slice(productsIdx).join('/') : '';
+
+      const { error } = await supabase.functions.invoke('delete-product-image', {
+        body: { image_id: imageId, storage_path: storagePath },
+      });
+
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ['admin-product', id] });
+      toast.success('Image deleted');
+    } catch (err: unknown) {
+      toast.error(`Delete failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  };
 
   if (isEditing && isLoading) return <p className="text-muted-foreground">Loading…</p>;
 
@@ -338,19 +401,49 @@ const AdminProductForm = () => {
             )} />
           </section>
 
-          {/* Images (read-only for edit) */}
-          {isEditing && product?.product_images?.length > 0 && (
-            <section className="space-y-4">
-              <h2 className="text-lg font-semibold text-foreground border-b border-border pb-2">Images</h2>
-              <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
-                {product.product_images
-                  .sort((a: { sort_order: number }, b: { sort_order: number }) => a.sort_order - b.sort_order)
-                  .map((img: { id: string; image_url: string }) => (
-                    <img key={img.id} src={img.image_url} alt="" className="w-full aspect-square object-cover rounded-md border border-border" />
+          {/* Images */}
+          <section className="space-y-4">
+            <h2 className="text-lg font-semibold text-foreground border-b border-border pb-2">Images</h2>
+            {!isEditing && (
+              <p className="text-sm text-muted-foreground">Save the product first, then you can upload images.</p>
+            )}
+            {isEditing && (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => e.target.files && uploadImages(e.target.files)}
+                />
+                <Button type="button" variant="outline" className="gap-2" onClick={() => fileInputRef.current?.click()}>
+                  <Upload size={16} /> Upload Images
+                </Button>
+                <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
+                  {product?.product_images
+                    ?.sort((a: { sort_order: number }, b: { sort_order: number }) => a.sort_order - b.sort_order)
+                    .map((img: { id: string; image_url: string }) => (
+                      <div key={img.id} className="relative group">
+                        <img src={img.image_url} alt="" className="w-full aspect-square object-cover rounded-md border border-border" />
+                        <button
+                          type="button"
+                          onClick={() => deleteImage(img.id, img.image_url)}
+                          className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  {uploadingFiles.map((tempId) => (
+                    <div key={tempId} className="w-full aspect-square rounded-md border border-border flex items-center justify-center bg-muted">
+                      <Loader2 className="animate-spin text-muted-foreground" size={24} />
+                    </div>
                   ))}
-              </div>
-            </section>
-          )}
+                </div>
+              </>
+            )}
+          </section>
 
           <div className="flex gap-3 pt-4 border-t border-border">
             <Button type="submit" disabled={saveMutation.isPending} className="gap-2">
