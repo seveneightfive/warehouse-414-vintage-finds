@@ -1,4 +1,5 @@
 import { Facebook, Instagram } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import firstdibsLogo from '@/assets/1stdibs-logo.png';
 import chairishLogo from '@/assets/chairish-logo.png';
 import ebayLogo from '@/assets/ebay-logo.png';
