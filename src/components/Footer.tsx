@@ -1,4 +1,5 @@
 import { Facebook, Instagram } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import firstdibsLogo from '@/assets/1stdibs-logo.png';
 import chairishLogo from '@/assets/chairish-logo.png';
 import ebayLogo from '@/assets/ebay-logo.png';
@@ -38,10 +39,13 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="border-t border-white/10 mt-8 pt-6 text-center">
+        <div className="border-t border-white/10 mt-8 pt-6 flex items-center justify-between">
           <p className="text-xs text-white/40 tracking-wider">
             © {new Date().getFullYear()} warehouse 414. all rights reserved.
           </p>
+          <Link to="/admin" className="text-xs text-white/30 hover:text-white/60 transition-colors tracking-wider">
+            Admin
+          </Link>
         </div>
       </div>
     </footer>
