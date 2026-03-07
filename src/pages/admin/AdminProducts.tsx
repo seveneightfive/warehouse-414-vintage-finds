@@ -92,8 +92,18 @@ const AdminProducts = () => {
           placeholder="Search products..."
           value={searchQuery}
           onChange={(e) => handleSearch(e.target.value)}
-          className="pl-9"
+        className="pl-9"
         />
+      </div>
+
+      <div className="mb-4">
+        <ToggleGroup type="single" value={statusFilter} onValueChange={handleStatusFilter} className="justify-start flex-wrap">
+          <ToggleGroupItem value="all" className="text-xs tracking-wider uppercase px-3">All</ToggleGroupItem>
+          <ToggleGroupItem value="available" className="text-xs tracking-wider uppercase px-3">Available</ToggleGroupItem>
+          <ToggleGroupItem value="on_hold" className="text-xs tracking-wider uppercase px-3">On Hold</ToggleGroupItem>
+          <ToggleGroupItem value="sold" className="text-xs tracking-wider uppercase px-3">Sold</ToggleGroupItem>
+          <ToggleGroupItem value="inventory" className="text-xs tracking-wider uppercase px-3">Inventory</ToggleGroupItem>
+        </ToggleGroup>
       </div>
 
       {isLoading ? (
