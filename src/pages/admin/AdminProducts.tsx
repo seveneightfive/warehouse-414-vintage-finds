@@ -70,6 +70,13 @@ const AdminProducts = () => {
     setPage(0);
   };
 
+  const handleStatusFilter = (value: string) => {
+    if (value) {
+      setStatusFilter(value);
+      setPage(0);
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
