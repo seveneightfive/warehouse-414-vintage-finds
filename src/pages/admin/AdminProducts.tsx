@@ -30,6 +30,7 @@ const AdminProducts = () => {
         .from('products')
         .select('*, designer:designers(name), category:categories(name), product_images(image_url, sort_order)')
         .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
       if (searchQuery) query = query.or(`name.ilike.%${searchQuery}%`);
