@@ -16,6 +16,7 @@ const PAGE_SIZE = 25;
 const AdminProducts = () => {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(0);
 
   const { data, isLoading } = useQuery({
