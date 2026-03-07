@@ -20,10 +20,11 @@ const AdminProducts = () => {
   const [page, setPage] = useState(0);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-products', page, searchQuery],
+    queryKey: ['admin-products', page, searchQuery, statusFilter],
     queryFn: async () => {
       let countQuery = supabase.from('products').select('*', { count: 'exact', head: true });
       if (searchQuery) countQuery = countQuery.or(`name.ilike.%${searchQuery}%`);
+      if (statusFilter !== 'all') countQuery = countQuery.eq('status', statusFilter);
 
       let query = supabase
         .from('products')
@@ -32,6 +33,7 @@ const AdminProducts = () => {
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
       if (searchQuery) query = query.or(`name.ilike.%${searchQuery}%`);
+      if (statusFilter !== 'all') query = query.eq('status', statusFilter);
 
       const [{ count }, { data: products, error }] = await Promise.all([countQuery, query]);
       if (error) throw error;
