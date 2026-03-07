@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Link } from 'react-router-dom';
 import { Pencil, Eye, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
@@ -15,13 +16,15 @@ const PAGE_SIZE = 25;
 const AdminProducts = () => {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(0);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-products', page, searchQuery],
+    queryKey: ['admin-products', page, searchQuery, statusFilter],
     queryFn: async () => {
       let countQuery = supabase.from('products').select('*', { count: 'exact', head: true });
       if (searchQuery) countQuery = countQuery.or(`name.ilike.%${searchQuery}%`);
+      if (statusFilter !== 'all') countQuery = countQuery.eq('status', statusFilter);
 
       let query = supabase
         .from('products')
@@ -30,6 +33,7 @@ const AdminProducts = () => {
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
       if (searchQuery) query = query.or(`name.ilike.%${searchQuery}%`);
+      if (statusFilter !== 'all') query = query.eq('status', statusFilter);
 
       const [{ count }, { data: products, error }] = await Promise.all([countQuery, query]);
       if (error) throw error;
@@ -66,6 +70,13 @@ const AdminProducts = () => {
     setPage(0);
   };
 
+  const handleStatusFilter = (value: string) => {
+    if (value) {
+      setStatusFilter(value);
+      setPage(0);
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -81,8 +92,18 @@ const AdminProducts = () => {
           placeholder="Search products..."
           value={searchQuery}
           onChange={(e) => handleSearch(e.target.value)}
-          className="pl-9"
+        className="pl-9"
         />
+      </div>
+
+      <div className="mb-4">
+        <ToggleGroup type="single" value={statusFilter} onValueChange={handleStatusFilter} className="justify-start flex-wrap">
+          <ToggleGroupItem value="all" className="text-xs tracking-wider uppercase px-3">All</ToggleGroupItem>
+          <ToggleGroupItem value="available" className="text-xs tracking-wider uppercase px-3">Available</ToggleGroupItem>
+          <ToggleGroupItem value="on_hold" className="text-xs tracking-wider uppercase px-3">On Hold</ToggleGroupItem>
+          <ToggleGroupItem value="sold" className="text-xs tracking-wider uppercase px-3">Sold</ToggleGroupItem>
+          <ToggleGroupItem value="inventory" className="text-xs tracking-wider uppercase px-3">Inventory</ToggleGroupItem>
+        </ToggleGroup>
       </div>
 
       {isLoading ? (
