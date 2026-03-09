@@ -183,7 +183,7 @@ const ProductDetail = () => {
               )}
             </div>
             <div>
-              <h2 className="font-display text-2xl md:text-3xl tracking-wide text-foreground mb-8">product details</h2>
+              <h2 className="bg-foreground text-background font-display text-sm tracking-[0.2em] px-4 py-2 inline-block mb-8">product details</h2>
               {hasDimensions && (
                 <div className="py-4 border-b border-border">
                   <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-3">DIMENSIONS</p>
