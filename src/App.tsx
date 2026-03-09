@@ -53,7 +53,7 @@ const App = () => (
               <Route path="offers" element={<AdminInbox title="Offers" tableName="purchase_inquiries" filterType="offer" showAmount />} />
               <Route path="inquiries" element={<AdminInbox title="Inquiries" tableName="purchase_inquiries" filterType="non-offer" />} />
               <Route path="designers" element={<AdminCrudList title="Designers" tableName="designers" columns={[{ key: 'name', label: 'Name' }, { key: 'about', label: 'Bio', type: 'textarea' }]} />} />
-              <Route path="makers" element={<AdminCrudList title="Makers" tableName="makers" />} />
+              <Route path="makers" element={<AdminCrudList title="Makers" tableName="makers" columns={[{ key: 'name', label: 'Name' }, { key: 'about', label: 'Bio', type: 'textarea' }]} />} />
               <Route path="categories" element={<AdminCrudList title="Categories" tableName="categories" />} />
               <Route path="styles" element={<AdminCrudList title="Styles" tableName="styles" />} />
               <Route path="periods" element={<AdminCrudList title="Periods" tableName="periods" />} />
