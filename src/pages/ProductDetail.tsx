@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useState, useRef, useCallback } from 'react';
-import { useProduct, useSimilarProducts } from '@/hooks/use-products';
+import { useProduct, useSimilarProducts, useProducts } from '@/hooks/use-products';
 import ProductCard from '@/components/ProductCard';
 import ProductActions from '@/components/ProductActions';
 import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
@@ -13,6 +13,10 @@ const ProductDetail = () => {
   const { id } = useParams();
   const { data: product, isLoading } = useProduct(id);
   const { data: similar } = useSimilarProducts(id, product?.category_id);
+  const { data: designerProductsRaw } = useProducts(product?.designer_id ? { designer_id: product.designer_id } : undefined);
+  const { data: makerProductsRaw } = useProducts(product?.maker_id ? { maker_id: product.maker_id } : undefined);
+  const designerProducts = designerProductsRaw?.filter(p => p.id !== id);
+  const makerProducts = makerProductsRaw?.filter(p => p.id !== id);
   const [selectedImage, setSelectedImage] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
@@ -257,6 +261,30 @@ const ProductDetail = () => {
           <h2 className="font-display text-xl tracking-[0.2em] uppercase text-foreground mb-8">similar pieces</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {similar.map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Pieces by Designer */}
+      {designerProducts && designerProducts.length > 0 && (
+        <section className="container mx-auto px-5 py-16 border-t border-border">
+          <h2 className="bg-foreground text-background font-display text-sm tracking-[0.2em] px-4 py-2 inline-block mb-8">pieces by {product.designer?.name}</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {designerProducts.slice(0, 4).map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Pieces by Maker */}
+      {makerProducts && makerProducts.length > 0 && (
+        <section className="container mx-auto px-5 py-16 border-t border-border">
+          <h2 className="bg-foreground text-background font-display text-sm tracking-[0.2em] px-4 py-2 inline-block mb-8">pieces by {product.maker?.name}</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {makerProducts.slice(0, 4).map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
           </div>
