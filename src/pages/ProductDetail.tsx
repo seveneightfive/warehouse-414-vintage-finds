@@ -122,7 +122,9 @@ const ProductDetail = () => {
             <h1 className="font-display text-2xl md:text-3xl tracking-wide text-foreground mb-2">{product.name}</h1>
             {product.designer && (
               <p className="text-muted-foreground text-base mb-1">
-                Designer: <a href={`/designer/${product.designer.id}`} className="hover:text-primary transition-colors">{product.designer.name}</a>
+                Designer: <Link to={`/designer/${product.designer.id}`} className="hover:text-primary transition-colors">{product.designer.name}</Link>
+              </p>
+            )}
               </p>
             )}
             {product.maker && (
