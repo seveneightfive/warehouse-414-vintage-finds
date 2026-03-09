@@ -263,6 +263,30 @@ const ProductDetail = () => {
         </section>
       )}
 
+      {/* Pieces by Designer */}
+      {designerProducts && designerProducts.length > 0 && (
+        <section className="container mx-auto px-5 py-16 border-t border-border">
+          <h2 className="bg-foreground text-background font-display text-sm tracking-[0.2em] px-4 py-2 inline-block mb-8">pieces by {product.designer?.name}</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {designerProducts.slice(0, 4).map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Pieces by Maker */}
+      {makerProducts && makerProducts.length > 0 && (
+        <section className="container mx-auto px-5 py-16 border-t border-border">
+          <h2 className="bg-foreground text-background font-display text-sm tracking-[0.2em] px-4 py-2 inline-block mb-8">pieces by {product.maker?.name}</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {makerProducts.slice(0, 4).map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Sticky Action Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-40">
         <div className="container mx-auto px-5 py-3 flex items-center gap-3">
