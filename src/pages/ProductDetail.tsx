@@ -147,8 +147,8 @@ const ProductDetail = () => {
       {(product.short_description || product.long_description) && (
         <section className="bg-secondary/50 border-t border-border">
           <div className="container mx-auto px-5 md:pr-24 py-14 md:py-20">
-            <div className="grid md:grid-cols-[200px_1fr] gap-6 md:gap-16">
-              <h2 className="bg-foreground text-background font-display text-sm tracking-[0.2em] px-4 py-2 inline-block mb-6">about this piece</h2>
+            <h2 className="bg-foreground text-background font-display text-sm tracking-[0.2em] px-4 py-2 inline-block mb-8">about this piece</h2>
+            <div>
               <div
                 className="text-lg leading-[1.9] text-foreground prose max-w-none"
                 dangerouslySetInnerHTML={{ __html: product.long_description || product.short_description || '' }}
