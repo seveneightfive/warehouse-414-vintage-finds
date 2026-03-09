@@ -125,7 +125,11 @@ const ProductDetail = () => {
                 Designer: <a href={`/designer/${product.designer.id}`} className="hover:text-primary transition-colors">{product.designer.name}</a>
               </p>
             )}
-            {product.maker && <p className="text-muted-foreground text-base mb-1">Maker: {product.maker.name}</p>}
+            {product.maker && (
+              <p className="text-muted-foreground text-base mb-1">
+                Maker: <Link to={`/maker/${product.maker.id}`} className="hover:text-primary transition-colors">{product.maker.name}</Link>
+              </p>
+            )}
             {product.price && (
               <p className="font-display text-xl md:text-2xl text-muted-foreground mt-4">${product.price.toLocaleString()}</p>
             )}
