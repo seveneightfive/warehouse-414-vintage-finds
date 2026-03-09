@@ -55,9 +55,10 @@ const ProductDetail = () => {
     return <div className="container mx-auto px-5 py-20 text-center text-muted-foreground">Product not found.</div>;
   }
 
+  const hasDimensions = product.product_dimensions || product.box_dimensions;
+
   const detailRows = [
     product.sku && { label: 'SKU', value: product.sku },
-    product.product_dimensions && { label: 'DIMENSIONS', value: product.product_dimensions },
     product.materials && { label: 'MATERIALS', value: product.materials },
     product.condition && { label: 'CONDITION', value: product.condition },
     product.year_created && { label: 'YEAR', value: `c. ${product.year_created}` },
