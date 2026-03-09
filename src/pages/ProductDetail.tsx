@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useState, useRef, useCallback } from 'react';
 import { useProduct, useSimilarProducts } from '@/hooks/use-products';
 import ProductCard from '@/components/ProductCard';
