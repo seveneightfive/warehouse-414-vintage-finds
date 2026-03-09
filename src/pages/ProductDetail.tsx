@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useState, useRef, useCallback } from 'react';
-import { useProduct, useSimilarProducts } from '@/hooks/use-products';
+import { useProduct, useSimilarProducts, useProducts } from '@/hooks/use-products';
 import ProductCard from '@/components/ProductCard';
 import ProductActions from '@/components/ProductActions';
 import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
