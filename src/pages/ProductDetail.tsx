@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useState, useRef, useCallback } from 'react';
 import { useProduct, useSimilarProducts } from '@/hooks/use-products';
 import ProductCard from '@/components/ProductCard';
@@ -122,10 +122,14 @@ const ProductDetail = () => {
             <h1 className="font-display text-2xl md:text-3xl tracking-wide text-foreground mb-2">{product.name}</h1>
             {product.designer && (
               <p className="text-muted-foreground text-base mb-1">
-                Designer: <a href={`/designer/${product.designer.id}`} className="hover:text-primary transition-colors">{product.designer.name}</a>
+                Designer: <Link to={`/designer/${product.designer.id}`} className="hover:text-primary transition-colors">{product.designer.name}</Link>
               </p>
             )}
-            {product.maker && <p className="text-muted-foreground text-base mb-1">Maker: {product.maker.name}</p>}
+            {product.maker && (
+              <p className="text-muted-foreground text-base mb-1">
+                Maker: <Link to={`/maker/${product.maker.id}`} className="hover:text-primary transition-colors">{product.maker.name}</Link>
+              </p>
+            )}
             {product.price && (
               <p className="font-display text-xl md:text-2xl text-muted-foreground mt-4">${product.price.toLocaleString()}</p>
             )}
@@ -143,8 +147,8 @@ const ProductDetail = () => {
       {(product.short_description || product.long_description) && (
         <section className="bg-secondary/50 border-t border-border">
           <div className="container mx-auto px-5 md:pr-24 py-14 md:py-20">
-            <div className="grid md:grid-cols-[200px_1fr] gap-6 md:gap-16">
-              <h2 className="font-display text-sm tracking-[0.2em] uppercase text-muted-foreground pt-1">about this piece</h2>
+            <h2 className="bg-foreground text-background font-display text-sm tracking-[0.2em] px-4 py-2 inline-block mb-8">about this piece</h2>
+            <div>
               <div
                 className="text-lg leading-[1.9] text-foreground prose max-w-none"
                 dangerouslySetInnerHTML={{ __html: product.long_description || product.short_description || '' }}
@@ -177,7 +181,7 @@ const ProductDetail = () => {
               )}
             </div>
             <div>
-              <h2 className="font-display text-2xl md:text-3xl tracking-wide text-foreground mb-8">product details</h2>
+              <h2 className="bg-foreground text-background font-display text-sm tracking-[0.2em] px-4 py-2 inline-block mb-8">product details</h2>
               {hasDimensions && (
                 <div className="py-4 border-b border-border">
                   <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-3">DIMENSIONS</p>

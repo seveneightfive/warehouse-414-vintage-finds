@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Catalog from "./pages/Catalog";
 import ProductDetail from "./pages/ProductDetail";
 import DesignerDetail from "./pages/DesignerDetail";
+import MakerDetail from "./pages/MakerDetail";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import AdminLogin from "./pages/AdminLogin";
@@ -37,6 +38,7 @@ const App = () => (
               <Route path="/catalog" element={<Catalog />} />
               <Route path="/product/:id" element={<ProductDetail />} />
               <Route path="/designer/:id" element={<DesignerDetail />} />
+              <Route path="/maker/:id" element={<MakerDetail />} />
               <Route path="/collection/:slug" element={<CollectionDetail />} />
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
