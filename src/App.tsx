@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import Catalog from "./pages/Catalog";
 import ProductDetail from "./pages/ProductDetail";
 import DesignerDetail from "./pages/DesignerDetail";
+import MakerDetail from "./pages/MakerDetail";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import AdminLogin from "./pages/AdminLogin";
