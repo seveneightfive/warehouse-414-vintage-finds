@@ -13,6 +13,10 @@ const ProductDetail = () => {
   const { id } = useParams();
   const { data: product, isLoading } = useProduct(id);
   const { data: similar } = useSimilarProducts(id, product?.category_id);
+  const { data: designerProductsRaw } = useProducts(product?.designer_id ? { designer_id: product.designer_id } : undefined);
+  const { data: makerProductsRaw } = useProducts(product?.maker_id ? { maker_id: product.maker_id } : undefined);
+  const designerProducts = designerProductsRaw?.filter(p => p.id !== id);
+  const makerProducts = makerProductsRaw?.filter(p => p.id !== id);
   const [selectedImage, setSelectedImage] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
