@@ -15,8 +15,8 @@ export default {
     extend: {
       fontFamily: {
         display: ["Kabel", "sans-serif"],
-        body: ["Jost", "sans-serif"],
-        sans: ["Jost", "sans-serif"],
+        body: ["Josefin Sans", "sans-serif"],
+        sans: ["Josefin Sans", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",

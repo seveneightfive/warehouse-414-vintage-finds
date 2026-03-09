@@ -67,12 +67,38 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Jost', 'Cormorant Garamond', Georgia, sans-serif;
+    font-family: 'Josefin Sans', sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    font-weight: 300;
   }
 
   .font-display {
     font-family: 'Kabel', sans-serif;
     text-transform: lowercase;
+    letter-spacing: 0.04em;
+  }
+
+  h1, h2, h3, h4, h5 {
+    font-family: 'Kabel', sans-serif;
+    text-transform: lowercase;
+    letter-spacing: 0.04em;
+  }
+
+  h1 {
+    font-size: clamp(2.5rem, 5vw, 3.5rem);
+  }
+
+  h2 {
+    font-size: clamp(1.75rem, 3vw, 2.25rem);
+  }
+
+  h3 {
+    font-size: clamp(1.375rem, 2.5vw, 1.625rem);
+  }
+
+  h4, h5 {
+    font-size: 1.125rem;
   }
 
   .stripe-pattern {
