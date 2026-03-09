@@ -357,10 +357,10 @@ const AdminProductForm = () => {
             <h2 className="text-lg font-semibold text-foreground border-b border-border pb-2">Dimensions & Condition</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField control={form.control} name="product_dimensions" render={({ field }) => (
-                <FormItem><FormLabel>Product Dimensions</FormLabel><FormControl><Textarea rows={4} {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Product Dimensions</FormLabel><FormControl><Textarea rows={8} className="max-w-sm font-mono text-sm" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="box_dimensions" render={({ field }) => (
-                <FormItem><FormLabel>Box Dimensions</FormLabel><FormControl><Textarea rows={4} {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Box / Shipping Dimensions</FormLabel><FormControl><Textarea rows={8} className="max-w-sm font-mono text-sm" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="dimension_notes" render={({ field }) => (
                 <FormItem className="md:col-span-2"><FormLabel>Dimension Notes</FormLabel><FormControl><Textarea rows={2} {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>

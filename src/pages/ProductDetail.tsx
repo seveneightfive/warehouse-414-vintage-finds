@@ -55,9 +55,10 @@ const ProductDetail = () => {
     return <div className="container mx-auto px-5 py-20 text-center text-muted-foreground">Product not found.</div>;
   }
 
+  const hasDimensions = product.product_dimensions || product.box_dimensions;
+
   const detailRows = [
     product.sku && { label: 'SKU', value: product.sku },
-    product.product_dimensions && { label: 'DIMENSIONS', value: product.product_dimensions },
     product.materials && { label: 'MATERIALS', value: product.materials },
     product.condition && { label: 'CONDITION', value: product.condition },
     product.year_created && { label: 'YEAR', value: `c. ${product.year_created}` },
@@ -177,11 +178,37 @@ const ProductDetail = () => {
             </div>
             <div>
               <h2 className="font-display text-2xl md:text-3xl tracking-wide text-foreground mb-8">product details</h2>
+              {hasDimensions && (
+                <div className="py-4 border-b border-border">
+                  <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-3">DIMENSIONS</p>
+                  <div className="flex gap-0">
+                    {product.product_dimensions && (
+                      <div className={product.box_dimensions ? 'flex-1 pr-6' : ''}>
+                        <p className="font-display text-[10px] tracking-[0.15em] text-muted-foreground mb-1.5">PRODUCT</p>
+                        {product.product_dimensions.split('\n').map((line, i) => (
+                          <p key={i} className="text-base text-foreground leading-relaxed">{line}</p>
+                        ))}
+                      </div>
+                    )}
+                    {product.product_dimensions && product.box_dimensions && (
+                      <div className="w-px bg-border/50 mx-0" />
+                    )}
+                    {product.box_dimensions && (
+                      <div className={product.product_dimensions ? 'flex-1 pl-6' : ''}>
+                        <p className="font-display text-[10px] tracking-[0.15em] text-muted-foreground mb-1.5">SHIPPING / CRATED</p>
+                        {product.box_dimensions.split('\n').map((line, i) => (
+                          <p key={i} className="text-base text-foreground leading-relaxed">{line}</p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               <div className="space-y-0">
                 {detailRows.map((row, i) => (
                   <div key={i} className="py-4 border-b border-border">
                     <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-1">{row.label}</p>
-                    <p className="text-lg text-foreground">{row.value}</p>
+                    <p className="text-lg text-foreground whitespace-pre-line">{row.value}</p>
                   </div>
                 ))}
               </div>
