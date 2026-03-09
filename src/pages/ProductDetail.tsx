@@ -181,9 +181,9 @@ const ProductDetail = () => {
               {hasDimensions && (
                 <div className="py-4 border-b border-border">
                   <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-3">DIMENSIONS</p>
-                  <div className="flex gap-0">
+                  <div className="flex flex-col md:flex-row gap-4 md:gap-0">
                     {product.product_dimensions && (
-                      <div className={product.box_dimensions ? 'flex-1 pr-6' : ''}>
+                      <div className={product.box_dimensions ? 'flex-1 md:pr-6' : ''}>
                         <p className="font-display text-[10px] tracking-[0.15em] text-muted-foreground mb-1.5">PRODUCT</p>
                         {product.product_dimensions.split('\n').map((line, i) => (
                           <p key={i} className="text-base text-foreground leading-relaxed">{line}</p>
@@ -191,10 +191,13 @@ const ProductDetail = () => {
                       </div>
                     )}
                     {product.product_dimensions && product.box_dimensions && (
-                      <div className="w-px bg-border/50 mx-0" />
+                      <>
+                        <div className="hidden md:block w-px bg-border/50" />
+                        <div className="md:hidden h-px bg-border/50" />
+                      </>
                     )}
                     {product.box_dimensions && (
-                      <div className={product.product_dimensions ? 'flex-1 pl-6' : ''}>
+                      <div className={product.product_dimensions ? 'flex-1 md:pl-6' : ''}>
                         <p className="font-display text-[10px] tracking-[0.15em] text-muted-foreground mb-1.5">SHIPPING / CRATED</p>
                         {product.box_dimensions.split('\n').map((line, i) => (
                           <p key={i} className="text-base text-foreground leading-relaxed">{line}</p>
