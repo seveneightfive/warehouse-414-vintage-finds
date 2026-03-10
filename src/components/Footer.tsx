@@ -20,7 +20,7 @@ const Footer = () => {
           {/* Social Icons */}
           <div className="flex items-center gap-4">
             <a
-              href="#"
+              href="https://www.facebook.com/people/Warehouse-414-new/61574405447016"
               target="_blank"
               rel="noopener noreferrer"
               className="text-white/50 hover:text-primary transition-colors"
@@ -29,7 +29,7 @@ const Footer = () => {
               <Facebook size={20} />
             </a>
             <a
-              href="#"
+              href="https://www.instagram.com/warehouse4one4"
               target="_blank"
               rel="noopener noreferrer"
               className="text-white/50 hover:text-primary transition-colors"
@@ -38,7 +38,7 @@ const Footer = () => {
               <Instagram size={20} />
             </a>
             <a
-              href="#"
+              href="https://www.1stdibs.com/dealers/warehouse-414"
               target="_blank"
               rel="noopener noreferrer"
               className="opacity-50 hover:opacity-100 transition-opacity"
@@ -47,7 +47,7 @@ const Footer = () => {
               <img src={firstdibsLogo} alt="1stDibs" className="h-5 w-auto brightness-0 invert" />
             </a>
             <a
-              href="#"
+              href="https://www.chairish.com/shop/warehouse414"
               target="_blank"
               rel="noopener noreferrer"
               className="opacity-50 hover:opacity-100 transition-opacity"
@@ -56,7 +56,7 @@ const Footer = () => {
               <img src={chairishLogo} alt="Chairish" className="h-4 w-auto brightness-0 invert" />
             </a>
             <a
-              href="#"
+              href="https://www.ebay.com/str/warehouse414"
               target="_blank"
               rel="noopener noreferrer"
               className="opacity-50 hover:opacity-100 transition-opacity"
