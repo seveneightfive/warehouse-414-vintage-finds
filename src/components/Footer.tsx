@@ -53,7 +53,7 @@ const Footer = () => {
               className="opacity-50 hover:opacity-100 transition-opacity"
               aria-label="Chairish"
             >
-              <img src={chairishLogo} alt="Chairish" className="h-8 w-auto brightness-0 invert" />
+              <img src={chairishLogo} alt="Chairish" className="h-5 w-auto brightness-0 invert" />
             </a>
             <a
               href="https://www.ebay.com/str/warehouse414"
