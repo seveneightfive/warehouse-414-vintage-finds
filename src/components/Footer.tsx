@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import firstdibsLogo from "@/assets/1stdibs-logo.png";
 import chairishLogo from "@/assets/chairish-logo.png";
 import ebayLogo from "@/assets/ebay-logo.png";
+import logoHorizontal from "@/assets/warehouse414-logo-horizontal.png";
 
 const Footer = () => {
   return (
@@ -11,8 +12,8 @@ const Footer = () => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
           {/* Brand */}
           <div>
-            <h3 className="font-display text-lg tracking-[0.3em] uppercase text-white mb-2">Warehouse 414</h3>
-            <p className="text-sm text-white/50 leading-relaxed">
+            <img src={logoHorizontal} alt="Warehouse 414" className="h-10 w-auto" />
+            <p className="text-sm text-white/50 leading-relaxed mt-2">
               Curated vintage & mid-century modern furniture for the discerning collector.
             </p>
           </div>
