@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getSupabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package, Clock, HandCoins, MessageSquare } from "lucide-react";
 
@@ -8,17 +8,17 @@ const AdminDashboard = () => {
     queryKey: ["admin-stats"],
     queryFn: async () => {
       const [products, holds, offers, inquiries] = await Promise.all([
-        getSupabase().from("products").select("id", { count: "exact", head: true }),
-        getSupabase()
+        supabase.from("products").select("id", { count: "exact", head: true }),
+        supabase
           .from("product_holds")
           .select("id", { count: "exact", head: true })
           .gt("expires_at", new Date().toISOString()),
-        getSupabase()
+        supabase
           .from("purchase_inquiries")
           .select("id", { count: "exact", head: true })
           .eq("inquiry_type", "offer")
           .eq("is_read", false),
-        getSupabase()
+        supabase
           .from("purchase_inquiries")
           .select("id", { count: "exact", head: true })
           .neq("inquiry_type", "offer")

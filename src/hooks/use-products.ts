@@ -1,4 +1,4 @@
-import { getSupabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import type { Product } from "@/types/database";
 
@@ -24,7 +24,7 @@ export function useInfiniteProducts(filters?: ProductFilters) {
   return useInfiniteQuery({
     queryKey: ["products-infinite", filters],
     queryFn: async ({ pageParam }: { pageParam: Cursor | undefined }) => {
-      let query = getSupabase()
+      let query = supabase
         .from("products")
         .select(
           `
@@ -36,12 +36,14 @@ export function useInfiniteProducts(filters?: ProductFilters) {
         .order("id", { ascending: false })
         .limit(PAGE_SIZE);
 
+      // Status filter
       if (filters?.status) {
         query = query.eq("status", filters.status);
       } else {
         query = query.in("status", ["available", "on_hold", "sold"]);
       }
 
+      // Cursor-based pagination
       if (pageParam) {
         query = query.or(
           `created_at.lt.${pageParam.created_at},and(created_at.eq.${pageParam.created_at},id.lt.${pageParam.id})`,
@@ -87,7 +89,7 @@ export function useProducts(filters?: {
   return useQuery({
     queryKey: ["products", filters],
     queryFn: async () => {
-      let query = getSupabase()
+      let query = supabase
         .from("products")
         .select(
           `
@@ -132,7 +134,7 @@ export function useProduct(id: string | undefined) {
     queryKey: ["product", id],
     queryFn: async () => {
       if (!id) return null;
-      const { data, error } = await getSupabase()
+      const { data, error } = await supabase
         .from("products")
         .select(
           `
@@ -160,7 +162,7 @@ export function useFeaturedProducts() {
   return useQuery({
     queryKey: ["products", "featured"],
     queryFn: async () => {
-      const { data, error } = await getSupabase()
+      const { data, error } = await supabase
         .from("products")
         .select(
           `
@@ -183,7 +185,7 @@ export function useSimilarProducts(productId: string | undefined, categoryId: st
     queryKey: ["products", "similar", productId, categoryId],
     queryFn: async () => {
       if (!productId) return [];
-      let query = getSupabase()
+      let query = supabase
         .from("products")
         .select(`*, designer:designers(*), product_images(*)`)
         .neq("id", productId)
@@ -202,15 +204,14 @@ export function useFilterOptions() {
   return useQuery({
     queryKey: ["filter-options"],
     queryFn: async () => {
-      const sb = getSupabase();
       const [designers, makers, categories, styles, periods, countries, colors] = await Promise.all([
-        sb.from("designers").select("*").order("name"),
-        sb.from("makers").select("*").order("name"),
-        sb.from("categories").select("*").order("name"),
-        sb.from("styles").select("*").order("name"),
-        sb.from("periods").select("*").order("name"),
-        sb.from("countries").select("*").order("name"),
-        sb.from("colors").select("*").order("name"),
+        supabase.from("designers").select("*").order("name"),
+        supabase.from("makers").select("*").order("name"),
+        supabase.from("categories").select("*").order("name"),
+        supabase.from("styles").select("*").order("name"),
+        supabase.from("periods").select("*").order("name"),
+        supabase.from("countries").select("*").order("name"),
+        supabase.from("colors").select("*").order("name"),
       ]);
       return {
         designers: designers.data || [],

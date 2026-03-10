@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { getSupabase } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ShoppingCart, Clock, DollarSign } from 'lucide-react';
 
@@ -47,7 +47,7 @@ export default function InquiryDialog({ type, productId, productTitle, triggerCl
       if (type === 'inquiry') { record.inquiry_type = 'purchase'; }
       if (type === 'offer' || type === 'inquiry') record.message = form.message || null;
 
-      const { error } = await getSupabase().from(cfg.table).insert(record);
+      const { error } = await supabase.from(cfg.table).insert(record);
       if (error) throw error;
       toast.success(`${cfg.title} submitted successfully!`);
       setForm({ name: '', email: '', phone: '', message: '', amount: '' });

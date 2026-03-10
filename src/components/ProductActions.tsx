@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { getSupabase } from '@/integrations/supabase/client';
-const supabase = getSupabase();
+import { supabase } from '@/integrations/supabase/client';
 import jsPDF from 'jspdf';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
