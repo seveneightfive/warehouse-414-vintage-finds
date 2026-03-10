@@ -85,20 +85,12 @@ const Catalog = () => {
     value: string,
     options: { id: string; name: string }[] | undefined
   ) => (
-    <div className="space-y-1.5 font-display">
-      <label className="text-sm font-medium text-foreground">{label}</label>
-      <Select value={value} onValueChange={(v) => setParam(paramKey, v === '__all__' ? '' : v)}>
-        <SelectTrigger className="bg-card border-border text-sm font-display">
-          <SelectValue placeholder={`All ${label}s`} />
-        </SelectTrigger>
-        <SelectContent className="font-display">
-          <SelectItem value="__all__">{`All ${label}s`}</SelectItem>
-          {options?.map((o) => (
-            <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
+    <SearchableSelect
+      label={label}
+      value={value}
+      options={options}
+      onChange={(v) => setParam(paramKey, v)}
+    />
   );
 
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
