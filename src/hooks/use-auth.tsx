@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const checkAdmin = async (userId: string) => {
-    const { data } = await supabase
+    const { data } = await getSupabase()
       .from('user_roles')
       .select('role')
       .eq('user_id', userId)
@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const { data: { subscription } } = getSupabase().auth.onAuthStateChange(
       async (_event, session) => {
         const currentUser = session?.user ?? null;
         setUser(currentUser);
@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    getSupabase().auth.getSession().then(({ data: { session } }) => {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
       if (currentUser) {
@@ -60,12 +60,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await getSupabase().auth.signInWithPassword({ email, password });
     if (error) throw error;
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await getSupabase().auth.signOut();
     setUser(null);
     setIsAdmin(false);
   };

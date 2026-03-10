@@ -8,17 +8,17 @@ const AdminDashboard = () => {
     queryKey: ["admin-stats"],
     queryFn: async () => {
       const [products, holds, offers, inquiries] = await Promise.all([
-        supabase.from("products").select("id", { count: "exact", head: true }),
-        supabase
+        getSupabase().from("products").select("id", { count: "exact", head: true }),
+        getSupabase()
           .from("product_holds")
           .select("id", { count: "exact", head: true })
           .gt("expires_at", new Date().toISOString()),
-        supabase
+        getSupabase()
           .from("purchase_inquiries")
           .select("id", { count: "exact", head: true })
           .eq("inquiry_type", "offer")
           .eq("is_read", false),
-        supabase
+        getSupabase()
           .from("purchase_inquiries")
           .select("id", { count: "exact", head: true })
           .neq("inquiry_type", "offer")
