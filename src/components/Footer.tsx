@@ -1,8 +1,8 @@
-import { Facebook, Instagram } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import firstdibsLogo from '@/assets/1stdibs-logo.png';
-import chairishLogo from '@/assets/chairish-logo.png';
-import ebayLogo from '@/assets/ebay-logo.png';
+import { Facebook, Instagram } from "lucide-react";
+import { Link } from "react-router-dom";
+import firstdibsLogo from "@/assets/1stdibs-logo.png";
+import chairishLogo from "@/assets/chairish-logo.png";
+import ebayLogo from "@/assets/ebay-logo.png";
 
 const Footer = () => {
   return (
@@ -11,9 +11,7 @@ const Footer = () => {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
           {/* Brand */}
           <div>
-            <h3 className="font-display text-lg tracking-[0.3em] uppercase text-white mb-2">
-              Warehouse 414
-            </h3>
+            <h3 className="font-display text-lg tracking-[0.3em] uppercase text-white mb-2">Warehouse 414</h3>
             <p className="text-sm text-white/50 leading-relaxed">
               Curated vintage & mid-century modern furniture for the discerning collector.
             </p>
@@ -21,20 +19,50 @@ const Footer = () => {
 
           {/* Social Icons */}
           <div className="flex items-center gap-4">
-            <a href="#" target="_blank" rel="noopener noreferrer" className="text-white/50 hover:text-primary transition-colors" aria-label="Facebook">
+            <a
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/50 hover:text-primary transition-colors"
+              aria-label="Facebook"
+            >
               <Facebook size={20} />
             </a>
-            <a href="#" target="_blank" rel="noopener noreferrer" className="text-white/50 hover:text-primary transition-colors" aria-label="Instagram">
+            <a
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/50 hover:text-primary transition-colors"
+              aria-label="Instagram"
+            >
               <Instagram size={20} />
             </a>
-            <a href="#" target="_blank" rel="noopener noreferrer" className="opacity-50 hover:opacity-100 transition-opacity" aria-label="1stDibs">
+            <a
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="opacity-50 hover:opacity-100 transition-opacity"
+              aria-label="1stDibs"
+            >
               <img src={firstdibsLogo} alt="1stDibs" className="h-5 w-auto brightness-0 invert" />
             </a>
-            <a href="#" target="_blank" rel="noopener noreferrer" className="opacity-50 hover:opacity-100 transition-opacity" aria-label="Chairish">
-              <img src={chairishLogo} alt="Chairish" className="h-5 w-auto brightness-0 invert" />
+            <a
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="opacity-50 hover:opacity-100 transition-opacity"
+              aria-label="Chairish"
+            >
+              <img src={chairishLogo} alt="Chairish" className="h-4 w-auto brightness-0 invert" />
             </a>
-            <a href="#" target="_blank" rel="noopener noreferrer" className="opacity-50 hover:opacity-100 transition-opacity" aria-label="eBay">
-              <img src={ebayLogo} alt="eBay" className="h-5 w-auto brightness-0 invert" />
+            <a
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="opacity-50 hover:opacity-100 transition-opacity"
+              aria-label="eBay"
+            >
+              <img src={ebayLogo} alt="eBay" className="h-4 w-auto max-w-[40px] brightness-0 invert" />
             </a>
           </div>
         </div>
