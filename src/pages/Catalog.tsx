@@ -3,7 +3,7 @@ import { useInfiniteProducts, useFilterOptions } from '@/hooks/use-products';
 import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
 import ProductCard from '@/components/ProductCard';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import SearchableSelect from '@/components/SearchableSelect';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Search, X, SlidersHorizontal, EyeOff, Eye } from 'lucide-react';
