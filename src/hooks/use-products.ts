@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { getSupabase } from "@/integrations/supabase/client";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import type { Product } from "@/types/database";
 
