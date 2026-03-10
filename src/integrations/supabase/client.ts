@@ -1,10 +1,16 @@
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 
-let client: ReturnType<typeof createBrowserClient> | null = null;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL!;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY!;
+
+let client: any = null;
 
 export function getSupabase() {
   if (!client) {
-    client = createBrowserClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
+    client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   }
   return client;
 }
+
+// Legacy alias
+export const supabase = getSupabase();

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { getSupabase } from '@/integrations/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,7 @@ const AdminInbox = ({ title, tableName, showAmount, filterType }: AdminInboxProp
   const { data: items, isLoading } = useQuery({
     queryKey: [tableName, filterType],
     queryFn: async () => {
-      let query = supabase
+      let query = getSupabase()
         .from(tableName)
         .select('*, product:products(name)')
         .order('created_at', { ascending: false });
@@ -32,14 +32,14 @@ const AdminInbox = ({ title, tableName, showAmount, filterType }: AdminInboxProp
 
   const updateStatus = useMutation({
     mutationFn: async ({ id, status, productId }: { id: string; status: string; productId?: string }) => {
-      const { error } = await supabase.from(tableName).update({ status }).eq('id', id);
+      const { error } = await getSupabase().from(tableName).update({ status }).eq('id', id);
       if (error) throw error;
       // Sync product status for holds
       if (tableName === 'product_holds' && productId) {
         if (status === 'approved') {
-          await supabase.from('products').update({ status: 'on_hold' }).eq('id', productId);
+          await getSupabase().from('products').update({ status: 'on_hold' }).eq('id', productId);
         } else if (status === 'released') {
-          await supabase.from('products').update({ status: 'available' }).eq('id', productId);
+          await getSupabase().from('products').update({ status: 'available' }).eq('id', productId);
         }
       }
     },

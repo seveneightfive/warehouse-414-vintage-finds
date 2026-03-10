@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { getSupabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import type { Designer } from '@/types/database';
 
@@ -6,7 +6,7 @@ export function useDesigners() {
   return useQuery({
     queryKey: ['designers'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await getSupabase()
         .from('designers')
         .select('*')
         .order('name');
@@ -21,7 +21,7 @@ export function useDesigner(id: string | undefined) {
     queryKey: ['designer', id],
     queryFn: async () => {
       if (!id) return null;
-      const { data, error } = await supabase
+      const { data, error } = await getSupabase()
         .from('designers')
         .select('*')
         .eq('id', id)

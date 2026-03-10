@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { getSupabase } from '@/integrations/supabase/client';
 import type { Collection, CollectionProduct } from '@/types/database';
 
 export function useCollections() {
   return useQuery<Collection[]>({
     queryKey: ['collections'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await getSupabase()
         .from('collections')
         .select('*')
         .order('name');
@@ -26,13 +26,13 @@ export function useCollectionBySlug(slug: string | undefined) {
     enabled: !!slug,
     queryFn: async () => {
       // Try with and without the collection/ prefix
-      let { data, error } = await supabase
+      let { data, error } = await getSupabase()
         .from('collections')
         .select('*')
         .eq('slug', slug!)
         .maybeSingle();
       if (!data) {
-        ({ data, error } = await supabase
+        ({ data, error } = await getSupabase()
           .from('collections')
           .select('*')
           .eq('slug', `collection/${slug}`)
@@ -49,7 +49,7 @@ export function useCollectionProducts(collectionId: string | undefined) {
     queryKey: ['collection-products', collectionId],
     enabled: !!collectionId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await getSupabase()
         .from('collection_products')
         .select('*, product:products(*, designer:designers(*), product_images(*))')
         .eq('collection_id', collectionId!)
