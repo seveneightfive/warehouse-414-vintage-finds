@@ -357,11 +357,24 @@ const AdminProductForm = () => {
               <SelectField name="style_id" label="Style" options={taxonomy.styles} />
               <SelectField name="country_id" label="Country" options={taxonomy.countries} />
             </div>
+
+            {/* Materials, Year Created, Condition */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField control={form.control} name="materials" render={({ field }) => (
+                <FormItem><FormLabel>Materials</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="year_created" render={({ field }) => (
+                <FormItem><FormLabel>Year Created</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="condition" render={({ field }) => (
+                <FormItem><FormLabel>Condition Notes</FormLabel><FormControl><Textarea rows={2} {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+              )} />
+            </div>
           </section>
 
-          {/* Dimensions & Condition */}
+          {/* Dimensions */}
           <section className="space-y-4">
-            <h2 className="text-lg font-semibold text-foreground border-b border-border pb-2">Dimensions & Condition</h2>
+            <h2 className="text-lg font-semibold text-foreground border-b border-border pb-2">Dimensions</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField control={form.control} name="product_dimensions" render={({ field }) => (
                 <FormItem><FormLabel>Product Dimensions</FormLabel><FormControl><Textarea rows={8} className="max-w-sm font-mono text-sm" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
@@ -371,15 +384,6 @@ const AdminProductForm = () => {
               )} />
               <FormField control={form.control} name="dimension_notes" render={({ field }) => (
                 <FormItem className="md:col-span-2"><FormLabel>Dimension Notes</FormLabel><FormControl><Textarea rows={2} {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <FormField control={form.control} name="materials" render={({ field }) => (
-                <FormItem><FormLabel>Materials</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <FormField control={form.control} name="condition" render={({ field }) => (
-                <FormItem><FormLabel>Condition</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <FormField control={form.control} name="year_created" render={({ field }) => (
-                <FormItem><FormLabel>Year Created</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
               )} />
             </div>
           </section>
