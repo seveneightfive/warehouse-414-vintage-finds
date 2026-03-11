@@ -18,7 +18,7 @@ type AdminCrudListProps = {
   productFk?: string;
 };
 
-const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Name' }] }: AdminCrudListProps) => {
+const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Name' }], productFk }: AdminCrudListProps) => {
   const queryClient = useQueryClient();
   const [editItem, setEditItem] = useState<Record<string, string> | null>(null);
   const [newItem, setNewItem] = useState<Record<string, string>>({});
@@ -32,6 +32,27 @@ const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Nam
       if (error) throw error;
       return data;
     },
+  });
+
+  // Fetch product counts per item when productFk is set
+  const { data: productCounts } = useQuery({
+    queryKey: [tableName, 'product-counts'],
+    queryFn: async () => {
+      if (!productFk || !items?.length) return {};
+      const ids = items.map((i: any) => i.id);
+      const { data, error } = await supabase
+        .from('products')
+        .select(`id, ${productFk}`)
+        .in(productFk, ids);
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      data?.forEach((p: any) => {
+        const fkVal = p[productFk];
+        if (fkVal) counts[fkVal] = (counts[fkVal] || 0) + 1;
+      });
+      return counts;
+    },
+    enabled: !!productFk && !!items?.length,
   });
 
   const upsertMutation = useMutation({
