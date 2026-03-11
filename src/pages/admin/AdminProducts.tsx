@@ -154,7 +154,10 @@ const AdminProducts = () => {
                   <TableHead>Title</TableHead>
                   {showStatus && <TableHead>Status</TableHead>}
                   {showExpires && <TableHead>Expires</TableHead>}
-                  <TableHead>Price</TableHead>
+                  {showSoldDetails && <TableHead>Sale Price</TableHead>}
+                  {showSoldDetails && <TableHead>Platform</TableHead>}
+                  {showSoldDetails && <TableHead>Sale Date</TableHead>}
+                  {!showSoldDetails && <TableHead>Price</TableHead>}
                   <TableHead className="w-24">Actions</TableHead>
                 </TableRow>
               </TableHeader>
