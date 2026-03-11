@@ -222,7 +222,18 @@ const AdminProducts = () => {
         </>
       )}
     </div>
+
+      <MarkSoldDialog
+        open={!!soldProduct}
+        onOpenChange={(open) => !open && setSoldProduct(null)}
+        productName={soldProduct?.name ?? ''}
+        currentPrice={soldProduct?.price ?? null}
+        onConfirm={(saleData) => {
+          if (soldProduct) markSoldMutation.mutate({ id: soldProduct.id, ...saleData });
+        }}
+        isLoading={markSoldMutation.isPending}
+      />
+    </div>
   );
 };
-
 export default AdminProducts;
