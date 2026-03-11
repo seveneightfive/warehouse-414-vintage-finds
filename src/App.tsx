@@ -57,7 +57,7 @@ const App = () => (
               <Route path="inquiries" element={<AdminInbox title="Inquiries" tableName="purchase_inquiries" filterType="non-offer" />} />
               <Route path="designers" element={<AdminCrudList title="Designers" tableName="designers" columns={[{ key: 'name', label: 'Name' }, { key: 'about', label: 'Bio', type: 'textarea' }]} productFk="designer_id" />} />
               <Route path="makers" element={<AdminCrudList title="Makers" tableName="makers" columns={[{ key: 'name', label: 'Name' }, { key: 'about', label: 'Bio', type: 'textarea' }]} productFk="maker_id" />} />
-              <Route path="categories" element={<AdminCrudList title="Categories" tableName="categories" productFk="category_id" />} />
+              <Route path="categories" element={<AdminCategoryManager />} />
               <Route path="styles" element={<AdminCrudList title="Styles" tableName="styles" />} />
               <Route path="periods" element={<AdminCrudList title="Periods" tableName="periods" />} />
               <Route path="countries" element={<AdminCrudList title="Countries" tableName="countries" />} />
