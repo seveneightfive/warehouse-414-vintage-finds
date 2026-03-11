@@ -14,9 +14,11 @@ type AdminCrudListProps = {
   title: string;
   tableName: string;
   columns?: { key: string; label: string; type?: 'text' | 'textarea' }[];
+  /** Foreign key column name on products table, e.g. "designer_id". When set, a Products count column is shown. */
+  productFk?: string;
 };
 
-const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Name' }] }: AdminCrudListProps) => {
+const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Name' }], productFk }: AdminCrudListProps) => {
   const queryClient = useQueryClient();
   const [editItem, setEditItem] = useState<Record<string, string> | null>(null);
   const [newItem, setNewItem] = useState<Record<string, string>>({});
@@ -30,6 +32,27 @@ const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Nam
       if (error) throw error;
       return data;
     },
+  });
+
+  // Fetch product counts per item when productFk is set
+  const { data: productCounts } = useQuery({
+    queryKey: [tableName, 'product-counts'],
+    queryFn: async () => {
+      if (!productFk || !items?.length) return {};
+      const ids = items.map((i: any) => i.id);
+      const { data, error } = await supabase
+        .from('products')
+        .select(`id, ${productFk}`)
+        .in(productFk, ids);
+      if (error) throw error;
+      const counts: Record<string, number> = {};
+      data?.forEach((p: any) => {
+        const fkVal = p[productFk];
+        if (fkVal) counts[fkVal] = (counts[fkVal] || 0) + 1;
+      });
+      return counts;
+    },
+    enabled: !!productFk && !!items?.length,
   });
 
   const upsertMutation = useMutation({
@@ -151,6 +174,7 @@ const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Nam
               {columns.map((col) => (
                 <TableHead key={col.key}>{col.label}</TableHead>
               ))}
+              {productFk && <TableHead>Products</TableHead>}
               <TableHead className="w-20">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -164,6 +188,9 @@ const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Nam
                 {columns.map((col) => (
                   <TableCell key={col.key}>{item[col.key] || '—'}</TableCell>
                 ))}
+                {productFk && (
+                  <TableCell className="text-muted-foreground">{productCounts?.[item.id] ?? 0}</TableCell>
+                )}
                 <TableCell>
                   <div className="flex gap-1">
                     <Button variant="ghost" size="icon" onClick={() => openEdit(item)}>
