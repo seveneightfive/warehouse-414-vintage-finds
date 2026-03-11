@@ -23,27 +23,45 @@ const AdminProducts = () => {
     queryKey: ['admin-products', page, searchQuery, statusFilter],
     queryFn: async () => {
       let countQuery = supabase.from('products').select('*', { count: 'exact', head: true });
-      if (searchQuery) countQuery = countQuery.or(`name.ilike.%${searchQuery}%`);
+      if (searchQuery) countQuery = countQuery.or(`name.ilike.%${searchQuery}%,sku.ilike.%${searchQuery}%`);
       if (statusFilter !== 'all') countQuery = countQuery.eq('status', statusFilter);
 
       let query = supabase
         .from('products')
-        .select('*, designer:designers(name), category:categories(name), product_images(image_url, sort_order)')
+        .select('*, product_images(image_url, sort_order)')
         .order('created_at', { ascending: false })
         .order('id', { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
-      if (searchQuery) query = query.or(`name.ilike.%${searchQuery}%`);
+      if (searchQuery) query = query.or(`name.ilike.%${searchQuery}%,sku.ilike.%${searchQuery}%`);
       if (statusFilter !== 'all') query = query.eq('status', statusFilter);
 
       const [{ count }, { data: products, error }] = await Promise.all([countQuery, query]);
       if (error) throw error;
-      return { products: products as Product[], total: count ?? 0 };
+
+      // Fetch holds for on_hold filter
+      let holdsMap: Record<string, string> = {};
+      if (statusFilter === 'on_hold' && products && products.length > 0) {
+        const productIds = products.map((p: any) => p.id);
+        const { data: holds } = await supabase
+          .from('product_holds')
+          .select('product_id, expires_at')
+          .in('product_id', productIds)
+          .eq('status', 'approved');
+        if (holds) {
+          holds.forEach((h: any) => { holdsMap[h.product_id] = h.expires_at; });
+        }
+      }
+
+      return { products: products as Product[], total: count ?? 0, holdsMap };
     },
   });
 
   const products = data?.products;
+  const holdsMap = data?.holdsMap ?? {};
   const totalPages = Math.ceil((data?.total ?? 0) / PAGE_SIZE);
+  const showStatus = statusFilter === 'all';
+  const showExpires = statusFilter === 'on_hold';
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -111,14 +129,14 @@ const AdminProducts = () => {
         <p className="text-muted-foreground">Loading...</p>
       ) : (
         <>
-          <Table>
+           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Image</TableHead>
+                <TableHead>SKU</TableHead>
                 <TableHead>Title</TableHead>
-                <TableHead>Designer</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Status</TableHead>
+                {showStatus && <TableHead>Status</TableHead>}
+                {showExpires && <TableHead>Expires</TableHead>}
                 <TableHead>Price</TableHead>
                 <TableHead className="w-24">Actions</TableHead>
               </TableRow>
@@ -137,11 +155,20 @@ const AdminProducts = () => {
                         <div className="w-12 h-12 rounded-sm bg-muted" />
                       )}
                     </TableCell>
+                    <TableCell className="text-muted-foreground text-xs">{p.sku || '—'}</TableCell>
                     <TableCell className="font-medium">{p.name}</TableCell>
-                    <TableCell className="text-muted-foreground">{p.designer?.name || '—'}</TableCell>
-                    <TableCell className="text-muted-foreground">{p.category?.name || '—'}</TableCell>
-                    <TableCell><Badge variant={statusColor(p.status)}>{p.status}</Badge></TableCell>
-                    <TableCell>{p.price ? `$${p.price.toLocaleString()}` : '—'}</TableCell>
+                    {showStatus && <TableCell><Badge variant={statusColor(p.status)}>{p.status}</Badge></TableCell>}
+                    {showExpires && (
+                      <TableCell className="text-muted-foreground text-xs">
+                        {holdsMap[p.id] ? new Date(holdsMap[p.id]).toLocaleDateString() : ''}
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      <div>{p.price ? `$${p.price.toLocaleString()}` : '—'}</div>
+                      {p.sale_price && (
+                        <div className="text-xs text-destructive">${p.sale_price.toLocaleString()}</div>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
                         <Link to={`/product/${p.id}`}><Button variant="ghost" size="icon"><Eye size={14} /></Button></Link>
