@@ -59,6 +59,24 @@ const AdminProducts = () => {
     },
   });
 
+  const { data: statusCounts } = useQuery({
+    queryKey: ['admin-product-counts'],
+    queryFn: async () => {
+      const statuses = ['available', 'on_hold', 'sold', 'inventory'] as const;
+      const results = await Promise.all(
+        statuses.map(s => supabase.from('products').select('*', { count: 'exact', head: true }).eq('status', s))
+      );
+      const allResult = await supabase.from('products').select('*', { count: 'exact', head: true });
+      return {
+        all: allResult.count ?? 0,
+        available: results[0].count ?? 0,
+        on_hold: results[1].count ?? 0,
+        sold: results[2].count ?? 0,
+        inventory: results[3].count ?? 0,
+      };
+    },
+  });
+
   const products = data?.products;
   const holdsMap = data?.holdsMap ?? {};
   const totalPages = Math.ceil((data?.total ?? 0) / PAGE_SIZE);
@@ -134,11 +152,11 @@ const AdminProducts = () => {
 
         <div className="mb-4">
           <ToggleGroup type="single" value={statusFilter} onValueChange={handleStatusFilter} className="justify-start flex-wrap">
-            <ToggleGroupItem value="all" className="text-xs tracking-wider uppercase px-3">All</ToggleGroupItem>
-            <ToggleGroupItem value="available" className="text-xs tracking-wider uppercase px-3">Available</ToggleGroupItem>
-            <ToggleGroupItem value="on_hold" className="text-xs tracking-wider uppercase px-3">On Hold</ToggleGroupItem>
-            <ToggleGroupItem value="sold" className="text-xs tracking-wider uppercase px-3">Sold</ToggleGroupItem>
-            <ToggleGroupItem value="inventory" className="text-xs tracking-wider uppercase px-3">Inventory</ToggleGroupItem>
+            <ToggleGroupItem value="all" className="text-xs tracking-wider uppercase px-3">All {statusCounts?.all != null && <span className="ml-1 text-muted-foreground">({statusCounts.all})</span>}</ToggleGroupItem>
+            <ToggleGroupItem value="available" className="text-xs tracking-wider uppercase px-3">Available {statusCounts?.available != null && <span className="ml-1 text-muted-foreground">({statusCounts.available})</span>}</ToggleGroupItem>
+            <ToggleGroupItem value="on_hold" className="text-xs tracking-wider uppercase px-3">On Hold {statusCounts?.on_hold != null && <span className="ml-1 text-muted-foreground">({statusCounts.on_hold})</span>}</ToggleGroupItem>
+            <ToggleGroupItem value="sold" className="text-xs tracking-wider uppercase px-3">Sold {statusCounts?.sold != null && <span className="ml-1 text-muted-foreground">({statusCounts.sold})</span>}</ToggleGroupItem>
+            <ToggleGroupItem value="inventory" className="text-xs tracking-wider uppercase px-3">Inventory {statusCounts?.inventory != null && <span className="ml-1 text-muted-foreground">({statusCounts.inventory})</span>}</ToggleGroupItem>
           </ToggleGroup>
         </div>
 
