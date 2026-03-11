@@ -58,7 +58,10 @@ const AdminProducts = () => {
   });
 
   const products = data?.products;
+  const holdsMap = data?.holdsMap ?? {};
   const totalPages = Math.ceil((data?.total ?? 0) / PAGE_SIZE);
+  const showStatus = statusFilter === 'all';
+  const showExpires = statusFilter === 'on_hold';
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
