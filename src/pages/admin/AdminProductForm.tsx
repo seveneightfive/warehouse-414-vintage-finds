@@ -322,33 +322,40 @@ const AdminProductForm = () => {
             )} />
           </section>
 
-          {/* Taxonomy */}
+          {/* Taxonomy & Attribution */}
           <section className="space-y-4">
-            <h2 className="text-lg font-semibold text-foreground border-b border-border pb-2">Taxonomy</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <h2 className="text-lg font-semibold text-foreground border-b border-border pb-2">Taxonomy & Attribution</h2>
+            <p className="text-sm text-muted-foreground">Attribution precedes the name, e.g. "by", "in the style of", "attributed to"</p>
+
+            {/* Designer + Attribution */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <ComboboxField name="designer_id" label="Designer" options={taxonomy.designers} />
+              <FormField control={form.control} name="designer_attribution" render={({ field }) => (
+                <FormItem><FormLabel>Designer Attribution</FormLabel><FormControl><Input placeholder="e.g. by, attributed to" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+              )} />
+            </div>
+
+            {/* Maker + Attribution */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <ComboboxField name="maker_id" label="Maker" options={taxonomy.makers} />
+              <FormField control={form.control} name="maker_attribution" render={({ field }) => (
+                <FormItem><FormLabel>Maker Attribution</FormLabel><FormControl><Input placeholder="e.g. by, in the style of" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+              )} />
+            </div>
+
+            {/* Period + Attribution */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <SelectField name="period_id" label="Period" options={taxonomy.periods} />
+              <FormField control={form.control} name="period_attribution" render={({ field }) => (
+                <FormItem><FormLabel>Period Attribution</FormLabel><FormControl><Input placeholder="e.g. from the, circa" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+              )} />
+            </div>
+
+            {/* Category, Style, Country in one row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <SelectField name="category_id" label="Category" options={taxonomy.categories} />
               <SelectField name="style_id" label="Style" options={taxonomy.styles} />
-              <SelectField name="period_id" label="Period" options={taxonomy.periods} />
               <SelectField name="country_id" label="Country" options={taxonomy.countries} />
-            </div>
-          </section>
-
-          {/* Attribution */}
-          <section className="space-y-4">
-            <h2 className="text-lg font-semibold text-foreground border-b border-border pb-2">Attribution</h2>
-            <p className="text-sm text-muted-foreground">Type in attribution that precedes the maker/designer/period. Examples: by, in the style of, attributed to</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FormField control={form.control} name="designer_attribution" render={({ field }) => (
-                <FormItem><FormLabel>Designer Attribution</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <FormField control={form.control} name="maker_attribution" render={({ field }) => (
-                <FormItem><FormLabel>Maker Attribution</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <FormField control={form.control} name="period_attribution" render={({ field }) => (
-                <FormItem><FormLabel>Period Attribution</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-              )} />
             </div>
           </section>
 
