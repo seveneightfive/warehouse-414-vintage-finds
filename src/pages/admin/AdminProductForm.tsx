@@ -120,6 +120,10 @@ const AdminProductForm = () => {
   const saveMutation = useMutation({
     mutationFn: async (values: FormValues) => {
       const payload: Record<string, unknown> = { ...values };
+      // Convert tags string to array
+      if (typeof payload.tags === 'string' && payload.tags) {
+        payload.tags = (payload.tags as string).split(',').map((t: string) => t.trim()).filter(Boolean);
+      }
       // Clean empty strings to null
       for (const [k, v] of Object.entries(payload)) {
         if (v === '' || v === undefined) payload[k] = null;
