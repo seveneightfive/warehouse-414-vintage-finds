@@ -7,9 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Link } from 'react-router-dom';
-import { Pencil, Eye, Trash2, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Pencil, Eye, Trash2, Search, ChevronLeft, ChevronRight, CircleDollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Product } from '@/types/database';
+import MarkSoldDialog from '@/components/MarkSoldDialog';
 
 const PAGE_SIZE = 25;
 
@@ -18,6 +19,7 @@ const AdminProducts = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(0);
+  const [soldProduct, setSoldProduct] = useState<Product | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-products', page, searchQuery, statusFilter],
@@ -75,6 +77,19 @@ const AdminProducts = () => {
     onError: (err) => toast.error(err.message),
   });
 
+  const markSoldMutation = useMutation({
+    mutationFn: async ({ id, sale_price, sale_platform, sale_date }: { id: string; sale_price: number | null; sale_platform: string; sale_date: string }) => {
+      const { error } = await supabase.from('products').update({ status: 'sold' as const, sale_price, sale_platform, sale_date }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      toast.success('Product marked as sold');
+      setSoldProduct(null);
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
   const statusColor = (s: string) => {
     switch (s) {
       case 'available': return 'default';
@@ -97,111 +112,129 @@ const AdminProducts = () => {
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display text-2xl tracking-wide text-foreground">Products</h1>
-        <Link to="/admin/products/new">
-          <Button className="text-xs tracking-[0.1em] uppercase">Add Product</Button>
-        </Link>
-      </div>
+    <>
+      <div>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="font-display text-2xl tracking-wide text-foreground">Products</h1>
+          <Link to="/admin/products/new">
+            <Button className="text-xs tracking-[0.1em] uppercase">Add Product</Button>
+          </Link>
+        </div>
 
-      <div className="relative mb-4">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Search products..."
-          value={searchQuery}
-          onChange={(e) => handleSearch(e.target.value)}
-        className="pl-9"
-        />
-      </div>
+        <div className="relative mb-4">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search products..."
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
 
-      <div className="mb-4">
-        <ToggleGroup type="single" value={statusFilter} onValueChange={handleStatusFilter} className="justify-start flex-wrap">
-          <ToggleGroupItem value="all" className="text-xs tracking-wider uppercase px-3">All</ToggleGroupItem>
-          <ToggleGroupItem value="available" className="text-xs tracking-wider uppercase px-3">Available</ToggleGroupItem>
-          <ToggleGroupItem value="on_hold" className="text-xs tracking-wider uppercase px-3">On Hold</ToggleGroupItem>
-          <ToggleGroupItem value="sold" className="text-xs tracking-wider uppercase px-3">Sold</ToggleGroupItem>
-          <ToggleGroupItem value="inventory" className="text-xs tracking-wider uppercase px-3">Inventory</ToggleGroupItem>
-        </ToggleGroup>
-      </div>
+        <div className="mb-4">
+          <ToggleGroup type="single" value={statusFilter} onValueChange={handleStatusFilter} className="justify-start flex-wrap">
+            <ToggleGroupItem value="all" className="text-xs tracking-wider uppercase px-3">All</ToggleGroupItem>
+            <ToggleGroupItem value="available" className="text-xs tracking-wider uppercase px-3">Available</ToggleGroupItem>
+            <ToggleGroupItem value="on_hold" className="text-xs tracking-wider uppercase px-3">On Hold</ToggleGroupItem>
+            <ToggleGroupItem value="sold" className="text-xs tracking-wider uppercase px-3">Sold</ToggleGroupItem>
+            <ToggleGroupItem value="inventory" className="text-xs tracking-wider uppercase px-3">Inventory</ToggleGroupItem>
+          </ToggleGroup>
+        </div>
 
-      {isLoading ? (
-        <p className="text-muted-foreground">Loading...</p>
-      ) : (
-        <>
-           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Image</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead>Title</TableHead>
-                {showStatus && <TableHead>Status</TableHead>}
-                {showExpires && <TableHead>Expires</TableHead>}
-                <TableHead>Price</TableHead>
-                <TableHead className="w-24">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products?.map((p) => {
-                const thumb = p.product_images?.sort((a, b) => a.sort_order - b.sort_order)?.[0];
-                return (
-                  <TableRow key={p.id}>
-                    <TableCell>
-                      {thumb ? (
-                        <img src={thumb.image_url} alt="" className="w-12 h-12 rounded-sm object-cover" />
-                      ) : p.featured_image_url ? (
-                        <img src={p.featured_image_url} alt="" className="w-12 h-12 rounded-sm object-cover" />
-                      ) : (
-                        <div className="w-12 h-12 rounded-sm bg-muted" />
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-xs">{p.sku || '—'}</TableCell>
-                    <TableCell className="font-medium">{p.name}</TableCell>
-                    {showStatus && <TableCell><Badge variant={statusColor(p.status)}>{p.status}</Badge></TableCell>}
-                    {showExpires && (
-                      <TableCell className="text-muted-foreground text-xs">
-                        {holdsMap[p.id] ? new Date(holdsMap[p.id]).toLocaleDateString() : ''}
+        {isLoading ? (
+          <p className="text-muted-foreground">Loading...</p>
+        ) : (
+          <>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Image</TableHead>
+                  <TableHead>SKU</TableHead>
+                  <TableHead>Title</TableHead>
+                  {showStatus && <TableHead>Status</TableHead>}
+                  {showExpires && <TableHead>Expires</TableHead>}
+                  <TableHead>Price</TableHead>
+                  <TableHead className="w-24">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {products?.map((p) => {
+                  const thumb = p.product_images?.sort((a, b) => a.sort_order - b.sort_order)?.[0];
+                  return (
+                    <TableRow key={p.id}>
+                      <TableCell>
+                        {thumb ? (
+                          <img src={thumb.image_url} alt="" className="w-12 h-12 rounded-sm object-cover" />
+                        ) : p.featured_image_url ? (
+                          <img src={p.featured_image_url} alt="" className="w-12 h-12 rounded-sm object-cover" />
+                        ) : (
+                          <div className="w-12 h-12 rounded-sm bg-muted" />
+                        )}
                       </TableCell>
-                    )}
-                    <TableCell>
-                      <div>{p.price ? `$${p.price.toLocaleString()}` : '—'}</div>
-                      {p.sale_price && (
-                        <div className="text-xs text-destructive">${p.sale_price.toLocaleString()}</div>
+                      <TableCell className="text-muted-foreground text-xs">{p.sku || '—'}</TableCell>
+                      <TableCell className="font-medium">{p.name}</TableCell>
+                      {showStatus && <TableCell><Badge variant={statusColor(p.status)}>{p.status}</Badge></TableCell>}
+                      {showExpires && (
+                        <TableCell className="text-muted-foreground text-xs">
+                          {holdsMap[p.id] ? new Date(holdsMap[p.id]).toLocaleDateString() : ''}
+                        </TableCell>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Link to={`/product/${p.id}`}><Button variant="ghost" size="icon"><Eye size={14} /></Button></Link>
-                        <Link to={`/admin/products/${p.id}`}><Button variant="ghost" size="icon"><Pencil size={14} /></Button></Link>
-                        <Button variant="ghost" size="icon" onClick={() => {
-                          if (confirm('Delete this product?')) deleteMutation.mutate(p.id);
-                        }}><Trash2 size={14} /></Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                      <TableCell>
+                        <div>{p.price ? `$${p.price.toLocaleString()}` : '—'}</div>
+                        {p.sale_price && (
+                          <div className="text-xs text-destructive">${p.sale_price.toLocaleString()}</div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Link to={`/product/${p.id}`}><Button variant="ghost" size="icon"><Eye size={14} /></Button></Link>
+                          <Link to={`/admin/products/${p.id}`}><Button variant="ghost" size="icon"><Pencil size={14} /></Button></Link>
+                          {p.status !== 'sold' && (
+                            <Button variant="ghost" size="icon" onClick={() => setSoldProduct(p)} title="Mark as sold">
+                              <CircleDollarSign size={14} />
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="icon" onClick={() => {
+                            if (confirm('Delete this product?')) deleteMutation.mutate(p.id);
+                          }}><Trash2 size={14} /></Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
 
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4">
-              <p className="text-sm text-muted-foreground">
-                Page {page + 1} of {totalPages} ({data?.total} products)
-              </p>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>
-                  <ChevronLeft size={14} className="mr-1" /> Previous
-                </Button>
-                <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>
-                  Next <ChevronRight size={14} className="ml-1" />
-                </Button>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4">
+                <p className="text-sm text-muted-foreground">
+                  Page {page + 1} of {totalPages} ({data?.total} products)
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(p => p - 1)}>
+                    <ChevronLeft size={14} className="mr-1" /> Previous
+                  </Button>
+                  <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>
+                    Next <ChevronRight size={14} className="ml-1" />
+                  </Button>
+                </div>
               </div>
-            </div>
-          )}
-        </>
-      )}
-    </div>
+            )}
+          </>
+        )}
+      </div>
+
+      <MarkSoldDialog
+        open={!!soldProduct}
+        onOpenChange={(open) => !open && setSoldProduct(null)}
+        productName={soldProduct?.name ?? ''}
+        currentPrice={soldProduct?.price ?? null}
+        onConfirm={(saleData) => {
+          if (soldProduct) markSoldMutation.mutate({ id: soldProduct.id, ...saleData });
+        }}
+        isLoading={markSoldMutation.isPending}
+      />
+    </>
   );
 };
 
