@@ -31,6 +31,8 @@ export type Product = {
   chairish_url: string | null;
   ebay_url: string | null;
   sold_on: string | null;
+  sale_date: string | null;
+  sale_platform: string | null;
   created_at: string;
   updated_at: string;
   designer?: Designer | null;
