@@ -64,6 +64,7 @@ const AdminProducts = () => {
   const totalPages = Math.ceil((data?.total ?? 0) / PAGE_SIZE);
   const showStatus = statusFilter === 'all';
   const showExpires = statusFilter === 'on_hold';
+  const showSoldDetails = statusFilter === 'sold';
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
