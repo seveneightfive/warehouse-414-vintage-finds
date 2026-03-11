@@ -43,6 +43,9 @@ const AdminDashboard = () => {
     { label: "Pending Holds", value: stats?.holds ?? "—", icon: Clock },
     { label: "Pending Offers", value: stats?.offers ?? "—", icon: HandCoins },
     { label: "Pending Inquiries", value: stats?.inquiries ?? "—", icon: MessageSquare },
+    { label: "Designers", value: stats?.designers ?? "—", icon: Users },
+    { label: "Makers", value: stats?.makers ?? "—", icon: Building2 },
+    { label: "Categories", value: stats?.categories ?? "—", icon: Tags },
   ];
 
   if (isError) {
