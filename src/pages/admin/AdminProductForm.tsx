@@ -117,6 +117,24 @@ const AdminProductForm = () => {
     }
   }, [product, form]);
 
+  const generateSlug = (name: string): string => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  };
+
+  const ensureUniqueSlug = async (slug: string): Promise<string> => {
+    const { data } = await supabase.from('products').select('id').eq('slug', slug).maybeSingle();
+    if (data) {
+      const suffix = Math.floor(1000 + Math.random() * 9000);
+      return `${slug}-${suffix}`;
+    }
+    return slug;
+  };
+
   const saveMutation = useMutation({
     mutationFn: async (values: FormValues) => {
       const payload: Record<string, unknown> = { ...values };
@@ -127,6 +145,11 @@ const AdminProductForm = () => {
       // Clean empty strings to null
       for (const [k, v] of Object.entries(payload)) {
         if (v === '' || v === undefined) payload[k] = null;
+      }
+      // Auto-generate slug on create
+      if (!isEditing && values.name) {
+        const baseSlug = generateSlug(values.name);
+        payload.slug = await ensureUniqueSlug(baseSlug);
       }
       if (isEditing) {
         const { error } = await supabase.from('products').update(payload).eq('id', id!);
