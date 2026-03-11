@@ -183,12 +183,23 @@ const AdminProducts = () => {
                           {holdsMap[p.id] ? new Date(holdsMap[p.id]).toLocaleDateString() : ''}
                         </TableCell>
                       )}
-                      <TableCell>
-                        <div>{p.price ? `$${p.price.toLocaleString()}` : '—'}</div>
-                        {p.sale_price && (
-                          <div className="text-xs text-destructive">${p.sale_price.toLocaleString()}</div>
-                        )}
-                      </TableCell>
+                      {showSoldDetails && (
+                        <TableCell className="text-sm">{p.sale_price ? `$${p.sale_price.toLocaleString()}` : '—'}</TableCell>
+                      )}
+                      {showSoldDetails && (
+                        <TableCell className="text-sm text-muted-foreground">{p.sale_platform || '—'}</TableCell>
+                      )}
+                      {showSoldDetails && (
+                        <TableCell className="text-sm text-muted-foreground">{p.sale_date ? new Date(p.sale_date).toLocaleDateString() : '—'}</TableCell>
+                      )}
+                      {!showSoldDetails && (
+                        <TableCell>
+                          <div>{p.price ? `$${p.price.toLocaleString()}` : '—'}</div>
+                          {p.sale_price && (
+                            <div className="text-xs text-destructive">${p.sale_price.toLocaleString()}</div>
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell>
                         <div className="flex gap-1">
                           <Link to={`/product/${p.id}`}><Button variant="ghost" size="icon"><Eye size={14} /></Button></Link>
