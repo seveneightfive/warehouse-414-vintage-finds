@@ -71,7 +71,9 @@ export type Category = {
 export type Subcategory = {
   id: string;
   name: string;
+  slug: string | null;
   category_id: string | null;
+  parent_id: string | null;
   created_at: string;
 };
 
