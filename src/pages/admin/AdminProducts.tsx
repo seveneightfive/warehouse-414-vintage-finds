@@ -188,6 +188,11 @@ const AdminProducts = () => {
                       <div className="flex gap-1">
                         <Link to={`/product/${p.id}`}><Button variant="ghost" size="icon"><Eye size={14} /></Button></Link>
                         <Link to={`/admin/products/${p.id}`}><Button variant="ghost" size="icon"><Pencil size={14} /></Button></Link>
+                        {p.status !== 'sold' && (
+                          <Button variant="ghost" size="icon" onClick={() => setSoldProduct(p)} title="Mark as sold">
+                            <CircleDollarSign size={14} />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="icon" onClick={() => {
                           if (confirm('Delete this product?')) deleteMutation.mutate(p.id);
                         }}><Trash2 size={14} /></Button>
