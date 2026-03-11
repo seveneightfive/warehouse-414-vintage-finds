@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Clock, HandCoins, MessageSquare } from "lucide-react";
+import { Package, Clock, HandCoins, MessageSquare, Users, Building2, Tags } from "lucide-react";
 
 const AdminDashboard = () => {
   const { data: stats, isError } = useQuery({
     queryKey: ["admin-stats"],
     queryFn: async () => {
-      const [products, holds, offers, inquiries] = await Promise.all([
+      const [products, holds, offers, inquiries, designers, makers, categories] = await Promise.all([
         supabase.from("products").select("id", { count: "exact", head: true }),
         supabase
           .from("product_holds")
@@ -23,16 +23,25 @@ const AdminDashboard = () => {
           .select("id", { count: "exact", head: true })
           .neq("inquiry_type", "offer")
           .eq("is_read", false),
+        supabase.from("designers").select("id", { count: "exact", head: true }),
+        supabase.from("makers").select("id", { count: "exact", head: true }),
+        supabase.from("categories").select("id", { count: "exact", head: true }),
       ]);
       if (products.error) throw products.error;
       if (holds.error) throw holds.error;
       if (offers.error) throw offers.error;
       if (inquiries.error) throw inquiries.error;
+      if (designers.error) throw designers.error;
+      if (makers.error) throw makers.error;
+      if (categories.error) throw categories.error;
       return {
         products: products.count || 0,
         holds: holds.count || 0,
         offers: offers.count || 0,
         inquiries: inquiries.count || 0,
+        designers: designers.count || 0,
+        makers: makers.count || 0,
+        categories: categories.count || 0,
       };
     },
     retry: 1,
@@ -43,6 +52,9 @@ const AdminDashboard = () => {
     { label: "Pending Holds", value: stats?.holds ?? "—", icon: Clock },
     { label: "Pending Offers", value: stats?.offers ?? "—", icon: HandCoins },
     { label: "Pending Inquiries", value: stats?.inquiries ?? "—", icon: MessageSquare },
+    { label: "Designers", value: stats?.designers ?? "—", icon: Users },
+    { label: "Makers", value: stats?.makers ?? "—", icon: Building2 },
+    { label: "Categories", value: stats?.categories ?? "—", icon: Tags },
   ];
 
   if (isError) {
