@@ -59,6 +59,24 @@ const AdminProducts = () => {
     },
   });
 
+  const { data: statusCounts } = useQuery({
+    queryKey: ['admin-product-counts'],
+    queryFn: async () => {
+      const statuses = ['available', 'on_hold', 'sold', 'inventory'] as const;
+      const results = await Promise.all(
+        statuses.map(s => supabase.from('products').select('*', { count: 'exact', head: true }).eq('status', s))
+      );
+      const allResult = await supabase.from('products').select('*', { count: 'exact', head: true });
+      return {
+        all: allResult.count ?? 0,
+        available: results[0].count ?? 0,
+        on_hold: results[1].count ?? 0,
+        sold: results[2].count ?? 0,
+        inventory: results[3].count ?? 0,
+      };
+    },
+  });
+
   const products = data?.products;
   const holdsMap = data?.holdsMap ?? {};
   const totalPages = Math.ceil((data?.total ?? 0) / PAGE_SIZE);
