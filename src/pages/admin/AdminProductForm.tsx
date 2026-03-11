@@ -471,6 +471,12 @@ const AdminProductForm = () => {
                   <Upload size={16} /> Upload Images
                 </Button>
                 <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
+                  {product?.featured_image_url && (
+                    <div className="relative group">
+                      <img src={product.featured_image_url} alt="Featured" className="w-full aspect-square object-cover rounded-md border-2 border-primary" />
+                      <span className="absolute bottom-1 left-1 bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded">Featured</span>
+                    </div>
+                  )}
                   {product?.product_images
                     ?.sort((a: { sort_order: number }, b: { sort_order: number }) => a.sort_order - b.sort_order)
                     .map((img: { id: string; image_url: string }) => (
