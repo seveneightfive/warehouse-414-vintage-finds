@@ -109,6 +109,10 @@ const AdminProductForm = () => {
         (values as Record<string, unknown>)[key] = (product as Record<string, unknown>)[key] ?? '';
       }
       values.price = product.price ?? undefined;
+      values.sale_price = (product as Record<string, unknown>).sale_price as number ?? undefined;
+      // Convert tags array to comma string for editing
+      const rawTags = (product as Record<string, unknown>).tags;
+      values.tags = Array.isArray(rawTags) ? (rawTags as string[]).join(', ') : '';
       form.reset(values as FormValues);
     }
   }, [product, form]);
