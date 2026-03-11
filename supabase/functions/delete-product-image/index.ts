@@ -62,8 +62,7 @@ Deno.serve(async (req) => {
     // Delete from Bunny.net storage if path provided
     if (storage_path) {
       const storageApiKey = Deno.env.get("BUNNY_STORAGE_API_KEY")!;
-      const storageZone = Deno.env.get("BUNNY_STORAGE_ZONE")!;
-      const deleteUrl = `https://storage.bunnycdn.com/${storageZone}/${storage_path}`;
+      const deleteUrl = `https://storage.bunnycdn.com/warehouseimages/${storage_path}`;
 
       await fetch(deleteUrl, {
         method: "DELETE",
