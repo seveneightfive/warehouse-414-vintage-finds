@@ -199,21 +199,6 @@ const AdminProductForm = () => {
 
   if (isEditing && isLoading) return <p className="text-muted-foreground">Loading…</p>;
 
-  const SelectField = ({ name, label, options }: { name: keyof FormValues; label: string; options?: { id: string; name: string }[] }) => (
-    <FormField control={form.control} name={name} render={({ field }) => (
-      <FormItem>
-        <FormLabel>{label}</FormLabel>
-        <Select onValueChange={field.onChange} value={field.value as string || ''}>
-          <FormControl><SelectTrigger><SelectValue placeholder={`Select ${label.toLowerCase()}`} /></SelectTrigger></FormControl>
-          <SelectContent>
-            <SelectItem value="__none">None</SelectItem>
-            {options?.map((o) => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <FormMessage />
-      </FormItem>
-    )} />
-  );
 
   const ComboboxField = ({ name, label, options }: { name: keyof FormValues; label: string; options?: { id: string; name: string }[] }) => {
     const [open, setOpen] = useState(false);
