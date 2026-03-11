@@ -18,6 +18,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminProducts from "./pages/admin/AdminProducts";
 import AdminProductForm from "./pages/admin/AdminProductForm";
 import AdminCrudList from "./pages/admin/AdminCrudList";
+import AdminCategoryManager from "./pages/admin/AdminCategoryManager";
 import AdminInbox from "./pages/admin/AdminInbox";
 import CollectionDetail from "./pages/CollectionDetail";
 import NotFound from "./pages/NotFound";
