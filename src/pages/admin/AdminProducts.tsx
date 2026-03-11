@@ -23,22 +23,37 @@ const AdminProducts = () => {
     queryKey: ['admin-products', page, searchQuery, statusFilter],
     queryFn: async () => {
       let countQuery = supabase.from('products').select('*', { count: 'exact', head: true });
-      if (searchQuery) countQuery = countQuery.or(`name.ilike.%${searchQuery}%`);
+      if (searchQuery) countQuery = countQuery.or(`name.ilike.%${searchQuery}%,sku.ilike.%${searchQuery}%`);
       if (statusFilter !== 'all') countQuery = countQuery.eq('status', statusFilter);
 
       let query = supabase
         .from('products')
-        .select('*, designer:designers(name), category:categories(name), product_images(image_url, sort_order)')
+        .select('*, product_images(image_url, sort_order)')
         .order('created_at', { ascending: false })
         .order('id', { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
-      if (searchQuery) query = query.or(`name.ilike.%${searchQuery}%`);
+      if (searchQuery) query = query.or(`name.ilike.%${searchQuery}%,sku.ilike.%${searchQuery}%`);
       if (statusFilter !== 'all') query = query.eq('status', statusFilter);
 
       const [{ count }, { data: products, error }] = await Promise.all([countQuery, query]);
       if (error) throw error;
-      return { products: products as Product[], total: count ?? 0 };
+
+      // Fetch holds for on_hold filter
+      let holdsMap: Record<string, string> = {};
+      if (statusFilter === 'on_hold' && products && products.length > 0) {
+        const productIds = products.map((p: any) => p.id);
+        const { data: holds } = await supabase
+          .from('product_holds')
+          .select('product_id, expires_at')
+          .in('product_id', productIds)
+          .eq('status', 'approved');
+        if (holds) {
+          holds.forEach((h: any) => { holdsMap[h.product_id] = h.expires_at; });
+        }
+      }
+
+      return { products: products as Product[], total: count ?? 0, holdsMap };
     },
   });
 
