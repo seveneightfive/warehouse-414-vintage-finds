@@ -52,8 +52,8 @@ const AdminLayout = () => {
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-56 border-r border-border bg-card flex-col">
+      {/* Desktop sidebar - sticky */}
+      <aside className="hidden md:flex w-56 shrink-0 border-r border-border bg-card flex-col sticky top-0 h-screen">
         <div className="p-4 border-b border-border">
           <Link to="/" className="font-display text-sm tracking-[0.2em] uppercase text-foreground">
             W414 Admin
@@ -72,7 +72,7 @@ const AdminLayout = () => {
       {/* Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile header */}
-        <header className="md:hidden flex items-center gap-3 px-4 h-12 border-b border-border bg-card">
+        <header className="md:hidden flex items-center gap-3 px-4 h-12 border-b border-border bg-card sticky top-0 z-30">
           <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="shrink-0">
@@ -98,9 +98,9 @@ const AdminLayout = () => {
           <span className="font-display text-sm tracking-[0.2em] uppercase text-foreground">W414 Admin</span>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-4 md:p-6">
+        <main className="flex-1 p-4 md:p-6 overflow-x-auto">
           <Outlet />
-        </div>
+        </main>
       </div>
     </div>
   );
