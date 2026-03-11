@@ -77,6 +77,19 @@ const AdminProducts = () => {
     onError: (err) => toast.error(err.message),
   });
 
+  const markSoldMutation = useMutation({
+    mutationFn: async ({ id, sale_price, sale_platform, sale_date }: { id: string; sale_price: number | null; sale_platform: string; sale_date: string }) => {
+      const { error } = await supabase.from('products').update({ status: 'sold' as const, sale_price, sale_platform, sale_date }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      toast.success('Product marked as sold');
+      setSoldProduct(null);
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
   const statusColor = (s: string) => {
     switch (s) {
       case 'available': return 'default';
