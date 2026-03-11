@@ -345,7 +345,7 @@ const AdminProductForm = () => {
 
             {/* Period + Attribution */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <SelectField name="period_id" label="Period" options={taxonomy.periods} />
+              <ComboboxField name="period_id" label="Period" options={taxonomy.periods} />
               <FormField control={form.control} name="period_attribution" render={({ field }) => (
                 <FormItem><FormLabel>Period Attribution</FormLabel><FormControl><Input placeholder="e.g. from the, circa" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
               )} />
@@ -353,9 +353,9 @@ const AdminProductForm = () => {
 
             {/* Category, Style, Country in one row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <SelectField name="category_id" label="Category" options={taxonomy.categories} />
-              <SelectField name="style_id" label="Style" options={taxonomy.styles} />
-              <SelectField name="country_id" label="Country" options={taxonomy.countries} />
+              <ComboboxField name="category_id" label="Category" options={taxonomy.categories} />
+              <ComboboxField name="style_id" label="Style" options={taxonomy.styles} />
+              <ComboboxField name="country_id" label="Country" options={taxonomy.countries} />
             </div>
 
             {/* Materials, Year Created, Condition */}
