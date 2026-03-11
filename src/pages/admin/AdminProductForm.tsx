@@ -178,6 +178,8 @@ const AdminProductForm = () => {
 
   const uploadImages = async (files: FileList) => {
     if (!id) return;
+    const sku = form.getValues('sku');
+    if (!sku) { toast.error('Product must have a SKU before uploading images'); return; }
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { toast.error('Not authenticated'); return; }
 
@@ -192,6 +194,7 @@ const AdminProductForm = () => {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('product_id', id);
+        formData.append('sku', sku);
         formData.append('sort_order', String(nextSort));
 
         const res = await supabase.functions.invoke('upload-product-image', {

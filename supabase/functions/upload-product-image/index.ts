@@ -40,27 +40,26 @@ Deno.serve(async (req) => {
     const formData = await req.formData();
     const file = formData.get("file") as File;
     const productId = formData.get("product_id") as string;
+    const sku = formData.get("sku") as string;
     const sortOrder = parseInt(formData.get("sort_order") as string || "0", 10);
 
-    if (!file || !productId) {
-      return new Response(JSON.stringify({ error: "file and product_id are required" }), {
+    if (!file || !productId || !sku) {
+      return new Response(JSON.stringify({ error: "file, product_id, and sku are required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const storageApiKey = Deno.env.get("BUNNY_STORAGE_API_KEY")!;
-    const storageZone = Deno.env.get("BUNNY_STORAGE_ZONE")!;
     const cdnHostname = Deno.env.get("BUNNY_CDN_HOSTNAME")!;
 
-    // Build path
-    const timestamp = Date.now();
+    // Build path using SKU and original filename
     const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const storagePath = `products/${productId}/${timestamp}-${sanitizedName}`;
+    const storagePath = `products/${sku}/${sanitizedName}`;
 
-    // Upload to Bunny.net
+    // Upload to Bunny.net (warehouseimages storage zone)
     const fileBuffer = await file.arrayBuffer();
-    const uploadUrl = `https://storage.bunnycdn.com/${storageZone}/${storagePath}`;
+    const uploadUrl = `https://storage.bunnycdn.com/warehouseimages/${storagePath}`;
 
     const uploadRes = await fetch(uploadUrl, {
       method: "PUT",
