@@ -129,14 +129,14 @@ const AdminProducts = () => {
         <p className="text-muted-foreground">Loading...</p>
       ) : (
         <>
-          <Table>
+           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Image</TableHead>
+                <TableHead>SKU</TableHead>
                 <TableHead>Title</TableHead>
-                <TableHead>Designer</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Status</TableHead>
+                {showStatus && <TableHead>Status</TableHead>}
+                {showExpires && <TableHead>Expires</TableHead>}
                 <TableHead>Price</TableHead>
                 <TableHead className="w-24">Actions</TableHead>
               </TableRow>
@@ -155,11 +155,20 @@ const AdminProducts = () => {
                         <div className="w-12 h-12 rounded-sm bg-muted" />
                       )}
                     </TableCell>
+                    <TableCell className="text-muted-foreground text-xs">{p.sku || '—'}</TableCell>
                     <TableCell className="font-medium">{p.name}</TableCell>
-                    <TableCell className="text-muted-foreground">{p.designer?.name || '—'}</TableCell>
-                    <TableCell className="text-muted-foreground">{p.category?.name || '—'}</TableCell>
-                    <TableCell><Badge variant={statusColor(p.status)}>{p.status}</Badge></TableCell>
-                    <TableCell>{p.price ? `$${p.price.toLocaleString()}` : '—'}</TableCell>
+                    {showStatus && <TableCell><Badge variant={statusColor(p.status)}>{p.status}</Badge></TableCell>}
+                    {showExpires && (
+                      <TableCell className="text-muted-foreground text-xs">
+                        {holdsMap[p.id] ? new Date(holdsMap[p.id]).toLocaleDateString() : ''}
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      <div>{p.price ? `$${p.price.toLocaleString()}` : '—'}</div>
+                      {p.sale_price && (
+                        <div className="text-xs text-destructive">${p.sale_price.toLocaleString()}</div>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
                         <Link to={`/product/${p.id}`}><Button variant="ghost" size="icon"><Eye size={14} /></Button></Link>
