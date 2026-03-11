@@ -14,6 +14,8 @@ type AdminCrudListProps = {
   title: string;
   tableName: string;
   columns?: { key: string; label: string; type?: 'text' | 'textarea' }[];
+  /** Foreign key column name on products table, e.g. "designer_id". When set, a Products count column is shown. */
+  productFk?: string;
 };
 
 const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Name' }] }: AdminCrudListProps) => {
