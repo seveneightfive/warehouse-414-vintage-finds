@@ -6,6 +6,7 @@ export type Product = {
   short_description: string | null;
   long_description: string | null;
   price: number | null;
+  sale_price: number | null;
   status: 'available' | 'on_hold' | 'sold' | 'inventory';
   designer_id: string | null;
   maker_id: string | null;

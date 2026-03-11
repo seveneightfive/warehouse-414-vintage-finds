@@ -30,6 +30,7 @@ const schema = z.object({
   short_description: z.string().nullable().optional(),
   long_description: z.string().nullable().optional(),
   price: z.coerce.number().nullable().optional(),
+  sale_price: z.coerce.number().nullable().optional(),
   status: z.enum(['available', 'on_hold', 'sold', 'inventory']).default('available'),
   designer_id: z.string().nullable().optional(),
   maker_id: z.string().nullable().optional(),
@@ -46,6 +47,7 @@ const schema = z.object({
   materials: z.string().nullable().optional(),
   condition: z.string().nullable().optional(),
   year_created: z.string().nullable().optional(),
+  tags: z.string().nullable().optional(),
   firstdibs_url: z.string().url().nullable().optional().or(z.literal('')),
   chairish_url: z.string().url().nullable().optional().or(z.literal('')),
   ebay_url: z.string().url().nullable().optional().or(z.literal('')),
@@ -107,6 +109,10 @@ const AdminProductForm = () => {
         (values as Record<string, unknown>)[key] = (product as Record<string, unknown>)[key] ?? '';
       }
       values.price = product.price ?? undefined;
+      values.sale_price = (product as Record<string, unknown>).sale_price as number ?? undefined;
+      // Convert tags array to comma string for editing
+      const rawTags = (product as Record<string, unknown>).tags;
+      values.tags = Array.isArray(rawTags) ? (rawTags as string[]).join(', ') : '';
       form.reset(values as FormValues);
     }
   }, [product, form]);
@@ -114,6 +120,10 @@ const AdminProductForm = () => {
   const saveMutation = useMutation({
     mutationFn: async (values: FormValues) => {
       const payload: Record<string, unknown> = { ...values };
+      // Convert tags string to array
+      if (typeof payload.tags === 'string' && payload.tags) {
+        payload.tags = (payload.tags as string).split(',').map((t: string) => t.trim()).filter(Boolean);
+      }
       // Clean empty strings to null
       for (const [k, v] of Object.entries(payload)) {
         if (v === '' || v === undefined) payload[k] = null;
@@ -262,15 +272,18 @@ const AdminProductForm = () => {
           {/* Basic Info */}
           <section className="space-y-4">
             <h2 className="text-lg font-semibold text-foreground border-b border-border pb-2">Basic Info</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField control={form.control} name="name" render={({ field }) => (
-                <FormItem className="md:col-span-2"><FormLabel>Name *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem className="md:col-span-3"><FormLabel>Name *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="sku" render={({ field }) => (
                 <FormItem><FormLabel>SKU</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="price" render={({ field }) => (
                 <FormItem><FormLabel>Price</FormLabel><FormControl><Input type="number" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+              )} />
+              <FormField control={form.control} name="sale_price" render={({ field }) => (
+                <FormItem><FormLabel>Sale Price</FormLabel><FormControl><Input type="number" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="status" render={({ field }) => (
                 <FormItem>
@@ -342,6 +355,16 @@ const AdminProductForm = () => {
               <ComboboxField name="style_id" label="Style" options={taxonomy.styles} />
               <ComboboxField name="country_id" label="Country" options={taxonomy.countries} />
             </div>
+
+            {/* Tags */}
+            <FormField control={form.control} name="tags" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tags</FormLabel>
+                <FormControl><Input placeholder="Comma-separated tags" {...field} value={field.value ?? ''} /></FormControl>
+                <p className="text-xs text-muted-foreground">Separate with commas, e.g. mid-century, brass, sculptural</p>
+                <FormMessage />
+              </FormItem>
+            )} />
 
             {/* Materials, Year Created, Condition */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
