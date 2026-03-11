@@ -174,6 +174,7 @@ const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Nam
               {columns.map((col) => (
                 <TableHead key={col.key}>{col.label}</TableHead>
               ))}
+              {productFk && <TableHead>Products</TableHead>}
               <TableHead className="w-20">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -187,6 +188,9 @@ const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Nam
                 {columns.map((col) => (
                   <TableCell key={col.key}>{item[col.key] || '—'}</TableCell>
                 ))}
+                {productFk && (
+                  <TableCell className="text-muted-foreground">{productCounts?.[item.id] ?? 0}</TableCell>
+                )}
                 <TableCell>
                   <div className="flex gap-1">
                     <Button variant="ghost" size="icon" onClick={() => openEdit(item)}>
