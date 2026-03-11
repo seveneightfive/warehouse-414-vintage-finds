@@ -364,7 +364,12 @@ const AdminProductForm = () => {
                 <FormItem><FormLabel>Materials</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="year_created" render={({ field }) => (
-                <FormItem><FormLabel>Year Created</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                <FormItem>
+                  <FormLabel>Year Created</FormLabel>
+                  <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
+                  <p className="text-xs text-muted-foreground">No apostrophe, e.g. 1950s</p>
+                  <FormMessage />
+                </FormItem>
               )} />
               <FormField control={form.control} name="condition" render={({ field }) => (
                 <FormItem><FormLabel>Condition Notes</FormLabel><FormControl><Textarea rows={2} {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
