@@ -348,6 +348,16 @@ const AdminProductForm = () => {
               <ComboboxField name="country_id" label="Country" options={taxonomy.countries} />
             </div>
 
+            {/* Tags */}
+            <FormField control={form.control} name="tags" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tags</FormLabel>
+                <FormControl><Input placeholder="Comma-separated tags" {...field} value={field.value ?? ''} /></FormControl>
+                <p className="text-xs text-muted-foreground">Separate with commas, e.g. mid-century, brass, sculptural</p>
+                <FormMessage />
+              </FormItem>
+            )} />
+
             {/* Materials, Year Created, Condition */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField control={form.control} name="materials" render={({ field }) => (
