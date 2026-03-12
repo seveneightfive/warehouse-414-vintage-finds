@@ -102,7 +102,7 @@ const AdminHolds = () => {
 
       {isLoading ? (
         <p className="text-muted-foreground text-sm">Loading...</p>
-      ) : !holds?.length ? (
+      ) : !heldProducts?.length ? (
         <p className="text-muted-foreground text-sm">No active holds.</p>
       ) : (
         <Table>
