@@ -86,6 +86,7 @@ const AdminProducts = () => {
   const showStatus = statusFilter === 'all';
   const showExpires = statusFilter === 'on_hold';
   const showSoldDetails = statusFilter === 'sold';
+  const showAuction = statusFilter === 'at_auction';
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
