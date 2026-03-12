@@ -54,7 +54,7 @@ const Catalog = () => {
   } = useInfiniteProducts({
     search: search || undefined,
     designer_slug: designerSlug || undefined,
-    maker_id: makerId || undefined,
+    maker_slug: makerSlug || undefined,
     category_id: categoryId || undefined,
     style_id: styleId || undefined,
     period_id: periodId || undefined,
