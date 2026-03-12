@@ -99,8 +99,8 @@ const AdminProducts = () => {
   });
 
   const markSoldMutation = useMutation({
-    mutationFn: async ({ id, sale_price, sale_platform, sale_date }: { id: string; sale_price: number | null; sale_platform: string; sale_date: string }) => {
-      const { error } = await supabase.from('products').update({ status: 'sold' as const, sale_price, sale_platform, sale_date }).eq('id', id);
+    mutationFn: async ({ id, sold_price, sale_platform, sale_date }: { id: string; sold_price: number | null; sale_platform: string; sale_date: string }) => {
+      const { error } = await supabase.from('products').update({ status: 'sold' as const, sold_price, sale_platform, sale_date } as any).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -201,7 +201,7 @@ const AdminProducts = () => {
                   <TableHead>Title</TableHead>
                   {showStatus && <TableHead>Status</TableHead>}
                   {showExpires && <TableHead>Expires</TableHead>}
-                  {showSoldDetails && <TableHead>Sale Price</TableHead>}
+                  {showSoldDetails && <TableHead>Sold Price</TableHead>}
                   {showSoldDetails && <TableHead>Platform</TableHead>}
                   {showSoldDetails && <TableHead>Sale Date</TableHead>}
                   {!showSoldDetails && <TableHead>Price</TableHead>}
@@ -231,7 +231,7 @@ const AdminProducts = () => {
                         </TableCell>
                       )}
                       {showSoldDetails && (
-                        <TableCell className="text-sm">{p.sale_price ? `$${p.sale_price.toLocaleString()}` : '—'}</TableCell>
+                        <TableCell className="text-sm">{(p as any).sold_price ? `$${(p as any).sold_price.toLocaleString()}` : '—'}</TableCell>
                       )}
                       {showSoldDetails && (
                         <TableCell className="text-sm text-muted-foreground">{p.sale_platform || '—'}</TableCell>

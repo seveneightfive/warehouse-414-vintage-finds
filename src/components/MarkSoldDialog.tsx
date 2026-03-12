@@ -17,7 +17,7 @@ interface MarkSoldDialogProps {
   onOpenChange: (open: boolean) => void;
   productName: string;
   currentPrice: number | null;
-  onConfirm: (data: { sale_price: number | null; sale_platform: string; sale_date: string }) => void;
+  onConfirm: (data: { sold_price: number | null; sale_platform: string; sale_date: string }) => void;
   isLoading?: boolean;
 }
 
@@ -28,7 +28,7 @@ const MarkSoldDialog = ({ open, onOpenChange, productName, currentPrice, onConfi
 
   const handleSubmit = () => {
     onConfirm({
-      sale_price: salePrice ? parseFloat(salePrice) : null,
+      sold_price: salePrice ? parseFloat(salePrice) : null,
       sale_platform: platform,
       sale_date: format(date, 'yyyy-MM-dd'),
     });
@@ -44,7 +44,7 @@ const MarkSoldDialog = ({ open, onOpenChange, productName, currentPrice, onConfi
 
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider">Sale Price</Label>
+            <Label className="text-xs uppercase tracking-wider">Sold Price</Label>
             <div className="relative">
               <DollarSign size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
