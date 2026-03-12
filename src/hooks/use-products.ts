@@ -25,12 +25,14 @@ export function useInfiniteProducts(filters?: ProductFilters) {
     queryKey: ["products-infinite", filters],
     queryFn: async ({ pageParam }: { pageParam: Cursor | undefined }) => {
       const designerJoin = filters?.designer_slug ? 'designer:designers!inner(id, name, slug)' : 'designer:designers(id, name)';
+      const makerJoin = filters?.maker_slug ? 'maker:makers!inner(id, name, slug)' : '';
+      const makerSelect = filters?.maker_slug ? `, ${makerJoin}` : '';
       let query = supabase
         .from("products")
         .select(
           `
           id, name, slug, price, status, featured_image_url, created_at, sale_price,
-          ${designerJoin}, product_images(image_url, sort_order)
+          ${designerJoin}, product_images(image_url, sort_order)${makerSelect}
         `,
         )
         .order("created_at", { ascending: false })
