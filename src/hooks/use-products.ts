@@ -129,11 +129,11 @@ export function useProducts(filters?: {
   });
 }
 
-export function useProduct(id: string | undefined) {
+export function useProduct(slug: string | undefined) {
   return useQuery({
-    queryKey: ["product", id],
+    queryKey: ["product", slug],
     queryFn: async () => {
-      if (!id) return null;
+      if (!slug) return null;
       const { data, error } = await supabase
         .from("products")
         .select(
@@ -149,12 +149,12 @@ export function useProduct(id: string | undefined) {
           product_colors(*, color:colors(*))
         `,
         )
-        .eq("id", id)
+        .eq("slug", slug)
         .single();
       if (error) throw error;
       return data as Product;
     },
-    enabled: !!id,
+    enabled: !!slug,
   });
 }
 
