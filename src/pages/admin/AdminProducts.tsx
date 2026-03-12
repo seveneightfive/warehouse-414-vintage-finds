@@ -186,6 +186,7 @@ const AdminProducts = () => {
           <ToggleGroup type="single" value={statusFilter} onValueChange={handleStatusFilter} className="justify-start flex-wrap">
             <ToggleGroupItem value="available" className="text-xs tracking-wider uppercase px-3">Available {statusCounts?.available != null && <span className="ml-1 text-muted-foreground">({statusCounts.available})</span>}</ToggleGroupItem>
             <ToggleGroupItem value="on_hold" className="text-xs tracking-wider uppercase px-3">On Hold {statusCounts?.on_hold != null && <span className="ml-1 text-muted-foreground">({statusCounts.on_hold})</span>}</ToggleGroupItem>
+            <ToggleGroupItem value="at_auction" className="text-xs tracking-wider uppercase px-3">At Auction {statusCounts?.at_auction != null && <span className="ml-1 text-muted-foreground">({statusCounts.at_auction})</span>}</ToggleGroupItem>
             <ToggleGroupItem value="sold" className="text-xs tracking-wider uppercase px-3">Sold {statusCounts?.sold != null && <span className="ml-1 text-muted-foreground">({statusCounts.sold})</span>}</ToggleGroupItem>
             <ToggleGroupItem value="inventory" className="text-xs tracking-wider uppercase px-3">Inventory {statusCounts?.inventory != null && <span className="ml-1 text-muted-foreground">({statusCounts.inventory})</span>}</ToggleGroupItem>
             <ToggleGroupItem value="all" className="text-xs tracking-wider uppercase px-3">All {statusCounts?.all != null && <span className="ml-1 text-muted-foreground">({statusCounts.all})</span>}</ToggleGroupItem>
