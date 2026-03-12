@@ -16,19 +16,19 @@ export function useDesigners() {
   });
 }
 
-export function useDesigner(id: string | undefined) {
+export function useDesigner(slug: string | undefined) {
   return useQuery({
-    queryKey: ['designer', id],
+    queryKey: ['designer', slug],
     queryFn: async () => {
-      if (!id) return null;
+      if (!slug) return null;
       const { data, error } = await supabase
         .from('designers')
         .select('*')
-        .eq('id', id)
-        .single();
+        .eq('slug', slug)
+        .maybeSingle();
       if (error) throw error;
-      return data as Designer;
+      return data as Designer | null;
     },
-    enabled: !!id,
+    enabled: !!slug,
   });
 }
