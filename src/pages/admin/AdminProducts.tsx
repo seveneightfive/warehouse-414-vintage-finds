@@ -7,10 +7,11 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Link } from 'react-router-dom';
-import { Pencil, Eye, Trash2, Search, ChevronLeft, ChevronRight, CircleDollarSign } from 'lucide-react';
+import { Pencil, Eye, Trash2, Search, ChevronLeft, ChevronRight, CircleDollarSign, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Product } from '@/types/database';
 import MarkSoldDialog from '@/components/MarkSoldDialog';
+import PlaceHoldDialog from '@/components/PlaceHoldDialog';
 
 const PAGE_SIZE = 25;
 
@@ -20,6 +21,7 @@ const AdminProducts = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(0);
   const [soldProduct, setSoldProduct] = useState<Product | null>(null);
+  const [holdProduct, setHoldProduct] = useState<Product | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-products', page, searchQuery, statusFilter],
@@ -105,6 +107,34 @@ const AdminProducts = () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       toast.success('Product marked as sold');
       setSoldProduct(null);
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const placeHoldMutation = useMutation({
+    mutationFn: async ({ product_id, customer_name, customer_email, customer_phone, hold_duration_hours, expires_at, notes }: {
+      product_id: string; customer_name: string; customer_email: string; customer_phone: string;
+      hold_duration_hours: number; expires_at: string; notes: string;
+    }) => {
+      const { error: holdError } = await supabase.from('product_holds').insert({
+        product_id,
+        customer_name,
+        customer_email,
+        customer_phone: customer_phone || null,
+        hold_duration_hours,
+        expires_at,
+        notes: notes || null,
+        status: 'approved',
+      } as any);
+      if (holdError) throw holdError;
+      const { error: statusError } = await supabase.from('products').update({ status: 'on_hold' as const }).eq('id', product_id);
+      if (statusError) throw statusError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-product-counts'] });
+      toast.success('Hold placed');
+      setHoldProduct(null);
     },
     onError: (err) => toast.error(err.message),
   });
@@ -222,6 +252,11 @@ const AdminProducts = () => {
                         <div className="flex gap-1">
                           <Link to={`/product/${p.slug}`}><Button variant="ghost" size="icon"><Eye size={14} /></Button></Link>
                           <Link to={`/admin/products/${p.id}`}><Button variant="ghost" size="icon"><Pencil size={14} /></Button></Link>
+                          {p.status === 'available' && (
+                            <Button variant="ghost" size="icon" onClick={() => setHoldProduct(p)} title="Place hold">
+                              <Clock size={14} />
+                            </Button>
+                          )}
                           {p.status !== 'sold' && (
                             <Button variant="ghost" size="icon" onClick={() => setSoldProduct(p)} title="Mark as sold">
                               <CircleDollarSign size={14} />
@@ -266,6 +301,16 @@ const AdminProducts = () => {
           if (soldProduct) markSoldMutation.mutate({ id: soldProduct.id, ...saleData });
         }}
         isLoading={markSoldMutation.isPending}
+      />
+
+      <PlaceHoldDialog
+        open={!!holdProduct}
+        onOpenChange={(open) => !open && setHoldProduct(null)}
+        productName={holdProduct?.name ?? ''}
+        onConfirm={(holdData) => {
+          if (holdProduct) placeHoldMutation.mutate({ product_id: holdProduct.id, ...holdData });
+        }}
+        isLoading={placeHoldMutation.isPending}
       />
     </>
   );
