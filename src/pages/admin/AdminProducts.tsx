@@ -64,7 +64,7 @@ const AdminProducts = () => {
   const { data: statusCounts } = useQuery({
     queryKey: ['admin-product-counts'],
     queryFn: async () => {
-      const statuses = ['available', 'on_hold', 'sold', 'inventory'] as const;
+      const statuses = ['available', 'on_hold', 'at_auction', 'sold', 'inventory'] as const;
       const results = await Promise.all(
         statuses.map(s => supabase.from('products').select('*', { count: 'exact', head: true }).eq('status', s))
       );
