@@ -99,8 +99,8 @@ const AdminProducts = () => {
   });
 
   const markSoldMutation = useMutation({
-    mutationFn: async ({ id, sale_price, sale_platform, sale_date }: { id: string; sale_price: number | null; sale_platform: string; sale_date: string }) => {
-      const { error } = await supabase.from('products').update({ status: 'sold' as const, sale_price, sale_platform, sale_date }).eq('id', id);
+    mutationFn: async ({ id, sold_price, sale_platform, sale_date }: { id: string; sold_price: number | null; sale_platform: string; sale_date: string }) => {
+      const { error } = await supabase.from('products').update({ status: 'sold' as const, sold_price, sale_platform, sale_date } as any).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
