@@ -73,7 +73,7 @@ const Catalog = () => {
     isFetchingNextPage,
   });
 
-  const activeFilterCount = [designerSlug, makerId, categoryId, styleId, periodId, countryId].filter(Boolean).length;
+  const activeFilterCount = [designerSlug, makerSlug, categoryId, styleId, periodId, countryId].filter(Boolean).length;
 
   const clearFilters = () => {
     setSearchParams({}, { replace: true });
