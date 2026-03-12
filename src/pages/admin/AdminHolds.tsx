@@ -97,7 +97,7 @@ const AdminHolds = () => {
       <div className="flex items-center gap-2">
         <Clock size={20} className="text-primary" />
         <h1 className="text-xl font-display tracking-wide">Active Holds</h1>
-        {holds && <span className="text-sm text-muted-foreground">({holds.length})</span>}
+        {heldProducts && <span className="text-sm text-muted-foreground">({heldProducts.length})</span>}
       </div>
 
       {isLoading ? (
