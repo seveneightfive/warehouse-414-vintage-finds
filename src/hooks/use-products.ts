@@ -43,7 +43,7 @@ export function useInfiniteProducts(filters?: ProductFilters) {
       if (filters?.status) {
         query = query.eq("status", filters.status);
       } else {
-        query = query.in("status", ["available", "on_hold", "sold"]);
+query = query.in("status", ["available", "on_hold", "sold", "at_auction"]);
       }
 
       // Cursor-based pagination
