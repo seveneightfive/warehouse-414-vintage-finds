@@ -11,9 +11,9 @@ const AdminDashboard = () => {
       const [products, holds, offers, inquiries, designers, makers, categories] = await Promise.all([
         supabase.from("products").select("id", { count: "exact", head: true }),
         supabase
-          .from("product_holds")
+          .from("products")
           .select("id", { count: "exact", head: true })
-          .gt("expires_at", new Date().toISOString()),
+          .eq("status", "on_hold"),
         supabase
           .from("purchase_inquiries")
           .select("id", { count: "exact", head: true })
