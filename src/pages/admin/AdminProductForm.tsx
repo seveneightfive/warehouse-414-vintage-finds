@@ -164,7 +164,9 @@ const AdminProductForm = () => {
     onSuccess: (newId) => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       toast.success(isEditing ? 'Product updated' : 'Product created');
-      if (!isEditing) {
+      if (isEditing) {
+        navigate(-1);
+      } else {
         // Redirect to edit mode so images can be attached
         navigate(`/admin/products/${newId}`);
       }
