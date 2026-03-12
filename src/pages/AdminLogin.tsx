@@ -22,7 +22,7 @@ const AdminLogin = () => {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: `${window.location.origin}/admin` },
+        options: { emailRedirectTo: 'https://shop-warehouse414.vercel.app/admin' },
       });
       if (error) throw error;
       setSent(true);
