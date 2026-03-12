@@ -24,12 +24,13 @@ export function useInfiniteProducts(filters?: ProductFilters) {
   return useInfiniteQuery({
     queryKey: ["products-infinite", filters],
     queryFn: async ({ pageParam }: { pageParam: Cursor | undefined }) => {
+      const designerJoin = filters?.designer_slug ? 'designer:designers!inner(id, name, slug)' : 'designer:designers(id, name)';
       let query = supabase
         .from("products")
         .select(
           `
-          id, name, slug, price, status, featured_image_url, created_at,
-          designer:designers(id, name), product_images(image_url, sort_order)
+          id, name, slug, price, status, featured_image_url, created_at, sale_price,
+          ${designerJoin}, product_images(image_url, sort_order)
         `,
         )
         .order("created_at", { ascending: false })
