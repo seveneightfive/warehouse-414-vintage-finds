@@ -9,9 +9,19 @@ import { supabase } from '@/integrations/supabase/client';
 
 const AdminLogin = () => {
   const { user, isAdmin, loading } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        navigate('/admin');
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   if (loading) return <div className="flex items-center justify-center min-h-screen text-muted-foreground">Loading...</div>;
   if (user && isAdmin) return <Navigate to="/admin" replace />;
