@@ -23,16 +23,29 @@ const AdminHolds = () => {
   const [extendHold, setExtendHold] = useState<{ id: string; expires_at: string; hold_duration_hours: number } | null>(null);
   const [extendDays, setExtendDays] = useState('3');
 
-  const { data: holds, isLoading } = useQuery({
+  const { data: heldProducts, isLoading } = useQuery({
     queryKey: ['admin-holds'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('product_holds')
-        .select('*, products!inner(id, name, sku, status, featured_image_url)')
-        .eq('products.status', 'on_hold')
-        .order('expires_at', { ascending: true });
+        .from('products')
+        .select(`
+          id, name, sku, status, featured_image_url, price,
+          product_holds(
+            id, customer_name, customer_email, customer_phone,
+            hold_duration_hours, created_at, expires_at, notes
+          )
+        `)
+        .eq('status', 'on_hold')
+        .order('name');
       if (error) throw error;
-      return data as any[];
+      // For each product, pick the most recent hold
+      return (data ?? []).map((p: any) => {
+        const holds = p.product_holds ?? [];
+        const latestHold = holds.sort((a: any, b: any) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )[0] ?? null;
+        return { ...p, hold: latestHold };
+      });
     },
   });
 
