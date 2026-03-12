@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
 
     // Upload to Bunny.net (warehouseimages storage zone)
     const fileBuffer = await file.arrayBuffer();
-    const uploadUrl = `https://storage.bunnycdn.com/warehouseimages/${storagePath}`;
+    const uploadUrl = `https://la.storage.bunnycdn.com/warehouseimages/${storagePath}`;
 
     const uploadRes = await fetch(uploadUrl, {
       method: "PUT",
