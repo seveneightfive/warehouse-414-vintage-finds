@@ -1,12 +1,27 @@
 import { useParams } from 'react-router-dom';
 import { useMaker } from '@/hooks/use-makers';
-import { useProducts } from '@/hooks/use-products';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import ProductCard from '@/components/ProductCard';
+import type { Product } from '@/types/database';
 
 const MakerDetail = () => {
-  const { id } = useParams();
-  const { data: maker, isLoading } = useMaker(id);
-  const { data: products } = useProducts({ maker_id: id });
+  const { slug } = useParams();
+  const { data: maker, isLoading } = useMaker(slug);
+
+  const { data: products } = useQuery({
+    queryKey: ['maker-products', maker?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*, product_images(*)')
+        .eq('maker_id', maker!.id)
+        .order('name');
+      if (error) throw error;
+      return data as Product[];
+    },
+    enabled: !!maker?.id,
+  });
 
   if (isLoading) {
     return <div className="container mx-auto px-4 py-12"><div className="h-8 bg-muted animate-pulse rounded w-1/3" /></div>;

@@ -131,7 +131,7 @@ const ProductDetail = () => {
             )}
             {product.maker && (
               <p className="text-muted-foreground text-base mb-1">
-                Maker: <Link to={`/maker/${product.maker.id}`} className="hover:text-primary transition-colors">{product.maker.name}</Link>
+                Maker: <Link to={`/maker/${product.maker.slug}`} className="hover:text-primary transition-colors">{product.maker.name}</Link>
               </p>
             )}
             {product.price && (
