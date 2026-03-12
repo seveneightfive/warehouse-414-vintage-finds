@@ -50,7 +50,7 @@ const ProductCard = ({ product }: { product: Product }) => {
         {product.name}
       </h3>
       {designerName && <p className="text-xs text-muted-foreground mt-0.5">{designerName}</p>}
-      {product.price && (
+{product.price && product.status !== "at_auction" && (
         <p className="text-sm text-muted-foreground mt-1 font-display">
           {product.sale_price ? (
             <>
