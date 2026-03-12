@@ -7,7 +7,7 @@ const ProductCard = ({ product }: { product: Product }) => {
   const designerName = product.designer?.name;
 
   return (
-    <Link to={`/product/${product.id}`} className="group block">
+    <Link to={`/product/${product.slug}`} className="group block">
       <div className="aspect-square overflow-hidden rounded-sm bg-muted mb-3 relative">
         {imageUrl ? (
           <img

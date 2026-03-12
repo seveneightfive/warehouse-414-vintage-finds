@@ -143,7 +143,7 @@ export async function generateSpecSheet(product: Product, siteUrl: string) {
   }
 
   // QR Code + footer (anchored to bottom)
-  const productUrl = `${siteUrl}/product/${product.id}`;
+  const productUrl = `${siteUrl}/product/${product.slug}`;
   const qrDataUrl = await QRCode.toDataURL(productUrl, {
     width: 200,
     margin: 1,

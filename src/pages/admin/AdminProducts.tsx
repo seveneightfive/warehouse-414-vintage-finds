@@ -220,7 +220,7 @@ const AdminProducts = () => {
                       )}
                       <TableCell>
                         <div className="flex gap-1">
-                          <Link to={`/product/${p.id}`}><Button variant="ghost" size="icon"><Eye size={14} /></Button></Link>
+                          <Link to={`/product/${p.slug}`}><Button variant="ghost" size="icon"><Eye size={14} /></Button></Link>
                           <Link to={`/admin/products/${p.id}`}><Button variant="ghost" size="icon"><Pencil size={14} /></Button></Link>
                           {p.status !== 'sold' && (
                             <Button variant="ghost" size="icon" onClick={() => setSoldProduct(p)} title="Mark as sold">
