@@ -73,8 +73,9 @@ const AdminProducts = () => {
         all: allResult.count ?? 0,
         available: results[0].count ?? 0,
         on_hold: results[1].count ?? 0,
-        sold: results[2].count ?? 0,
-        inventory: results[3].count ?? 0,
+        at_auction: results[2].count ?? 0,
+        sold: results[3].count ?? 0,
+        inventory: results[4].count ?? 0,
       };
     },
   });
