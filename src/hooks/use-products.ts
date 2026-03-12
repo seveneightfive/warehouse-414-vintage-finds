@@ -5,7 +5,7 @@ import type { Product } from "@/types/database";
 const PAGE_SIZE = 50;
 
 type ProductFilters = {
-  designer_id?: string;
+  designer_slug?: string;
   maker_id?: string;
   category_id?: string;
   style_id?: string;
@@ -24,12 +24,13 @@ export function useInfiniteProducts(filters?: ProductFilters) {
   return useInfiniteQuery({
     queryKey: ["products-infinite", filters],
     queryFn: async ({ pageParam }: { pageParam: Cursor | undefined }) => {
+      const designerJoin = filters?.designer_slug ? 'designer:designers!inner(id, name, slug)' : 'designer:designers(id, name)';
       let query = supabase
         .from("products")
         .select(
           `
-          id, name, slug, price, status, featured_image_url, created_at,
-          designer:designers(id, name), product_images(image_url, sort_order)
+          id, name, slug, price, status, featured_image_url, created_at, sale_price,
+          ${designerJoin}, product_images(image_url, sort_order)
         `,
         )
         .order("created_at", { ascending: false })
@@ -50,7 +51,7 @@ export function useInfiniteProducts(filters?: ProductFilters) {
         );
       }
 
-      if (filters?.designer_id) query = query.eq("designer_id", filters.designer_id);
+      if (filters?.designer_slug) query = query.eq("designers.slug", filters.designer_slug);
       if (filters?.maker_id) query = query.eq("maker_id", filters.maker_id);
       if (filters?.category_id) query = query.eq("category_id", filters.category_id);
       if (filters?.style_id) query = query.eq("style_id", filters.style_id);
