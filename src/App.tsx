@@ -20,6 +20,7 @@ import AdminProductForm from "./pages/admin/AdminProductForm";
 import AdminCrudList from "./pages/admin/AdminCrudList";
 import AdminCategoryManager from "./pages/admin/AdminCategoryManager";
 import AdminInbox from "./pages/admin/AdminInbox";
+import AdminHolds from "./pages/admin/AdminHolds";
 import CollectionDetail from "./pages/CollectionDetail";
 import NotFound from "./pages/NotFound";
 
