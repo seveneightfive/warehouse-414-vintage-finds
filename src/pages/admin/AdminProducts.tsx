@@ -18,7 +18,7 @@ const PAGE_SIZE = 25;
 const AdminProducts = () => {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('available');
   const [page, setPage] = useState(0);
   const [soldProduct, setSoldProduct] = useState<Product | null>(null);
   const [holdProduct, setHoldProduct] = useState<Product | null>(null);
