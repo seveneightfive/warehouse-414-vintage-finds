@@ -193,7 +193,7 @@ const AdminProductForm = () => {
       try {
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('product_id', id);
+        formData.append('productId', id);
         formData.append('sku', sku);
         formData.append('sort_order', String(nextSort));
 
