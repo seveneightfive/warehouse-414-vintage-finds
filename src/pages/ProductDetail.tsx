@@ -95,6 +95,9 @@ const ProductDetail = () => {
               {product.status === 'on_hold' && (
                 <span className="absolute top-3 left-3 bg-background text-foreground font-display text-xs tracking-[0.15em] px-3 py-1.5">on hold</span>
               )}
+              {product.status === 'at_auction' && (
+                <span className="absolute top-3 left-3 bg-background text-foreground font-display text-xs tracking-[0.15em] px-3 py-1.5">at auction</span>
+              )}
               {allImages.length > 1 && (
                 <>
                   <button onClick={goPrev} className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background rounded-full p-1.5 transition-colors">
