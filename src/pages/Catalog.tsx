@@ -227,7 +227,7 @@ const Catalog = () => {
           <div className="mt-6 space-y-4">
             {filterSelect('Category', 'category', categoryId, filterOptions?.categories)}
             {filterSelect('Style', 'style', styleId, filterOptions?.styles)}
-            {filterSelect('Designer', 'designer', designerId, filterOptions?.designers)}
+            {filterSelect('Designer', 'designer', designerSlug, filterOptions?.designers?.map(d => ({ id: d.slug || d.id, name: d.name })))}
             {filterSelect('Maker', 'maker', makerId, filterOptions?.makers)}
             {filterSelect('Period', 'period', periodId, filterOptions?.periods)}
             {filterSelect('Country', 'country', countryId, filterOptions?.countries)}
