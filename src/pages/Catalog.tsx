@@ -53,7 +53,7 @@ const Catalog = () => {
     refetch,
   } = useInfiniteProducts({
     search: search || undefined,
-    designer_id: designerId || undefined,
+    designer_slug: designerSlug || undefined,
     maker_id: makerId || undefined,
     category_id: categoryId || undefined,
     style_id: styleId || undefined,
