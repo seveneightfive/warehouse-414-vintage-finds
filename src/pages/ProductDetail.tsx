@@ -147,7 +147,7 @@ const ProductDetail = () => {
                 Maker: <Link to={`/maker/${product.maker.slug}`} className="hover:text-primary transition-colors">{product.maker.name}</Link>
               </p>
             )}
-            {product.price && (
+{product.price && product.status !== 'at_auction' && (
               <p className="font-display text-xl md:text-2xl text-muted-foreground mt-4">
                 {product.sale_price ? (
                   <>
