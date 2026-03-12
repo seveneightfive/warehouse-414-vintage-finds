@@ -49,13 +49,13 @@ const AdminDashboard = () => {
   });
 
   const cards = [
-    { label: "Total Products", value: stats?.products ?? "—", icon: Package },
-    { label: "Pending Holds", value: stats?.holds ?? "—", icon: Clock },
-    { label: "Pending Offers", value: stats?.offers ?? "—", icon: HandCoins },
-    { label: "Pending Inquiries", value: stats?.inquiries ?? "—", icon: MessageSquare },
-    { label: "Designers", value: stats?.designers ?? "—", icon: Users },
-    { label: "Makers", value: stats?.makers ?? "—", icon: Building2 },
-    { label: "Categories", value: stats?.categories ?? "—", icon: Tags },
+    { label: "Total Products", value: stats?.products ?? "—", icon: Package, to: "/admin/products" },
+    { label: "Pending Holds", value: stats?.holds ?? "—", icon: Clock, to: "/admin/holds" },
+    { label: "Pending Offers", value: stats?.offers ?? "—", icon: HandCoins, to: "/admin/offers" },
+    { label: "Pending Inquiries", value: stats?.inquiries ?? "—", icon: MessageSquare, to: "/admin/inquiries" },
+    { label: "Designers", value: stats?.designers ?? "—", icon: Users, to: "/admin/designers" },
+    { label: "Makers", value: stats?.makers ?? "—", icon: Building2, to: "/admin/makers" },
+    { label: "Categories", value: stats?.categories ?? "—", icon: Tags, to: "/admin/categories" },
   ];
 
   if (isError) {
