@@ -144,6 +144,7 @@ const AdminProducts = () => {
     switch (s) {
       case 'available': return 'default';
       case 'on_hold': return 'secondary';
+      case 'at_auction': return 'secondary';
       case 'sold': return 'destructive';
       default: return 'outline';
     }
