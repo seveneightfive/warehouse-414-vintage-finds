@@ -601,6 +601,11 @@ const AdminProductForm = () => {
               <FormField control={form.control} name="ebay_url" render={({ field }) => (
                 <FormItem><FormLabel>eBay URL</FormLabel><FormControl><Input type="url" placeholder="https://www.ebay.com/..." {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
               )} />
+              <div ref={auctionUrlRef}>
+                <FormField control={form.control} name="chairish_auction_url" render={({ field }) => (
+                  <FormItem><FormLabel>Chairish Auction URL</FormLabel><FormControl><Input type="url" placeholder="https://www.chairish.com/..." {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                )} />
+              </div>
             </div>
           </section>
 
