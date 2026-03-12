@@ -439,9 +439,103 @@ const AdminProductForm = () => {
               )} />
             </div>
 
-            {/* Category, Style, Country in one row */}
+            {/* Category — cascading 3-level selector */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <ComboboxField name="category_id" label="Category" options={taxonomy.categories} />
+              {watchCategoryId && subcategories && subcategories.length > 0 && (
+                <FormField control={form.control} name="subcategory_id" render={({ field }) => {
+                  // Determine displayed value: if the saved value is a sub-subcategory, show the parent
+                  const displayValue = selectedSubcategoryId || '';
+                  const selectedName = subcategories?.find(o => o.id === displayValue)?.name;
+                  return (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Subcategory</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button variant="outline" role="combobox" className={cn("w-full justify-between font-normal", !displayValue && "text-muted-foreground")}>
+                              {selectedName || 'Select subcategory'}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                          <Command>
+                            <CommandInput placeholder="Search subcategory…" />
+                            <CommandList>
+                              <CommandEmpty>No results.</CommandEmpty>
+                              <CommandGroup>
+                                <CommandItem value="__none" onSelect={() => { setSelectedSubcategoryId(null); field.onChange(null); }}>
+                                  <Check className={cn("mr-2 h-4 w-4", !displayValue ? "opacity-100" : "opacity-0")} />
+                                  None
+                                </CommandItem>
+                                {subcategories?.map(o => (
+                                  <CommandItem key={o.id} value={o.name} onSelect={() => {
+                                    setSelectedSubcategoryId(o.id);
+                                    field.onChange(o.id); // Save subcategory as subcategory_id (may be overwritten by sub-sub)
+                                  }}>
+                                    <Check className={cn("mr-2 h-4 w-4", displayValue === o.id ? "opacity-100" : "opacity-0")} />
+                                    {o.name}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }} />
+              )}
+              {selectedSubcategoryId && subSubcategories && subSubcategories.length > 0 && (
+                <FormField control={form.control} name="subcategory_id" render={({ field }) => {
+                  // Show sub-subcategory value only if it's actually a child of selectedSubcategoryId
+                  const isSubSub = subSubcategories?.some(o => o.id === field.value);
+                  const displayValue = isSubSub ? field.value : '';
+                  const selectedName = subSubcategories?.find(o => o.id === displayValue)?.name;
+                  return (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Sub-subcategory</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button variant="outline" role="combobox" className={cn("w-full justify-between font-normal", !displayValue && "text-muted-foreground")}>
+                              {selectedName || 'Select sub-subcategory'}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                          <Command>
+                            <CommandInput placeholder="Search sub-subcategory…" />
+                            <CommandList>
+                              <CommandEmpty>No results.</CommandEmpty>
+                              <CommandGroup>
+                                <CommandItem value="__none" onSelect={() => { field.onChange(selectedSubcategoryId); }}>
+                                  <Check className={cn("mr-2 h-4 w-4", !displayValue ? "opacity-100" : "opacity-0")} />
+                                  None
+                                </CommandItem>
+                                {subSubcategories?.map(o => (
+                                  <CommandItem key={o.id} value={o.name} onSelect={() => { field.onChange(o.id); }}>
+                                    <Check className={cn("mr-2 h-4 w-4", displayValue === o.id ? "opacity-100" : "opacity-0")} />
+                                    {o.name}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }} />
+              )}
+            </div>
+
+            {/* Style, Country */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <ComboboxField name="style_id" label="Style" options={taxonomy.styles} />
               <ComboboxField name="country_id" label="Country" options={taxonomy.countries} />
             </div>
