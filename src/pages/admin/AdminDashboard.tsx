@@ -115,7 +115,7 @@ const AdminDashboard = () => {
 
   const summaryCards = [
     { label: "Total Products", value: categorySummary?.total ?? 0, color: "text-foreground" },
-    { label: "Available", value: categorySummary?.available ?? 0, color: "text-blue-600" },
+    { label: "Available", value: categorySummary?.available ?? 0, color: "text-foreground" },
     { label: "Sold", value: categorySummary?.sold ?? 0, color: "text-muted-foreground" },
   ];
 
