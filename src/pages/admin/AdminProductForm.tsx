@@ -88,6 +88,47 @@ const AdminProductForm = () => {
   });
 
   const watchStatus = form.watch('status');
+  const watchCategoryId = form.watch('category_id');
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string | null>(null);
+
+  // Fetch subcategories (parent_id IS NULL) for selected category
+  const { data: subcategories } = useQuery({
+    queryKey: ['taxonomy-subcategories', watchCategoryId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('subcategories')
+        .select('id, name')
+        .eq('category_id', watchCategoryId!)
+        .is('parent_id', null)
+        .order('name');
+      if (error) throw error;
+      return data as { id: string; name: string }[];
+    },
+    enabled: !!watchCategoryId,
+  });
+
+  // Fetch sub-subcategories for selected subcategory
+  const { data: subSubcategories } = useQuery({
+    queryKey: ['taxonomy-subsubcategories', selectedSubcategoryId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('subcategories')
+        .select('id, name')
+        .eq('parent_id', selectedSubcategoryId!)
+        .order('name');
+      if (error) throw error;
+      return data as { id: string; name: string }[];
+    },
+    enabled: !!selectedSubcategoryId,
+  });
+
+  // When category changes, clear subcategory
+  useEffect(() => {
+    // Only clear if user changed category (not on initial load)
+    if (product && watchCategoryId === ((product as Record<string, unknown>).category_id as string)) return;
+    form.setValue('subcategory_id', null);
+    setSelectedSubcategoryId(null);
+  }, [watchCategoryId]);
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['admin-product', id],
