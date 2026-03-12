@@ -35,6 +35,11 @@ const ProductCard = ({ product }: { product: Product }) => {
             on hold
           </span>
         )}
+        {product.sale_price && (
+          <span className="absolute top-2 left-2 bg-destructive text-white font-display text-[10px] tracking-[0.15em] px-2.5 py-1">
+            sale
+          </span>
+        )}
       </div>
       <h3 className="text-sm font-display tracking-wide text-foreground group-hover:text-primary transition-colors line-clamp-2">
         {product.name}
