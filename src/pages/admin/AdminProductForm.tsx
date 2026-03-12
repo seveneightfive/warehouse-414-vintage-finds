@@ -156,6 +156,26 @@ const AdminProductForm = () => {
       const rawTags = (product as Record<string, unknown>).tags;
       values.tags = Array.isArray(rawTags) ? (rawTags as string[]).join(', ') : '';
       form.reset(values as FormValues);
+
+      // Initialize cascading subcategory state from saved subcategory_id
+      const savedSubcategoryId = (product as Record<string, unknown>).subcategory_id as string | null;
+      if (savedSubcategoryId) {
+        // Determine if this is a sub-subcategory (has parent_id) or a direct subcategory
+        supabase
+          .from('subcategories')
+          .select('id, parent_id')
+          .eq('id', savedSubcategoryId)
+          .single()
+          .then(({ data: subRow }) => {
+            if (subRow?.parent_id) {
+              // It's a sub-subcategory — set the parent as the selected subcategory
+              setSelectedSubcategoryId(subRow.parent_id);
+            } else {
+              // It's a direct subcategory
+              setSelectedSubcategoryId(savedSubcategoryId);
+            }
+          });
+      }
     }
   }, [product, form]);
 
