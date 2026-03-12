@@ -5,13 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminLogin = () => {
   const { user, isAdmin, loading } = useAuth();
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const { signIn } = useAuth();
+  const [sent, setSent] = useState(false);
 
   if (loading) return <div className="flex items-center justify-center min-h-screen text-muted-foreground">Loading...</div>;
   if (user && isAdmin) return <Navigate to="/admin" replace />;
@@ -20,9 +20,14 @@ const AdminLogin = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await signIn(email, password);
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: `${window.location.origin}/admin` },
+      });
+      if (error) throw error;
+      setSent(true);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Invalid credentials');
+      toast.error(err instanceof Error ? err.message : 'Failed to send magic link');
     } finally {
       setSubmitting(false);
     }
@@ -35,18 +40,23 @@ const AdminLogin = () => {
         {user && !isAdmin && (
           <p className="text-destructive text-sm text-center mb-4">You do not have admin access.</p>
         )}
-        {!user && (
+        {!user && sent && (
+          <div className="text-center space-y-2">
+            <p className="text-foreground text-sm">Check your email for a magic link to sign in.</p>
+            <p className="text-muted-foreground text-xs">Sent to {email}</p>
+            <Button variant="ghost" size="sm" className="mt-4 text-xs tracking-[0.15em] uppercase" onClick={() => setSent(false)}>
+              Try a different email
+            </Button>
+          </div>
+        )}
+        {!user && !sent && (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label>Email</Label>
               <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
-            <div>
-              <Label>Password</Label>
-              <Input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-            </div>
             <Button type="submit" disabled={submitting} className="w-full text-xs tracking-[0.15em] uppercase">
-              {submitting ? 'Signing in...' : 'Sign In'}
+              {submitting ? 'Sending...' : 'Send Magic Link'}
             </Button>
           </form>
         )}
