@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Link } from 'react-router-dom';
-import { Pencil, Eye, Trash2, Search, ChevronLeft, ChevronRight, CircleDollarSign, Clock } from 'lucide-react';
+import { Pencil, Eye, Trash2, Search, ChevronLeft, ChevronRight, CircleDollarSign, Clock, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Product } from '@/types/database';
 import MarkSoldDialog from '@/components/MarkSoldDialog';
