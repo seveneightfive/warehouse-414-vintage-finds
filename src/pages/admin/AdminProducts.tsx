@@ -18,7 +18,7 @@ const PAGE_SIZE = 25;
 const AdminProducts = () => {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('available');
   const [page, setPage] = useState(0);
   const [soldProduct, setSoldProduct] = useState<Product | null>(null);
   const [holdProduct, setHoldProduct] = useState<Product | null>(null);
@@ -182,11 +182,11 @@ const AdminProducts = () => {
 
         <div className="mb-4">
           <ToggleGroup type="single" value={statusFilter} onValueChange={handleStatusFilter} className="justify-start flex-wrap">
-            <ToggleGroupItem value="all" className="text-xs tracking-wider uppercase px-3">All {statusCounts?.all != null && <span className="ml-1 text-muted-foreground">({statusCounts.all})</span>}</ToggleGroupItem>
             <ToggleGroupItem value="available" className="text-xs tracking-wider uppercase px-3">Available {statusCounts?.available != null && <span className="ml-1 text-muted-foreground">({statusCounts.available})</span>}</ToggleGroupItem>
             <ToggleGroupItem value="on_hold" className="text-xs tracking-wider uppercase px-3">On Hold {statusCounts?.on_hold != null && <span className="ml-1 text-muted-foreground">({statusCounts.on_hold})</span>}</ToggleGroupItem>
             <ToggleGroupItem value="sold" className="text-xs tracking-wider uppercase px-3">Sold {statusCounts?.sold != null && <span className="ml-1 text-muted-foreground">({statusCounts.sold})</span>}</ToggleGroupItem>
             <ToggleGroupItem value="inventory" className="text-xs tracking-wider uppercase px-3">Inventory {statusCounts?.inventory != null && <span className="ml-1 text-muted-foreground">({statusCounts.inventory})</span>}</ToggleGroupItem>
+            <ToggleGroupItem value="all" className="text-xs tracking-wider uppercase px-3">All {statusCounts?.all != null && <span className="ml-1 text-muted-foreground">({statusCounts.all})</span>}</ToggleGroupItem>
           </ToggleGroup>
         </div>
 
