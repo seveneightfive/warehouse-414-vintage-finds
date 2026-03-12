@@ -253,7 +253,7 @@ const AdminProducts = () => {
                       {showSoldDetails && (
                         <TableCell className="text-sm text-muted-foreground">{p.sale_date ? new Date(p.sale_date).toLocaleDateString() : '—'}</TableCell>
                       )}
-                      {!showSoldDetails && (
+                      {!showSoldDetails && !showAuction && (
                         <TableCell>
                           <div>{p.price ? `$${p.price.toLocaleString()}` : '—'}</div>
                           {p.sale_price && (
