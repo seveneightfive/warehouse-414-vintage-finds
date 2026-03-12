@@ -74,15 +74,17 @@ const AdminDashboard = () => {
       <h1 className="font-display text-2xl tracking-wide text-foreground mb-6">Dashboard</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((c) => (
-          <Card key={c.label}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-normal text-muted-foreground">{c.label}</CardTitle>
-              <c.icon size={18} className="text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-display text-foreground">{c.value}</p>
-            </CardContent>
-          </Card>
+          <Link to={c.to} key={c.label} className="block">
+            <Card className="cursor-pointer transition-shadow hover:shadow-md">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-normal text-muted-foreground">{c.label}</CardTitle>
+                <c.icon size={18} className="text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-display text-foreground">{c.value}</p>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
     </div>
