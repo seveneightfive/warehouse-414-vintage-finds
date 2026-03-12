@@ -35,6 +35,7 @@ const schema = z.object({
   designer_id: z.string().nullable().optional(),
   maker_id: z.string().nullable().optional(),
   category_id: z.string().nullable().optional(),
+  subcategory_id: z.string().nullable().optional(),
   style_id: z.string().nullable().optional(),
   period_id: z.string().nullable().optional(),
   country_id: z.string().nullable().optional(),
@@ -87,6 +88,47 @@ const AdminProductForm = () => {
   });
 
   const watchStatus = form.watch('status');
+  const watchCategoryId = form.watch('category_id');
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string | null>(null);
+
+  // Fetch subcategories (parent_id IS NULL) for selected category
+  const { data: subcategories } = useQuery({
+    queryKey: ['taxonomy-subcategories', watchCategoryId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('subcategories')
+        .select('id, name')
+        .eq('category_id', watchCategoryId!)
+        .is('parent_id', null)
+        .order('name');
+      if (error) throw error;
+      return data as { id: string; name: string }[];
+    },
+    enabled: !!watchCategoryId,
+  });
+
+  // Fetch sub-subcategories for selected subcategory
+  const { data: subSubcategories } = useQuery({
+    queryKey: ['taxonomy-subsubcategories', selectedSubcategoryId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('subcategories')
+        .select('id, name')
+        .eq('parent_id', selectedSubcategoryId!)
+        .order('name');
+      if (error) throw error;
+      return data as { id: string; name: string }[];
+    },
+    enabled: !!selectedSubcategoryId,
+  });
+
+  // When category changes, clear subcategory
+  useEffect(() => {
+    // Only clear if user changed category (not on initial load)
+    if (product && watchCategoryId === ((product as Record<string, unknown>).category_id as string)) return;
+    form.setValue('subcategory_id', null);
+    setSelectedSubcategoryId(null);
+  }, [watchCategoryId]);
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['admin-product', id],
@@ -114,6 +156,26 @@ const AdminProductForm = () => {
       const rawTags = (product as Record<string, unknown>).tags;
       values.tags = Array.isArray(rawTags) ? (rawTags as string[]).join(', ') : '';
       form.reset(values as FormValues);
+
+      // Initialize cascading subcategory state from saved subcategory_id
+      const savedSubcategoryId = (product as Record<string, unknown>).subcategory_id as string | null;
+      if (savedSubcategoryId) {
+        // Determine if this is a sub-subcategory (has parent_id) or a direct subcategory
+        supabase
+          .from('subcategories')
+          .select('id, parent_id')
+          .eq('id', savedSubcategoryId)
+          .single()
+          .then(({ data: subRow }) => {
+            if (subRow?.parent_id) {
+              // It's a sub-subcategory — set the parent as the selected subcategory
+              setSelectedSubcategoryId(subRow.parent_id);
+            } else {
+              // It's a direct subcategory
+              setSelectedSubcategoryId(savedSubcategoryId);
+            }
+          });
+      }
     }
   }, [product, form]);
 
@@ -377,9 +439,103 @@ const AdminProductForm = () => {
               )} />
             </div>
 
-            {/* Category, Style, Country in one row */}
+            {/* Category — cascading 3-level selector */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <ComboboxField name="category_id" label="Category" options={taxonomy.categories} />
+              {watchCategoryId && subcategories && subcategories.length > 0 && (
+                <FormField control={form.control} name="subcategory_id" render={({ field }) => {
+                  // Determine displayed value: if the saved value is a sub-subcategory, show the parent
+                  const displayValue = selectedSubcategoryId || '';
+                  const selectedName = subcategories?.find(o => o.id === displayValue)?.name;
+                  return (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Subcategory</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button variant="outline" role="combobox" className={cn("w-full justify-between font-normal", !displayValue && "text-muted-foreground")}>
+                              {selectedName || 'Select subcategory'}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                          <Command>
+                            <CommandInput placeholder="Search subcategory…" />
+                            <CommandList>
+                              <CommandEmpty>No results.</CommandEmpty>
+                              <CommandGroup>
+                                <CommandItem value="__none" onSelect={() => { setSelectedSubcategoryId(null); field.onChange(null); }}>
+                                  <Check className={cn("mr-2 h-4 w-4", !displayValue ? "opacity-100" : "opacity-0")} />
+                                  None
+                                </CommandItem>
+                                {subcategories?.map(o => (
+                                  <CommandItem key={o.id} value={o.name} onSelect={() => {
+                                    setSelectedSubcategoryId(o.id);
+                                    field.onChange(o.id); // Save subcategory as subcategory_id (may be overwritten by sub-sub)
+                                  }}>
+                                    <Check className={cn("mr-2 h-4 w-4", displayValue === o.id ? "opacity-100" : "opacity-0")} />
+                                    {o.name}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }} />
+              )}
+              {selectedSubcategoryId && subSubcategories && subSubcategories.length > 0 && (
+                <FormField control={form.control} name="subcategory_id" render={({ field }) => {
+                  // Show sub-subcategory value only if it's actually a child of selectedSubcategoryId
+                  const isSubSub = subSubcategories?.some(o => o.id === field.value);
+                  const displayValue = isSubSub ? field.value : '';
+                  const selectedName = subSubcategories?.find(o => o.id === displayValue)?.name;
+                  return (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Sub-subcategory</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button variant="outline" role="combobox" className={cn("w-full justify-between font-normal", !displayValue && "text-muted-foreground")}>
+                              {selectedName || 'Select sub-subcategory'}
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                          <Command>
+                            <CommandInput placeholder="Search sub-subcategory…" />
+                            <CommandList>
+                              <CommandEmpty>No results.</CommandEmpty>
+                              <CommandGroup>
+                                <CommandItem value="__none" onSelect={() => { field.onChange(selectedSubcategoryId); }}>
+                                  <Check className={cn("mr-2 h-4 w-4", !displayValue ? "opacity-100" : "opacity-0")} />
+                                  None
+                                </CommandItem>
+                                {subSubcategories?.map(o => (
+                                  <CommandItem key={o.id} value={o.name} onSelect={() => { field.onChange(o.id); }}>
+                                    <Check className={cn("mr-2 h-4 w-4", displayValue === o.id ? "opacity-100" : "opacity-0")} />
+                                    {o.name}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }} />
+              )}
+            </div>
+
+            {/* Style, Country */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <ComboboxField name="style_id" label="Style" options={taxonomy.styles} />
               <ComboboxField name="country_id" label="Country" options={taxonomy.countries} />
             </div>
