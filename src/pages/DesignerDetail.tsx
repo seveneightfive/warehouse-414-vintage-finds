@@ -16,7 +16,6 @@ const DesignerDetail = () => {
         .from('products')
         .select('*, product_images(*)')
         .eq('designer_id', designer!.id)
-        .eq('status', 'available')
         .order('name');
       if (error) throw error;
       return data as Product[];
