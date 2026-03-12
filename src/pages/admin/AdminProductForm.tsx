@@ -91,6 +91,7 @@ const AdminProductForm = () => {
 
   const watchStatus = form.watch('status');
   const watchCategoryId = form.watch('category_id');
+  const auctionUrlRef = useRef<HTMLDivElement>(null);
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string | null>(null);
 
   // Fetch subcategories (parent_id IS NULL) for selected category
