@@ -24,7 +24,7 @@ const Catalog = () => {
 
   const search = searchParams.get('q') || '';
   const designerSlug = searchParams.get('designer') || '';
-  const makerId = searchParams.get('maker') || '';
+  const makerSlug = searchParams.get('maker') || '';
   const categoryId = searchParams.get('category') || '';
   const styleId = searchParams.get('style') || '';
   const periodId = searchParams.get('period') || '';
@@ -54,7 +54,7 @@ const Catalog = () => {
   } = useInfiniteProducts({
     search: search || undefined,
     designer_slug: designerSlug || undefined,
-    maker_id: makerId || undefined,
+    maker_slug: makerSlug || undefined,
     category_id: categoryId || undefined,
     style_id: styleId || undefined,
     period_id: periodId || undefined,
@@ -73,7 +73,7 @@ const Catalog = () => {
     isFetchingNextPage,
   });
 
-  const activeFilterCount = [designerSlug, makerId, categoryId, styleId, periodId, countryId].filter(Boolean).length;
+  const activeFilterCount = [designerSlug, makerSlug, categoryId, styleId, periodId, countryId].filter(Boolean).length;
 
   const clearFilters = () => {
     setSearchParams({}, { replace: true });
@@ -228,7 +228,7 @@ const Catalog = () => {
             {filterSelect('Category', 'category', categoryId, filterOptions?.categories)}
             {filterSelect('Style', 'style', styleId, filterOptions?.styles)}
             {filterSelect('Designer', 'designer', designerSlug, filterOptions?.designers?.map(d => ({ id: d.slug || d.id, name: d.name })))}
-            {filterSelect('Maker', 'maker', makerId, filterOptions?.makers)}
+            {filterSelect('Maker', 'maker', makerSlug, filterOptions?.makers?.map(m => ({ id: m.slug || m.id, name: m.name })))}
             {filterSelect('Period', 'period', periodId, filterOptions?.periods)}
             {filterSelect('Country', 'country', countryId, filterOptions?.countries)}
           </div>
