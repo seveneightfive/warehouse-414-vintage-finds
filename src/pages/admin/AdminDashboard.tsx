@@ -2,7 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Package, Clock, HandCoins, MessageSquare, Users, Building2, Tags } from "lucide-react";
+import { Package, Clock, HandCoins, MessageSquare, Users, Building2, Tags, BarChart3 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+
+const COLORS = {
+  available: "hsl(220, 70%, 55%)",
+  sold: "hsl(220, 10%, 65%)",
+  other: "hsl(42, 40%, 75%)",
+};
 
 const AdminDashboard = () => {
   const { data: stats, isError } = useQuery({
@@ -48,6 +55,43 @@ const AdminDashboard = () => {
     retry: 1,
   });
 
+  const { data: categoryData } = useQuery({
+    queryKey: ["admin-category-inventory"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("categories_with_product_count" as any)
+        .select("*")
+        .order("total_product_count", { ascending: false });
+      if (error) throw error;
+      return data as Array<{
+        id: string;
+        name: string;
+        total_product_count: number;
+        available_product_count: number;
+        sold_product_count: number;
+      }>;
+    },
+    retry: 1,
+  });
+
+  const categorySummary = categoryData?.reduce(
+    (acc, c) => ({
+      total: acc.total + (c.total_product_count || 0),
+      available: acc.available + (c.available_product_count || 0),
+      sold: acc.sold + (c.sold_product_count || 0),
+    }),
+    { total: 0, available: 0, sold: 0 }
+  );
+
+  const chartData = categoryData
+    ?.filter((c) => c.total_product_count > 0)
+    .map((c) => ({
+      name: c.name,
+      available: c.available_product_count || 0,
+      sold: c.sold_product_count || 0,
+      other: Math.max(0, (c.total_product_count || 0) - (c.available_product_count || 0) - (c.sold_product_count || 0)),
+    }));
+
   const cards = [
     { label: "Total Products", value: stats?.products ?? "—", icon: Package, to: "/admin/products" },
     { label: "Pending Holds", value: stats?.holds ?? "—", icon: Clock, to: "/admin/holds" },
@@ -69,6 +113,12 @@ const AdminDashboard = () => {
     );
   }
 
+  const summaryCards = [
+    { label: "Total Products", value: categorySummary?.total ?? 0, color: "text-foreground" },
+    { label: "Available", value: categorySummary?.available ?? 0, color: "text-blue-600" },
+    { label: "Sold", value: categorySummary?.sold ?? 0, color: "text-muted-foreground" },
+  ];
+
   return (
     <div>
       <h1 className="font-display text-2xl tracking-wide text-foreground mb-6">Dashboard</h1>
@@ -86,6 +136,59 @@ const AdminDashboard = () => {
             </Card>
           </Link>
         ))}
+      </div>
+
+      {/* Category Inventory Section */}
+      <div className="mt-10">
+        <div className="flex items-center gap-2 mb-4">
+          <BarChart3 size={20} className="text-muted-foreground" />
+          <h2 className="font-display text-xl tracking-wide text-foreground">Category Inventory</h2>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          {summaryCards.map((s) => (
+            <Card key={s.label}>
+              <CardContent className="p-4 text-center">
+                <p className="text-xs uppercase tracking-widest text-muted-foreground mb-1">{s.label}</p>
+                <p className={`text-2xl font-display ${s.color}`}>{s.value}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {chartData && chartData.length > 0 && (
+          <Card>
+            <CardContent className="p-4">
+              <ResponsiveContainer width="100%" height={chartData.length * 40 + 40}>
+                <BarChart data={chartData} layout="vertical" margin={{ left: 10, right: 20, top: 10, bottom: 10 }}>
+                  <XAxis type="number" tick={{ fontSize: 11, fill: "hsl(220, 10%, 40%)" }} />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={120}
+                    tick={{ fontSize: 11, fill: "hsl(220, 15%, 10%)" }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      fontSize: 12,
+                      borderRadius: 6,
+                      border: "1px solid hsl(220, 10%, 88%)",
+                    }}
+                  />
+                  <Bar dataKey="available" stackId="a" fill={COLORS.available} name="Available" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="sold" stackId="a" fill={COLORS.sold} name="Sold" />
+                  <Bar dataKey="other" stackId="a" fill={COLORS.other} name="Other" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+
+              <div className="flex items-center justify-center gap-6 mt-2 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: COLORS.available }} /> Available</span>
+                <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: COLORS.sold }} /> Sold</span>
+                <span className="flex items-center gap-1.5"><span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: COLORS.other }} /> Other</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
