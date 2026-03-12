@@ -316,7 +316,14 @@ const ProductDetail = () => {
             </p>
             {product.price && (
               <p className="font-display text-sm text-muted-foreground shrink-0">
-                ${product.price.toLocaleString()}
+                {product.sale_price ? (
+                  <>
+                    <span className="line-through opacity-60 mr-1">${product.price.toLocaleString()}</span>
+                    <span className="text-destructive">${product.sale_price.toLocaleString()}</span>
+                  </>
+                ) : (
+                  `$${product.price.toLocaleString()}`
+                )}
               </p>
             )}
           </div>

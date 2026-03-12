@@ -231,7 +231,7 @@ const AdminProducts = () => {
                         </TableCell>
                       )}
                       {showSoldDetails && (
-                        <TableCell className="text-sm">{p.sale_price ? `$${p.sale_price.toLocaleString()}` : '—'}</TableCell>
+                        <TableCell className="text-sm">{(p as any).sold_price ? `$${(p as any).sold_price.toLocaleString()}` : '—'}</TableCell>
                       )}
                       {showSoldDetails && (
                         <TableCell className="text-sm text-muted-foreground">{p.sale_platform || '—'}</TableCell>
