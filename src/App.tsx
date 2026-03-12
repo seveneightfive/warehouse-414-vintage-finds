@@ -21,6 +21,7 @@ import AdminCrudList from "./pages/admin/AdminCrudList";
 import AdminCategoryManager from "./pages/admin/AdminCategoryManager";
 import AdminInbox from "./pages/admin/AdminInbox";
 import AdminHolds from "./pages/admin/AdminHolds";
+import AdminConsignors from "./pages/admin/AdminConsignors";
 import CollectionDetail from "./pages/CollectionDetail";
 import NotFound from "./pages/NotFound";
 
