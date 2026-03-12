@@ -23,7 +23,7 @@ const Catalog = () => {
   }, [searchOpen]);
 
   const search = searchParams.get('q') || '';
-  const designerId = searchParams.get('designer') || '';
+  const designerSlug = searchParams.get('designer') || '';
   const makerId = searchParams.get('maker') || '';
   const categoryId = searchParams.get('category') || '';
   const styleId = searchParams.get('style') || '';
