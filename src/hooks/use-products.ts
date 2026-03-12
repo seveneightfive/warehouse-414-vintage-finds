@@ -6,7 +6,7 @@ const PAGE_SIZE = 50;
 
 type ProductFilters = {
   designer_slug?: string;
-  maker_id?: string;
+  maker_slug?: string;
   category_id?: string;
   style_id?: string;
   period_id?: string;
