@@ -32,7 +32,7 @@ const schema = z.object({
   long_description: z.string().nullable().optional(),
   price: z.coerce.number().nullable().optional(),
   sale_price: z.coerce.number().nullable().optional(),
-  status: z.enum(['available', 'on_hold', 'sold', 'inventory']).default('available'),
+  status: z.enum(['available', 'on_hold', 'sold', 'inventory', 'at_auction']).default('available'),
   designer_id: z.string().nullable().optional(),
   maker_id: z.string().nullable().optional(),
   category_id: z.string().nullable().optional(),
