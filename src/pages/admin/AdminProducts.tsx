@@ -111,6 +111,34 @@ const AdminProducts = () => {
     onError: (err) => toast.error(err.message),
   });
 
+  const placeHoldMutation = useMutation({
+    mutationFn: async ({ product_id, customer_name, customer_email, customer_phone, hold_duration_hours, expires_at, notes }: {
+      product_id: string; customer_name: string; customer_email: string; customer_phone: string;
+      hold_duration_hours: number; expires_at: string; notes: string;
+    }) => {
+      const { error: holdError } = await supabase.from('product_holds').insert({
+        product_id,
+        customer_name,
+        customer_email,
+        customer_phone: customer_phone || null,
+        hold_duration_hours,
+        expires_at,
+        notes: notes || null,
+        status: 'approved',
+      } as any);
+      if (holdError) throw holdError;
+      const { error: statusError } = await supabase.from('products').update({ status: 'on_hold' as const }).eq('id', product_id);
+      if (statusError) throw statusError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-product-counts'] });
+      toast.success('Hold placed');
+      setHoldProduct(null);
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
   const statusColor = (s: string) => {
     switch (s) {
       case 'available': return 'default';
