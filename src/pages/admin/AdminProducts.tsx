@@ -302,6 +302,16 @@ const AdminProducts = () => {
         }}
         isLoading={markSoldMutation.isPending}
       />
+
+      <PlaceHoldDialog
+        open={!!holdProduct}
+        onOpenChange={(open) => !open && setHoldProduct(null)}
+        productName={holdProduct?.name ?? ''}
+        onConfirm={(holdData) => {
+          if (holdProduct) placeHoldMutation.mutate({ product_id: holdProduct.id, ...holdData });
+        }}
+        isLoading={placeHoldMutation.isPending}
+      />
     </>
   );
 };
