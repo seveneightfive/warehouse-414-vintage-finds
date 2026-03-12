@@ -24,7 +24,7 @@ const Catalog = () => {
 
   const search = searchParams.get('q') || '';
   const designerSlug = searchParams.get('designer') || '';
-  const makerId = searchParams.get('maker') || '';
+  const makerSlug = searchParams.get('maker') || '';
   const categoryId = searchParams.get('category') || '';
   const styleId = searchParams.get('style') || '';
   const periodId = searchParams.get('period') || '';
