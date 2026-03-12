@@ -6,9 +6,9 @@ import { Package, Clock, HandCoins, MessageSquare, Users, Building2, Tags, BarCh
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 const COLORS = {
-  available: "hsl(220, 70%, 55%)",
-  sold: "hsl(220, 10%, 65%)",
-  other: "hsl(42, 40%, 75%)",
+  available: "hsl(220 15% 10%)",
+  sold: "hsl(220 10% 65%)",
+  other: "hsl(42 40% 75%)",
 };
 
 const AdminDashboard = () => {
