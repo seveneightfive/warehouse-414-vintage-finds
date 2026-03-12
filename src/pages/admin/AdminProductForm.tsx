@@ -35,6 +35,7 @@ const schema = z.object({
   designer_id: z.string().nullable().optional(),
   maker_id: z.string().nullable().optional(),
   category_id: z.string().nullable().optional(),
+  subcategory_id: z.string().nullable().optional(),
   style_id: z.string().nullable().optional(),
   period_id: z.string().nullable().optional(),
   country_id: z.string().nullable().optional(),
