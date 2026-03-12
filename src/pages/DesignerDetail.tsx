@@ -1,12 +1,28 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useDesigner } from '@/hooks/use-designers';
-import { useProducts } from '@/hooks/use-products';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import ProductCard from '@/components/ProductCard';
+import type { Product } from '@/types/database';
 
 const DesignerDetail = () => {
-  const { id } = useParams();
-  const { data: designer, isLoading } = useDesigner(id);
-  const { data: products } = useProducts({ designer_id: id });
+  const { slug } = useParams();
+  const { data: designer, isLoading } = useDesigner(slug);
+
+  const { data: products } = useQuery({
+    queryKey: ['designer-products', designer?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*, product_images(*)')
+        .eq('designer_id', designer!.id)
+        .eq('status', 'available')
+        .order('name');
+      if (error) throw error;
+      return data as Product[];
+    },
+    enabled: !!designer?.id,
+  });
 
   if (isLoading) {
     return <div className="container mx-auto px-4 py-12"><div className="h-8 bg-muted animate-pulse rounded w-1/3" /></div>;
