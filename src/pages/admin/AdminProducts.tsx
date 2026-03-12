@@ -124,8 +124,7 @@ const AdminProducts = () => {
         hold_duration_hours,
         expires_at,
         notes: notes || null,
-        status: 'approved',
-      } as any);
+      });
       if (holdError) throw holdError;
       const { error: statusError } = await supabase.from('products').update({ status: 'on_hold' as const }).eq('id', product_id);
       if (statusError) throw statusError;

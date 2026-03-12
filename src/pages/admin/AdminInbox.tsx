@@ -75,25 +75,10 @@ const AdminInbox = ({ title, tableName, showAmount, filterType }: AdminInboxProp
                 <TableCell>{item.customer_name as string}</TableCell>
                 <TableCell className="text-muted-foreground">{item.customer_email as string}</TableCell>
                 {showAmount && <TableCell>${Number(item.offer_amount).toLocaleString()}</TableCell>}
-                <TableCell><Badge variant={item.status === 'pending' ? 'secondary' : 'default'}>{item.status as string}</Badge></TableCell>
                 <TableCell className="text-muted-foreground text-xs">{new Date(item.created_at as string).toLocaleDateString()}</TableCell>
                 <TableCell>
                   <div className="flex gap-1">
-                    {item.status === 'pending' && (
-                      <>
-                        <Button size="sm" variant="outline" onClick={() => updateStatus.mutate({ id: item.id as string, status: 'approved', productId: item.product_id as string })}>
-                          Approve
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => updateStatus.mutate({ id: item.id as string, status: 'declined' })}>
-                          Decline
-                        </Button>
-                      </>
-                    )}
-                    {tableName === 'product_holds' && item.status === 'approved' && (
-                      <Button size="sm" variant="outline" onClick={() => updateStatus.mutate({ id: item.id as string, status: 'released', productId: item.product_id as string })}>
-                        Release Hold
-                      </Button>
-                    )}
+                    <Button size="sm" variant="ghost">View</Button>
                   </div>
                 </TableCell>
               </TableRow>
