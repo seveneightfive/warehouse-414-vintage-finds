@@ -8,7 +8,8 @@ export type Product = {
   price: number | null;
   sale_price: number | null;
   sold_price: number | null;
-  status: 'available' | 'on_hold' | 'sold' | 'inventory';
+  status: 'available' | 'on_hold' | 'sold' | 'inventory' | 'at_auction';
+  chairish_auction_url: string | null;
   designer_id: string | null;
   maker_id: string | null;
   category_id: string | null;

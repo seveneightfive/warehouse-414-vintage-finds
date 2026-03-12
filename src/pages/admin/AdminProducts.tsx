@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Link } from 'react-router-dom';
-import { Pencil, Eye, Trash2, Search, ChevronLeft, ChevronRight, CircleDollarSign, Clock } from 'lucide-react';
+import { Pencil, Eye, Trash2, Search, ChevronLeft, ChevronRight, CircleDollarSign, Clock, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Product } from '@/types/database';
 import MarkSoldDialog from '@/components/MarkSoldDialog';
@@ -64,7 +64,7 @@ const AdminProducts = () => {
   const { data: statusCounts } = useQuery({
     queryKey: ['admin-product-counts'],
     queryFn: async () => {
-      const statuses = ['available', 'on_hold', 'sold', 'inventory'] as const;
+      const statuses = ['available', 'on_hold', 'at_auction', 'sold', 'inventory'] as const;
       const results = await Promise.all(
         statuses.map(s => supabase.from('products').select('*', { count: 'exact', head: true }).eq('status', s))
       );
@@ -73,8 +73,9 @@ const AdminProducts = () => {
         all: allResult.count ?? 0,
         available: results[0].count ?? 0,
         on_hold: results[1].count ?? 0,
-        sold: results[2].count ?? 0,
-        inventory: results[3].count ?? 0,
+        at_auction: results[2].count ?? 0,
+        sold: results[3].count ?? 0,
+        inventory: results[4].count ?? 0,
       };
     },
   });
@@ -85,6 +86,7 @@ const AdminProducts = () => {
   const showStatus = statusFilter === 'all';
   const showExpires = statusFilter === 'on_hold';
   const showSoldDetails = statusFilter === 'sold';
+  const showAuction = statusFilter === 'at_auction';
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -94,6 +96,19 @@ const AdminProducts = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-products'] });
       toast.success('Product deleted');
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const releaseAuctionMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('products').update({ status: 'available' as const, chairish_auction_url: null } as any).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-product-counts'] });
+      toast.success('Item released from auction');
     },
     onError: (err) => toast.error(err.message),
   });
@@ -142,6 +157,7 @@ const AdminProducts = () => {
     switch (s) {
       case 'available': return 'default';
       case 'on_hold': return 'secondary';
+      case 'at_auction': return 'secondary';
       case 'sold': return 'destructive';
       default: return 'outline';
     }
@@ -183,6 +199,7 @@ const AdminProducts = () => {
           <ToggleGroup type="single" value={statusFilter} onValueChange={handleStatusFilter} className="justify-start flex-wrap">
             <ToggleGroupItem value="available" className="text-xs tracking-wider uppercase px-3">Available {statusCounts?.available != null && <span className="ml-1 text-muted-foreground">({statusCounts.available})</span>}</ToggleGroupItem>
             <ToggleGroupItem value="on_hold" className="text-xs tracking-wider uppercase px-3">On Hold {statusCounts?.on_hold != null && <span className="ml-1 text-muted-foreground">({statusCounts.on_hold})</span>}</ToggleGroupItem>
+            <ToggleGroupItem value="at_auction" className="text-xs tracking-wider uppercase px-3">At Auction {statusCounts?.at_auction != null && <span className="ml-1 text-muted-foreground">({statusCounts.at_auction})</span>}</ToggleGroupItem>
             <ToggleGroupItem value="sold" className="text-xs tracking-wider uppercase px-3">Sold {statusCounts?.sold != null && <span className="ml-1 text-muted-foreground">({statusCounts.sold})</span>}</ToggleGroupItem>
             <ToggleGroupItem value="inventory" className="text-xs tracking-wider uppercase px-3">Inventory {statusCounts?.inventory != null && <span className="ml-1 text-muted-foreground">({statusCounts.inventory})</span>}</ToggleGroupItem>
             <ToggleGroupItem value="all" className="text-xs tracking-wider uppercase px-3">All {statusCounts?.all != null && <span className="ml-1 text-muted-foreground">({statusCounts.all})</span>}</ToggleGroupItem>
@@ -201,10 +218,11 @@ const AdminProducts = () => {
                   <TableHead>Title</TableHead>
                   {showStatus && <TableHead>Status</TableHead>}
                   {showExpires && <TableHead>Expires</TableHead>}
+                  {showAuction && <TableHead>Auction URL</TableHead>}
                   {showSoldDetails && <TableHead>Sold Price</TableHead>}
                   {showSoldDetails && <TableHead>Platform</TableHead>}
                   {showSoldDetails && <TableHead>Sale Date</TableHead>}
-                  {!showSoldDetails && <TableHead>Price</TableHead>}
+                  {!showSoldDetails && !showAuction && <TableHead>Price</TableHead>}
                   <TableHead className="w-24">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -230,6 +248,15 @@ const AdminProducts = () => {
                           {holdsMap[p.id] ? new Date(holdsMap[p.id]).toLocaleDateString() : ''}
                         </TableCell>
                       )}
+                      {showAuction && (
+                        <TableCell className="text-xs">
+                          {(p as any).chairish_auction_url ? (
+                            <a href={(p as any).chairish_auction_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate block max-w-[200px]">
+                              View on Chairish
+                            </a>
+                          ) : '—'}
+                        </TableCell>
+                      )}
                       {showSoldDetails && (
                         <TableCell className="text-sm">{(p as any).sold_price ? `$${(p as any).sold_price.toLocaleString()}` : '—'}</TableCell>
                       )}
@@ -239,7 +266,7 @@ const AdminProducts = () => {
                       {showSoldDetails && (
                         <TableCell className="text-sm text-muted-foreground">{p.sale_date ? new Date(p.sale_date).toLocaleDateString() : '—'}</TableCell>
                       )}
-                      {!showSoldDetails && (
+                      {!showSoldDetails && !showAuction && (
                         <TableCell>
                           <div>{p.price ? `$${p.price.toLocaleString()}` : '—'}</div>
                           {p.sale_price && (
@@ -254,6 +281,15 @@ const AdminProducts = () => {
                           {p.status === 'available' && (
                             <Button variant="ghost" size="icon" onClick={() => setHoldProduct(p)} title="Place hold">
                               <Clock size={14} />
+                            </Button>
+                          )}
+                          {p.status === 'at_auction' && (
+                            <Button variant="ghost" size="icon" onClick={() => {
+                              if (confirm('Release this item from auction back to available?')) {
+                                releaseAuctionMutation.mutate(p.id);
+                              }
+                            }} title="Release from auction">
+                              <ArrowLeft size={14} />
                             </Button>
                           )}
                           {p.status !== 'sold' && (

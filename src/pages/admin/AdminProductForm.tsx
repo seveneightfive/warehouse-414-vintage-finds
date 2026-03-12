@@ -20,6 +20,7 @@ const SOLD_ON_OPTIONS = ['1stDibs', 'Chairish', 'eBay', 'Website', 'Direct', 'Ot
 const STATUS_OPTIONS = [
   { value: 'available', label: 'Available' },
   { value: 'on_hold', label: 'On Hold' },
+  { value: 'at_auction', label: 'At Auction' },
   { value: 'sold', label: 'Sold' },
   { value: 'inventory', label: 'Inventory' },
 ];
@@ -31,7 +32,7 @@ const schema = z.object({
   long_description: z.string().nullable().optional(),
   price: z.coerce.number().nullable().optional(),
   sale_price: z.coerce.number().nullable().optional(),
-  status: z.enum(['available', 'on_hold', 'sold', 'inventory']).default('available'),
+  status: z.enum(['available', 'on_hold', 'sold', 'inventory', 'at_auction']).default('available'),
   designer_id: z.string().nullable().optional(),
   maker_id: z.string().nullable().optional(),
   category_id: z.string().nullable().optional(),
@@ -52,6 +53,7 @@ const schema = z.object({
   firstdibs_url: z.string().url().nullable().optional().or(z.literal('')),
   chairish_url: z.string().url().nullable().optional().or(z.literal('')),
   ebay_url: z.string().url().nullable().optional().or(z.literal('')),
+  chairish_auction_url: z.string().url().nullable().optional().or(z.literal('')),
   sold_on: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
 });
@@ -89,6 +91,7 @@ const AdminProductForm = () => {
 
   const watchStatus = form.watch('status');
   const watchCategoryId = form.watch('category_id');
+  const auctionUrlRef = useRef<HTMLDivElement>(null);
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string | null>(null);
 
   // Fetch subcategories (parent_id IS NULL) for selected category
@@ -122,7 +125,13 @@ const AdminProductForm = () => {
     enabled: !!selectedSubcategoryId,
   });
 
-  // When category changes, clear subcategory
+  // Scroll to auction URL field when status changes to at_auction
+  useEffect(() => {
+    if (watchStatus === 'at_auction') {
+      setTimeout(() => auctionUrlRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+    }
+  }, [watchStatus]);
+
   useEffect(() => {
     // Only clear if user changed category (not on initial load)
     if (product && watchCategoryId === ((product as Record<string, unknown>).category_id as string)) return;
@@ -387,6 +396,15 @@ const AdminProductForm = () => {
                   <FormMessage />
                 </FormItem>
               )} />
+              {watchStatus === 'at_auction' && (
+                <p className="text-xs text-muted-foreground md:col-span-3">
+                  Don't forget to add the{' '}
+                  <button type="button" className="underline text-primary" onClick={() => auctionUrlRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>
+                    Chairish Auction URL
+                  </button>{' '}
+                  below.
+                </p>
+              )}
               {watchStatus === 'sold' && (
                 <FormField control={form.control} name="sold_on" render={({ field }) => (
                   <FormItem>
@@ -598,6 +616,11 @@ const AdminProductForm = () => {
               <FormField control={form.control} name="ebay_url" render={({ field }) => (
                 <FormItem><FormLabel>eBay URL</FormLabel><FormControl><Input type="url" placeholder="https://www.ebay.com/..." {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
               )} />
+              <div ref={auctionUrlRef}>
+                <FormField control={form.control} name="chairish_auction_url" render={({ field }) => (
+                  <FormItem><FormLabel>Chairish Auction URL</FormLabel><FormControl><Input type="url" placeholder="https://www.chairish.com/..." {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                )} />
+              </div>
             </div>
           </section>
 

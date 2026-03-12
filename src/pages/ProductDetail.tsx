@@ -95,6 +95,9 @@ const ProductDetail = () => {
               {product.status === 'on_hold' && (
                 <span className="absolute top-3 left-3 bg-background text-foreground font-display text-xs tracking-[0.15em] px-3 py-1.5">on hold</span>
               )}
+              {product.status === 'at_auction' && (
+                <span className="absolute top-3 left-3 bg-background text-foreground font-display text-xs tracking-[0.15em] px-3 py-1.5">at auction</span>
+              )}
               {allImages.length > 1 && (
                 <>
                   <button onClick={goPrev} className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/80 hover:bg-background rounded-full p-1.5 transition-colors">
@@ -123,6 +126,16 @@ const ProductDetail = () => {
 
           {/* Basic Info */}
           <div className="min-w-0">
+            {product.status === 'at_auction' && (
+              <div className="mb-4 border border-border bg-secondary/50 rounded-sm px-4 py-3 flex items-center gap-2">
+                <span className="font-display text-sm tracking-wide text-foreground">This item is currently at auction on Chairish</span>
+                {(product as any).chairish_auction_url && (
+                  <a href={(product as any).chairish_auction_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm flex items-center gap-1">
+                    View auction <ExternalLink size={12} />
+                  </a>
+                )}
+              </div>
+            )}
             <h1 className="font-display text-2xl md:text-3xl tracking-wide text-foreground mb-2">{product.name}</h1>
             {product.designer && (
               <p className="text-muted-foreground text-base mb-1">
