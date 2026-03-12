@@ -5,7 +5,7 @@ import type { Product } from "@/types/database";
 const PAGE_SIZE = 50;
 
 type ProductFilters = {
-  designer_id?: string;
+  designer_slug?: string;
   maker_id?: string;
   category_id?: string;
   style_id?: string;
