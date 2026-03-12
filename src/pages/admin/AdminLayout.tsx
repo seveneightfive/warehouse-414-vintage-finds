@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Navigate, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { LayoutDashboard, Package, Users, Palette, LogOut, Tag, Globe, Clock, Layers, ShoppingBag, MessageSquare, HandCoins, Menu } from 'lucide-react';
@@ -22,7 +23,17 @@ const navItems = [
 const AdminLayout = () => {
   const { user, isAdmin, loading, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        navigate('/admin', { replace: true });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   if (loading) return <div className="flex items-center justify-center min-h-screen text-muted-foreground">Loading...</div>;
   if (!user || !isAdmin) return <Navigate to="/admin/login" replace />;
