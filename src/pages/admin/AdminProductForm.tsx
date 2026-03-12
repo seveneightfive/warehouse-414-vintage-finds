@@ -390,6 +390,15 @@ const AdminProductForm = () => {
                   <FormMessage />
                 </FormItem>
               )} />
+              {watchStatus === 'at_auction' && (
+                <p className="text-xs text-muted-foreground md:col-span-3">
+                  Don't forget to add the{' '}
+                  <button type="button" className="underline text-primary" onClick={() => auctionUrlRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>
+                    Chairish Auction URL
+                  </button>{' '}
+                  below.
+                </p>
+              )}
               {watchStatus === 'sold' && (
                 <FormField control={form.control} name="sold_on" render={({ field }) => (
                   <FormItem>

@@ -270,6 +270,15 @@ const AdminProducts = () => {
                               <Clock size={14} />
                             </Button>
                           )}
+                          {p.status === 'at_auction' && (
+                            <Button variant="ghost" size="icon" onClick={() => {
+                              if (confirm('Release this item from auction back to available?')) {
+                                releaseAuctionMutation.mutate(p.id);
+                              }
+                            }} title="Release from auction">
+                              <ArrowLeft size={14} />
+                            </Button>
+                          )}
                           {p.status !== 'sold' && (
                             <Button variant="ghost" size="icon" onClick={() => setSoldProduct(p)} title="Mark as sold">
                               <CircleDollarSign size={14} />
