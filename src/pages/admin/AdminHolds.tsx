@@ -120,55 +120,54 @@ const AdminHolds = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {holds.map((h: any) => (
-              <TableRow key={h.id}>
-                <TableCell>
-                  {h.products?.featured_image_url ? (
-                    <img
-                      src={h.products.featured_image_url}
-                      alt={h.products.name}
-                      className="w-10 h-10 object-cover rounded"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 bg-muted rounded" />
-                  )}
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground font-mono">
-                  {h.products?.sku || '—'}
-                </TableCell>
-                <TableCell className="font-medium text-sm">{h.products?.name || '—'}</TableCell>
-                <TableCell className={`text-sm ${h.customer_name === 'Internal Hold' ? 'text-muted-foreground italic' : ''}`}>
-                  {h.customer_name}
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">{h.customer_email}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{h.customer_phone || '—'}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {new Date(h.created_at).toLocaleDateString()}
-                </TableCell>
-                <TableCell className={`text-xs font-medium ${isExpiringSoon(h.expires_at) ? 'text-destructive' : 'text-muted-foreground'}`}>
-                  {h.expires_at ? new Date(h.expires_at).toLocaleDateString() : '—'}
-                </TableCell>
-                <TableCell className="text-right space-x-1">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => { setExtendDays('3'); setExtendHold({ id: h.id, expires_at: h.expires_at, hold_duration_hours: h.hold_duration_hours || 0 }); }}
-                    title="Extend Hold"
-                  >
-                    <CalendarPlus size={14} className="mr-1" /> Extend
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => releaseMutation.mutate(h.products?.id)}
-                    disabled={releaseMutation.isPending}
-                    title="Release Hold"
-                  >
-                    <Unlock size={14} className="mr-1" /> Release
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {heldProducts.map((p: any) => {
+              const h = p.hold;
+              return (
+                <TableRow key={p.id}>
+                  <TableCell>
+                    {p.featured_image_url ? (
+                      <img src={p.featured_image_url} alt={p.name} className="w-10 h-10 object-cover rounded" />
+                    ) : (
+                      <div className="w-10 h-10 bg-muted rounded" />
+                    )}
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground font-mono">{p.sku || '—'}</TableCell>
+                  <TableCell className="font-medium text-sm">{p.name}</TableCell>
+                  <TableCell className={`text-sm ${h?.customer_name === 'Internal Hold' ? 'text-muted-foreground italic' : ''}`}>
+                    {h?.customer_name || '—'}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{h?.customer_email || '—'}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{h?.customer_phone || '—'}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {h?.created_at ? new Date(h.created_at).toLocaleDateString() : '—'}
+                  </TableCell>
+                  <TableCell className={`text-xs font-medium ${h?.expires_at && isExpiringSoon(h.expires_at) ? 'text-destructive' : 'text-muted-foreground'}`}>
+                    {h?.expires_at ? new Date(h.expires_at).toLocaleDateString() : '—'}
+                  </TableCell>
+                  <TableCell className="text-right space-x-1">
+                    {h && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => { setExtendDays('3'); setExtendHold({ id: h.id, expires_at: h.expires_at, hold_duration_hours: h.hold_duration_hours || 0 }); }}
+                        title="Extend Hold"
+                      >
+                        <CalendarPlus size={14} className="mr-1" /> Extend
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => releaseMutation.mutate(p.id)}
+                      disabled={releaseMutation.isPending}
+                      title="Release Hold"
+                    >
+                      <Unlock size={14} className="mr-1" /> Release
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       )}
