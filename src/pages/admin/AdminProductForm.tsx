@@ -53,6 +53,7 @@ const schema = z.object({
   firstdibs_url: z.string().url().nullable().optional().or(z.literal('')),
   chairish_url: z.string().url().nullable().optional().or(z.literal('')),
   ebay_url: z.string().url().nullable().optional().or(z.literal('')),
+  chairish_auction_url: z.string().url().nullable().optional().or(z.literal('')),
   sold_on: z.string().nullable().optional(),
   notes: z.string().nullable().optional(),
 });
