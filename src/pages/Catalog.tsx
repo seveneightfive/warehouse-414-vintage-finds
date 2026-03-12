@@ -228,7 +228,7 @@ const Catalog = () => {
             {filterSelect('Category', 'category', categoryId, filterOptions?.categories)}
             {filterSelect('Style', 'style', styleId, filterOptions?.styles)}
             {filterSelect('Designer', 'designer', designerSlug, filterOptions?.designers?.map(d => ({ id: d.slug || d.id, name: d.name })))}
-            {filterSelect('Maker', 'maker', makerId, filterOptions?.makers)}
+            {filterSelect('Maker', 'maker', makerSlug, filterOptions?.makers?.map(m => ({ id: m.slug || m.id, name: m.name })))}
             {filterSelect('Period', 'period', periodId, filterOptions?.periods)}
             {filterSelect('Country', 'country', countryId, filterOptions?.countries)}
           </div>

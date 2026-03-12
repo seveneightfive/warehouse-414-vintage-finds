@@ -54,7 +54,7 @@ export function useInfiniteProducts(filters?: ProductFilters) {
       }
 
       if (filters?.designer_slug) query = query.eq("designers.slug", filters.designer_slug);
-      if (filters?.maker_id) query = query.eq("maker_id", filters.maker_id);
+      if (filters?.maker_slug) query = query.eq("makers.slug", filters.maker_slug);
       if (filters?.category_id) query = query.eq("category_id", filters.category_id);
       if (filters?.style_id) query = query.eq("style_id", filters.style_id);
       if (filters?.period_id) query = query.eq("period_id", filters.period_id);
