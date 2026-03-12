@@ -20,6 +20,7 @@ const SOLD_ON_OPTIONS = ['1stDibs', 'Chairish', 'eBay', 'Website', 'Direct', 'Ot
 const STATUS_OPTIONS = [
   { value: 'available', label: 'Available' },
   { value: 'on_hold', label: 'On Hold' },
+  { value: 'at_auction', label: 'At Auction' },
   { value: 'sold', label: 'Sold' },
   { value: 'inventory', label: 'Inventory' },
 ];
