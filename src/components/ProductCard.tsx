@@ -35,13 +35,27 @@ const ProductCard = ({ product }: { product: Product }) => {
             on hold
           </span>
         )}
+        {product.sale_price && (
+          <span className="absolute top-2 left-2 bg-destructive text-white font-display text-[10px] tracking-[0.15em] px-2.5 py-1">
+            sale
+          </span>
+        )}
       </div>
       <h3 className="text-sm font-display tracking-wide text-foreground group-hover:text-primary transition-colors line-clamp-2">
         {product.name}
       </h3>
       {designerName && <p className="text-xs text-muted-foreground mt-0.5">{designerName}</p>}
       {product.price && (
-        <p className="text-sm text-muted-foreground mt-1 font-display">${product.price.toLocaleString()}</p>
+        <p className="text-sm text-muted-foreground mt-1 font-display">
+          {product.sale_price ? (
+            <>
+              <span className="line-through opacity-60 mr-2">${product.price.toLocaleString()}</span>
+              <span className="text-destructive">${product.sale_price.toLocaleString()}</span>
+            </>
+          ) : (
+            `$${product.price.toLocaleString()}`
+          )}
+        </p>
       )}
     </Link>
   );
