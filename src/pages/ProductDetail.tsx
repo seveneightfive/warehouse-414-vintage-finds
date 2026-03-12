@@ -126,6 +126,16 @@ const ProductDetail = () => {
 
           {/* Basic Info */}
           <div className="min-w-0">
+            {product.status === 'at_auction' && (
+              <div className="mb-4 border border-border bg-secondary/50 rounded-sm px-4 py-3 flex items-center gap-2">
+                <span className="font-display text-sm tracking-wide text-foreground">This item is currently at auction on Chairish</span>
+                {(product as any).chairish_auction_url && (
+                  <a href={(product as any).chairish_auction_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm flex items-center gap-1">
+                    View auction <ExternalLink size={12} />
+                  </a>
+                )}
+              </div>
+            )}
             <h1 className="font-display text-2xl md:text-3xl tracking-wide text-foreground mb-2">{product.name}</h1>
             {product.designer && (
               <p className="text-muted-foreground text-base mb-1">

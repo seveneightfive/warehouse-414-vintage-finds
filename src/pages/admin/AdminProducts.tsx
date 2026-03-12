@@ -100,6 +100,19 @@ const AdminProducts = () => {
     onError: (err) => toast.error(err.message),
   });
 
+  const releaseAuctionMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('products').update({ status: 'available' as const, chairish_auction_url: null } as any).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-product-counts'] });
+      toast.success('Item released from auction');
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
   const markSoldMutation = useMutation({
     mutationFn: async ({ id, sold_price, sale_platform, sale_date }: { id: string; sold_price: number | null; sale_platform: string; sale_date: string }) => {
       const { error } = await supabase.from('products').update({ status: 'sold' as const, sold_price, sale_platform, sale_date } as any).eq('id', id);
