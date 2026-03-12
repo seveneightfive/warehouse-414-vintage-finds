@@ -6,9 +6,9 @@ import { Package, Clock, HandCoins, MessageSquare, Users, Building2, Tags, BarCh
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 const COLORS = {
-  available: "hsl(220, 70%, 55%)",
-  sold: "hsl(220, 10%, 65%)",
-  other: "hsl(42, 40%, 75%)",
+  available: "hsl(220 15% 10%)",
+  sold: "hsl(220 10% 65%)",
+  other: "hsl(42 40% 75%)",
 };
 
 const AdminDashboard = () => {
@@ -115,7 +115,7 @@ const AdminDashboard = () => {
 
   const summaryCards = [
     { label: "Total Products", value: categorySummary?.total ?? 0, color: "text-foreground" },
-    { label: "Available", value: categorySummary?.available ?? 0, color: "text-blue-600" },
+    { label: "Available", value: categorySummary?.available ?? 0, color: "text-foreground" },
     { label: "Sold", value: categorySummary?.sold ?? 0, color: "text-muted-foreground" },
   ];
 
