@@ -16,19 +16,19 @@ export function useMakers() {
   });
 }
 
-export function useMaker(id: string | undefined) {
+export function useMaker(slug: string | undefined) {
   return useQuery({
-    queryKey: ['maker', id],
+    queryKey: ['maker', slug],
     queryFn: async () => {
-      if (!id) return null;
+      if (!slug) return null;
       const { data, error } = await supabase
         .from('makers')
         .select('*')
-        .eq('id', id)
-        .single();
+        .eq('slug', slug)
+        .maybeSingle();
       if (error) throw error;
-      return data as Maker;
+      return data as Maker | null;
     },
-    enabled: !!id,
+    enabled: !!slug,
   });
 }
