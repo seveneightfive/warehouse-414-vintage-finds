@@ -28,7 +28,7 @@ const MarkSoldDialog = ({ open, onOpenChange, productName, currentPrice, onConfi
 
   const handleSubmit = () => {
     onConfirm({
-      sale_price: salePrice ? parseFloat(salePrice) : null,
+      sold_price: salePrice ? parseFloat(salePrice) : null,
       sale_platform: platform,
       sale_date: format(date, 'yyyy-MM-dd'),
     });
