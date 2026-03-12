@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
     // Parse multipart form data
     const formData = await req.formData();
     const file = formData.get("file") as File;
-    const productId = formData.get("product_id") as string;
+    const productId = formData.get("productId") as string;
     const sku = formData.get("sku") as string;
     const sortOrder = parseInt(formData.get("sort_order") as string || "0", 10);
 
