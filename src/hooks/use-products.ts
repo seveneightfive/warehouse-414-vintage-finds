@@ -109,10 +109,10 @@ export function useProducts(filters?: {
         )
         .order("created_at", { ascending: false });
 
-      if (filters?.status) {
+if (filters?.status) {
         query = query.eq("status", filters.status);
       } else {
-        query = query.in("status", ["available", "on_hold", "sold"]);
+        query = query.in("status", ["available", "on_hold", "sold", "at_auction"]);
       }
 
       if (filters?.designer_id) query = query.eq("designer_id", filters.designer_id);
