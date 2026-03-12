@@ -1,4 +1,4 @@
-[functions.upload-product-image]
+[functions.upload-product-images]
 verify_jwt = false
 
 [functions.delete-product-image]

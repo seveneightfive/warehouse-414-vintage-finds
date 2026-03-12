@@ -197,7 +197,7 @@ const AdminProductForm = () => {
         formData.append('sku', sku);
         formData.append('sort_order', String(nextSort));
 
-        const res = await supabase.functions.invoke('upload-product-image', {
+        const res = await supabase.functions.invoke('upload-product-images', {
           body: formData,
         });
 
