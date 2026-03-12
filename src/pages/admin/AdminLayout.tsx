@@ -4,12 +4,13 @@ import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { LayoutDashboard, Package, Users, Palette, LogOut, Tag, Globe, Clock, Layers, ShoppingBag, MessageSquare, HandCoins, Menu } from 'lucide-react';
+import { LayoutDashboard, Package, Users, Palette, LogOut, Tag, Globe, Clock, Layers, ShoppingBag, MessageSquare, HandCoins, Menu, UserCheck } from 'lucide-react';
 
 const navItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
   { to: '/admin/products', icon: Package, label: 'Products' },
   { to: '/admin/holds', icon: Clock, label: 'Holds' },
+  { to: '/admin/consignors', icon: UserCheck, label: 'Consignors' },
   { to: '/admin/offers', icon: HandCoins, label: 'Offers' },
   { to: '/admin/inquiries', icon: MessageSquare, label: 'Inquiries' },
   { to: '/admin/designers', icon: Users, label: 'Designers' },
