@@ -125,7 +125,13 @@ const AdminProductForm = () => {
     enabled: !!selectedSubcategoryId,
   });
 
-  // When category changes, clear subcategory
+  // Scroll to auction URL field when status changes to at_auction
+  useEffect(() => {
+    if (watchStatus === 'at_auction') {
+      setTimeout(() => auctionUrlRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+    }
+  }, [watchStatus]);
+
   useEffect(() => {
     // Only clear if user changed category (not on initial load)
     if (product && watchCategoryId === ((product as Record<string, unknown>).category_id as string)) return;
