@@ -21,6 +21,7 @@ const AdminProducts = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(0);
   const [soldProduct, setSoldProduct] = useState<Product | null>(null);
+  const [holdProduct, setHoldProduct] = useState<Product | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-products', page, searchQuery, statusFilter],
