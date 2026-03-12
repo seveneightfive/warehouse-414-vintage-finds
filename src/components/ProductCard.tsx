@@ -46,7 +46,16 @@ const ProductCard = ({ product }: { product: Product }) => {
       </h3>
       {designerName && <p className="text-xs text-muted-foreground mt-0.5">{designerName}</p>}
       {product.price && (
-        <p className="text-sm text-muted-foreground mt-1 font-display">${product.price.toLocaleString()}</p>
+        <p className="text-sm text-muted-foreground mt-1 font-display">
+          {product.sale_price ? (
+            <>
+              <span className="line-through opacity-60 mr-2">${product.price.toLocaleString()}</span>
+              <span className="text-destructive">${product.sale_price.toLocaleString()}</span>
+            </>
+          ) : (
+            `$${product.price.toLocaleString()}`
+          )}
+        </p>
       )}
     </Link>
   );
