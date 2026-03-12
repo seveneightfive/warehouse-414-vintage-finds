@@ -235,6 +235,15 @@ const AdminProducts = () => {
                           {holdsMap[p.id] ? new Date(holdsMap[p.id]).toLocaleDateString() : ''}
                         </TableCell>
                       )}
+                      {showAuction && (
+                        <TableCell className="text-xs">
+                          {(p as any).chairish_auction_url ? (
+                            <a href={(p as any).chairish_auction_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate block max-w-[200px]">
+                              View on Chairish
+                            </a>
+                          ) : '—'}
+                        </TableCell>
+                      )}
                       {showSoldDetails && (
                         <TableCell className="text-sm">{(p as any).sold_price ? `$${(p as any).sold_price.toLocaleString()}` : '—'}</TableCell>
                       )}
