@@ -17,7 +17,7 @@ interface MarkSoldDialogProps {
   onOpenChange: (open: boolean) => void;
   productName: string;
   currentPrice: number | null;
-  onConfirm: (data: { sale_price: number | null; sale_platform: string; sale_date: string }) => void;
+  onConfirm: (data: { sold_price: number | null; sale_platform: string; sale_date: string }) => void;
   isLoading?: boolean;
 }
 
