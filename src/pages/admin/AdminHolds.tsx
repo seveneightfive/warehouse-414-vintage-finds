@@ -23,16 +23,29 @@ const AdminHolds = () => {
   const [extendHold, setExtendHold] = useState<{ id: string; expires_at: string; hold_duration_hours: number } | null>(null);
   const [extendDays, setExtendDays] = useState('3');
 
-  const { data: holds, isLoading } = useQuery({
+  const { data: heldProducts, isLoading } = useQuery({
     queryKey: ['admin-holds'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('product_holds')
-        .select('*, products!inner(id, name, sku, status, featured_image_url)')
-        .eq('products.status', 'on_hold')
-        .order('expires_at', { ascending: true });
+        .from('products')
+        .select(`
+          id, name, sku, status, featured_image_url, price,
+          product_holds(
+            id, customer_name, customer_email, customer_phone,
+            hold_duration_hours, created_at, expires_at, notes
+          )
+        `)
+        .eq('status', 'on_hold')
+        .order('name');
       if (error) throw error;
-      return data as any[];
+      // For each product, pick the most recent hold
+      return (data ?? []).map((p: any) => {
+        const holds = p.product_holds ?? [];
+        const latestHold = holds.sort((a: any, b: any) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )[0] ?? null;
+        return { ...p, hold: latestHold };
+      });
     },
   });
 
@@ -84,12 +97,12 @@ const AdminHolds = () => {
       <div className="flex items-center gap-2">
         <Clock size={20} className="text-primary" />
         <h1 className="text-xl font-display tracking-wide">Active Holds</h1>
-        {holds && <span className="text-sm text-muted-foreground">({holds.length})</span>}
+        {heldProducts && <span className="text-sm text-muted-foreground">({heldProducts.length})</span>}
       </div>
 
       {isLoading ? (
         <p className="text-muted-foreground text-sm">Loading...</p>
-      ) : !holds?.length ? (
+      ) : !heldProducts?.length ? (
         <p className="text-muted-foreground text-sm">No active holds.</p>
       ) : (
         <Table>
@@ -107,55 +120,54 @@ const AdminHolds = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {holds.map((h: any) => (
-              <TableRow key={h.id}>
-                <TableCell>
-                  {h.products?.featured_image_url ? (
-                    <img
-                      src={h.products.featured_image_url}
-                      alt={h.products.name}
-                      className="w-10 h-10 object-cover rounded"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 bg-muted rounded" />
-                  )}
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground font-mono">
-                  {h.products?.sku || '—'}
-                </TableCell>
-                <TableCell className="font-medium text-sm">{h.products?.name || '—'}</TableCell>
-                <TableCell className={`text-sm ${h.customer_name === 'Internal Hold' ? 'text-muted-foreground italic' : ''}`}>
-                  {h.customer_name}
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">{h.customer_email}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{h.customer_phone || '—'}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {new Date(h.created_at).toLocaleDateString()}
-                </TableCell>
-                <TableCell className={`text-xs font-medium ${isExpiringSoon(h.expires_at) ? 'text-destructive' : 'text-muted-foreground'}`}>
-                  {h.expires_at ? new Date(h.expires_at).toLocaleDateString() : '—'}
-                </TableCell>
-                <TableCell className="text-right space-x-1">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => { setExtendDays('3'); setExtendHold({ id: h.id, expires_at: h.expires_at, hold_duration_hours: h.hold_duration_hours || 0 }); }}
-                    title="Extend Hold"
-                  >
-                    <CalendarPlus size={14} className="mr-1" /> Extend
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => releaseMutation.mutate(h.products?.id)}
-                    disabled={releaseMutation.isPending}
-                    title="Release Hold"
-                  >
-                    <Unlock size={14} className="mr-1" /> Release
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
+            {heldProducts.map((p: any) => {
+              const h = p.hold;
+              return (
+                <TableRow key={p.id}>
+                  <TableCell>
+                    {p.featured_image_url ? (
+                      <img src={p.featured_image_url} alt={p.name} className="w-10 h-10 object-cover rounded" />
+                    ) : (
+                      <div className="w-10 h-10 bg-muted rounded" />
+                    )}
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground font-mono">{p.sku || '—'}</TableCell>
+                  <TableCell className="font-medium text-sm">{p.name}</TableCell>
+                  <TableCell className={`text-sm ${h?.customer_name === 'Internal Hold' ? 'text-muted-foreground italic' : ''}`}>
+                    {h?.customer_name || '—'}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{h?.customer_email || '—'}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{h?.customer_phone || '—'}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {h?.created_at ? new Date(h.created_at).toLocaleDateString() : '—'}
+                  </TableCell>
+                  <TableCell className={`text-xs font-medium ${h?.expires_at && isExpiringSoon(h.expires_at) ? 'text-destructive' : 'text-muted-foreground'}`}>
+                    {h?.expires_at ? new Date(h.expires_at).toLocaleDateString() : '—'}
+                  </TableCell>
+                  <TableCell className="text-right space-x-1">
+                    {h && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => { setExtendDays('3'); setExtendHold({ id: h.id, expires_at: h.expires_at, hold_duration_hours: h.hold_duration_hours || 0 }); }}
+                        title="Extend Hold"
+                      >
+                        <CalendarPlus size={14} className="mr-1" /> Extend
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => releaseMutation.mutate(p.id)}
+                      disabled={releaseMutation.isPending}
+                      title="Release Hold"
+                    >
+                      <Unlock size={14} className="mr-1" /> Release
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       )}
