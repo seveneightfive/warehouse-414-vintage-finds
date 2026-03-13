@@ -288,22 +288,28 @@ const AdminProductForm = () => {
   };
 
   const deleteImage = async (imageId: string, imageUrl: string) => {
-    try {
-      // Extract storage path from CDN URL
-      const urlParts = imageUrl.split('/');
-      const productsIdx = urlParts.indexOf('products');
-      const storagePath = productsIdx >= 0 ? urlParts.slice(productsIdx).join('/') : '';
+    // Delete from product_images table
+    const { error } = await supabase
+      .from('product_images')
+      .delete()
+      .eq('id', imageId);
 
-      const { error } = await supabase.functions.invoke('delete-product-image', {
-        body: { image_id: imageId, storage_path: storagePath },
-      });
-
-      if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ['admin-product', id] });
-      toast.success('Image deleted');
-    } catch (err: unknown) {
-      toast.error(`Delete failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    if (error) {
+      console.error('Delete error:', error);
+      toast.error('Delete failed', { description: error.message });
+      return;
     }
+
+    // If this was the featured image, clear it on the product
+    if (product?.featured_image_url === imageUrl) {
+      await supabase
+        .from('products')
+        .update({ featured_image_url: null })
+        .eq('id', product.id);
+    }
+
+    toast.success('Image deleted');
+    queryClient.invalidateQueries({ queryKey: ['admin-product', id] });
   };
 
   if (isEditing && isLoading) return <p className="text-muted-foreground">Loading…</p>;
