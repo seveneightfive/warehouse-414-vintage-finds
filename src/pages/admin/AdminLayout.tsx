@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { LayoutDashboard, Package, Users, Palette, LogOut, Tag, Globe, Clock, Layers, ShoppingBag, MessageSquare, HandCoins, Menu, UserCheck } from 'lucide-react';
+import { LayoutDashboard, Package, Users, Palette, LogOut, Tag, Globe, Clock, Layers, ShoppingBag, MessageSquare, HandCoins, Menu, UserCheck, FolderOpen } from 'lucide-react';
 
 const navItems = [
   { to: '/admin', icon: LayoutDashboard, label: 'Dashboard', exact: true },
@@ -16,6 +16,7 @@ const navItems = [
   { to: '/admin/designers', icon: Users, label: 'Designers' },
   { to: '/admin/makers', icon: ShoppingBag, label: 'Makers' },
   { to: '/admin/categories', icon: Layers, label: 'Categories' },
+  { to: '/admin/collections', icon: FolderOpen, label: 'Collections' },
   { to: '/admin/styles', icon: Palette, label: 'Styles' },
   { to: '/admin/periods', icon: Tag, label: 'Periods' },
   { to: '/admin/countries', icon: Globe, label: 'Countries' },

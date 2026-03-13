@@ -19,6 +19,8 @@ import AdminProducts from "./pages/admin/AdminProducts";
 import AdminProductForm from "./pages/admin/AdminProductForm";
 import AdminCrudList from "./pages/admin/AdminCrudList";
 import AdminCategoryManager from "./pages/admin/AdminCategoryManager";
+import AdminCollections from "./pages/admin/AdminCollections";
+import AdminCollectionDetail from "./pages/admin/AdminCollectionDetail";
 import AdminInbox from "./pages/admin/AdminInbox";
 import AdminHolds from "./pages/admin/AdminHolds";
 import AdminConsignors from "./pages/admin/AdminConsignors";
@@ -61,6 +63,8 @@ const App = () => (
               <Route path="designers" element={<AdminCrudList title="Designers" tableName="designers" columns={[{ key: 'name', label: 'Name' }, { key: 'about', label: 'Bio', type: 'textarea' }]} productFk="designer_id" />} />
               <Route path="makers" element={<AdminCrudList title="Makers" tableName="makers" columns={[{ key: 'name', label: 'Name' }, { key: 'about', label: 'Bio', type: 'textarea' }]} productFk="maker_id" />} />
               <Route path="categories" element={<AdminCategoryManager />} />
+              <Route path="collections" element={<AdminCollections />} />
+              <Route path="collections/:id" element={<AdminCollectionDetail />} />
               <Route path="styles" element={<AdminCrudList title="Styles" tableName="styles" />} />
               <Route path="periods" element={<AdminCrudList title="Periods" tableName="periods" />} />
               <Route path="countries" element={<AdminCrudList title="Countries" tableName="countries" />} />
