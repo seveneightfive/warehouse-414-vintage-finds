@@ -190,8 +190,8 @@ const AdminCollections = () => {
             {collections?.map((c) => (
               <TableRow key={c.id}>
                 <TableCell>
-                  {c['cover-image'] ? (
-                    <img src={c['cover-image']} alt="" className="w-12 h-12 object-cover rounded" />
+                  {c.cover_image ? (
+                    <img src={c.cover_image} alt="" className="w-12 h-12 object-cover rounded" />
                   ) : (
                     <div className="w-12 h-12 bg-muted rounded" />
                   )}
