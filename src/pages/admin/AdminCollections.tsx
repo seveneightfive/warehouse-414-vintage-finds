@@ -17,7 +17,7 @@ type CollectionRow = {
   name: string;
   slug: string | null;
   description: string | null;
-  'cover-image': string | null;
+  cover_image: string | null;
   display_order: number | null;
   is_active: boolean | null;
   product_count: number;
