@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Link } from 'react-router-dom';
@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Upload, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 type CollectionRow = {
@@ -31,6 +31,8 @@ const AdminCollections = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<Record<string, any>>({});
   const [editId, setEditId] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: collections, isLoading } = useQuery<CollectionRow[]>({
     queryKey: ['admin-collections'],
@@ -61,8 +63,17 @@ const AdminCollections = () => {
         const { error } = await supabase.from('collections').update(row).eq('id', payload.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('collections').insert(row);
+        const { data, error } = await supabase.from('collections').insert(row).select('id, slug').single();
         if (error) throw error;
+
+        // Upload pending file for newly created collection
+        if (payload._pendingFile && data) {
+          const fd = new FormData();
+          fd.append('file', payload._pendingFile);
+          fd.append('collectionId', data.id);
+          fd.append('slug', data.slug || slugify(payload.name));
+          await supabase.functions.invoke('upload-collection-image', { body: fd });
+        }
       }
     },
     onSuccess: () => {
@@ -108,12 +119,49 @@ const AdminCollections = () => {
     setDialogOpen(false);
     setEditId(null);
     setForm({});
+    setUploading(false);
   };
 
   const handleNameChange = (name: string) => {
     const updates: any = { ...form, name };
     if (!editId) updates.slug = slugify(name);
     setForm(updates);
+  };
+
+  const handleCoverUpload = async (file: File) => {
+    // For new collections we need to save first, so just show a preview
+    const slug = form.slug || slugify(form.name || 'collection');
+
+    if (editId) {
+      // Upload directly for existing collections
+      setUploading(true);
+      try {
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('collectionId', editId);
+        fd.append('slug', slug);
+
+        const { data, error } = await supabase.functions.invoke('upload-collection-image', { body: fd });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+
+        setForm((prev: Record<string, any>) => ({ ...prev, cover_image: data.cdn_url }));
+        toast.success('Cover image uploaded');
+        qc.invalidateQueries({ queryKey: ['admin-collections'] });
+      } catch (err: any) {
+        toast.error('Upload failed', { description: err.message });
+      } finally {
+        setUploading(false);
+      }
+    } else {
+      // For new collections, store the file to upload after creation
+      setForm((prev: Record<string, any>) => ({ ...prev, _pendingFile: file, _previewUrl: URL.createObjectURL(file) }));
+    }
+  };
+
+  const removeCoverImage = () => {
+    if (form._previewUrl) URL.revokeObjectURL(form._previewUrl);
+    setForm((prev: Record<string, any>) => ({ ...prev, cover_image: '', _pendingFile: null, _previewUrl: null }));
   };
 
   return (
@@ -152,8 +200,47 @@ const AdminCollections = () => {
               <Textarea rows={3} value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </div>
             <div>
-              <Label>Cover Image URL</Label>
-              <Input value={form.cover_image || ''} onChange={(e) => setForm({ ...form, cover_image: e.target.value })} />
+              <Label>Cover Image</Label>
+              {(form.cover_image || form._previewUrl) ? (
+                <div className="relative mt-1 w-32 h-32">
+                  <img
+                    src={form._previewUrl || form.cover_image}
+                    alt="Cover preview"
+                    className="w-32 h-32 object-cover rounded border border-border"
+                  />
+                  <button
+                    type="button"
+                    onClick={removeCoverImage}
+                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="mt-1 flex items-center justify-center gap-2 w-full border-2 border-dashed border-border rounded-md py-6 text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                >
+                  {uploading ? (
+                    <><Loader2 size={16} className="animate-spin" /> Uploading...</>
+                  ) : (
+                    <><Upload size={16} /> Click to upload cover image</>
+                  )}
+                </button>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleCoverUpload(file);
+                  e.target.value = '';
+                }}
+              />
             </div>
             <div>
               <Label>Display Order</Label>
