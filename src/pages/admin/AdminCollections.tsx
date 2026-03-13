@@ -53,7 +53,7 @@ const AdminCollections = () => {
         name: payload.name,
         slug: payload.slug || slugify(payload.name),
         description: payload.description || null,
-        'cover-image': payload.cover_image || null,
+        cover_image: payload.cover_image || null,
         display_order: payload.display_order ? Number(payload.display_order) : null,
         is_active: payload.is_active ?? true,
       };
