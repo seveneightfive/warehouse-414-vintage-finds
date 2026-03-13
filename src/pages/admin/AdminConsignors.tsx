@@ -52,7 +52,7 @@ const AdminConsignors = () => {
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<ConsignorForm>(emptyForm);
 
-  const { data: consignors, isLoading } = useQuery({
+  const { data: consignors, isLoading, refetch: fetchConsignors } = useQuery({
     queryKey: ['admin-consignors'],
     queryFn: async () => {
       const { data, error } = await supabase
