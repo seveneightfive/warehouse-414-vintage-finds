@@ -83,7 +83,7 @@ const AdminConsignors = () => {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-consignors'] });
+      fetchConsignors();
       toast.success(editId ? 'Consignor updated' : 'Consignor added');
       closeModal();
     },
