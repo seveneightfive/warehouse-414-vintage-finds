@@ -45,7 +45,6 @@ const emptyForm: ConsignorForm = {
 };
 
 const AdminConsignors = () => {
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
