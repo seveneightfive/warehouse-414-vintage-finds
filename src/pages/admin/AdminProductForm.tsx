@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
-import { ArrowLeft, Save, Check, ChevronsUpDown, Upload, X, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Check, ChevronsUpDown, Upload, X, Loader2, Star, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const SOLD_ON_OPTIONS = ['1stDibs', 'Chairish', 'eBay', 'Website', 'Direct', 'Other'];
