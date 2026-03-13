@@ -19,6 +19,8 @@ import AdminProducts from "./pages/admin/AdminProducts";
 import AdminProductForm from "./pages/admin/AdminProductForm";
 import AdminCrudList from "./pages/admin/AdminCrudList";
 import AdminCategoryManager from "./pages/admin/AdminCategoryManager";
+import AdminCollections from "./pages/admin/AdminCollections";
+import AdminCollectionDetail from "./pages/admin/AdminCollectionDetail";
 import AdminInbox from "./pages/admin/AdminInbox";
 import AdminHolds from "./pages/admin/AdminHolds";
 import AdminConsignors from "./pages/admin/AdminConsignors";
