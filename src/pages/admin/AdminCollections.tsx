@@ -200,8 +200,47 @@ const AdminCollections = () => {
               <Textarea rows={3} value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </div>
             <div>
-              <Label>Cover Image URL</Label>
-              <Input value={form.cover_image || ''} onChange={(e) => setForm({ ...form, cover_image: e.target.value })} />
+              <Label>Cover Image</Label>
+              {(form.cover_image || form._previewUrl) ? (
+                <div className="relative mt-1 w-32 h-32">
+                  <img
+                    src={form._previewUrl || form.cover_image}
+                    alt="Cover preview"
+                    className="w-32 h-32 object-cover rounded border border-border"
+                  />
+                  <button
+                    type="button"
+                    onClick={removeCoverImage}
+                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="mt-1 flex items-center justify-center gap-2 w-full border-2 border-dashed border-border rounded-md py-6 text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                >
+                  {uploading ? (
+                    <><Loader2 size={16} className="animate-spin" /> Uploading...</>
+                  ) : (
+                    <><Upload size={16} /> Click to upload cover image</>
+                  )}
+                </button>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleCoverUpload(file);
+                  e.target.value = '';
+                }}
+              />
             </div>
             <div>
               <Label>Display Order</Label>
