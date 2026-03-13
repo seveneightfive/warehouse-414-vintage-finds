@@ -672,26 +672,46 @@ const AdminProductForm = () => {
                   <Upload size={16} /> Upload Images
                 </Button>
                 <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
-                  {product?.featured_image_url && (
-                    <div className="relative group">
-                      <img src={product.featured_image_url} alt="Featured" className="w-full aspect-square object-cover rounded-md border-2 border-primary" />
-                      <span className="absolute bottom-1 left-1 bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded">Featured</span>
-                    </div>
-                  )}
                   {product?.product_images
                     ?.sort((a: { sort_order: number }, b: { sort_order: number }) => a.sort_order - b.sort_order)
-                    .map((img: { id: string; image_url: string }) => (
-                      <div key={img.id} className="relative group">
-                        <img src={img.image_url} alt="" className="w-full aspect-square object-cover rounded-md border border-border" />
-                        <button
-                          type="button"
-                          onClick={() => deleteImage(img.id, img.image_url)}
-                          className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ))}
+                    .map((img: { id: string; image_url: string }) => {
+                      const isFeatured = product.featured_image_url === img.image_url;
+                      return (
+                        <div key={img.id} className="relative group">
+                          <img
+                            src={img.image_url}
+                            alt=""
+                            className={cn(
+                              'w-full aspect-square object-cover rounded-md',
+                              isFeatured ? 'border-2 border-primary' : 'border border-border'
+                            )}
+                          />
+                          {isFeatured && (
+                            <span className="absolute bottom-1 left-1 bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded">Featured</span>
+                          )}
+                          <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {!isFeatured && (
+                              <button
+                                type="button"
+                                onClick={() => setFeaturedImage(img.image_url)}
+                                className="bg-accent text-accent-foreground rounded-full p-1"
+                                title="Set as featured"
+                              >
+                                <Star size={14} />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => deleteImage(img.id, img.image_url)}
+                              className="bg-destructive text-destructive-foreground rounded-full p-1"
+                              title="Delete image"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   {uploadingFiles.map((tempId) => (
                     <div key={tempId} className="w-full aspect-square rounded-md border border-border flex items-center justify-center bg-muted">
                       <Loader2 className="animate-spin text-muted-foreground" size={24} />
