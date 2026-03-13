@@ -63,8 +63,17 @@ const AdminCollections = () => {
         const { error } = await supabase.from('collections').update(row).eq('id', payload.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('collections').insert(row);
+        const { data, error } = await supabase.from('collections').insert(row).select('id, slug').single();
         if (error) throw error;
+
+        // Upload pending file for newly created collection
+        if (payload._pendingFile && data) {
+          const fd = new FormData();
+          fd.append('file', payload._pendingFile);
+          fd.append('collectionId', data.id);
+          fd.append('slug', data.slug || slugify(payload.name));
+          await supabase.functions.invoke('upload-collection-image', { body: fd });
+        }
       }
     },
     onSuccess: () => {
