@@ -17,7 +17,7 @@ type CollectionRow = {
   name: string;
   slug: string | null;
   description: string | null;
-  'cover-image': string | null;
+  cover_image: string | null;
   display_order: number | null;
   is_active: boolean | null;
   product_count: number;
@@ -53,7 +53,7 @@ const AdminCollections = () => {
         name: payload.name,
         slug: payload.slug || slugify(payload.name),
         description: payload.description || null,
-        'cover-image': payload.cover_image || null,
+        cover_image: payload.cover_image || null,
         display_order: payload.display_order ? Number(payload.display_order) : null,
         is_active: payload.is_active ?? true,
       };
@@ -97,7 +97,7 @@ const AdminCollections = () => {
       name: c.name,
       slug: c.slug || '',
       description: c.description || '',
-      cover_image: c['cover-image'] || '',
+      cover_image: c.cover_image || '',
       display_order: c.display_order ?? '',
       is_active: c.is_active ?? true,
     });
@@ -190,8 +190,8 @@ const AdminCollections = () => {
             {collections?.map((c) => (
               <TableRow key={c.id}>
                 <TableCell>
-                  {c['cover-image'] ? (
-                    <img src={c['cover-image']} alt="" className="w-12 h-12 object-cover rounded" />
+                  {c.cover_image ? (
+                    <img src={c.cover_image} alt="" className="w-12 h-12 object-cover rounded" />
                   ) : (
                     <div className="w-12 h-12 bg-muted rounded" />
                   )}
