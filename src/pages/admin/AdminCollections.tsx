@@ -110,12 +110,49 @@ const AdminCollections = () => {
     setDialogOpen(false);
     setEditId(null);
     setForm({});
+    setUploading(false);
   };
 
   const handleNameChange = (name: string) => {
     const updates: any = { ...form, name };
     if (!editId) updates.slug = slugify(name);
     setForm(updates);
+  };
+
+  const handleCoverUpload = async (file: File) => {
+    // For new collections we need to save first, so just show a preview
+    const slug = form.slug || slugify(form.name || 'collection');
+
+    if (editId) {
+      // Upload directly for existing collections
+      setUploading(true);
+      try {
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('collectionId', editId);
+        fd.append('slug', slug);
+
+        const { data, error } = await supabase.functions.invoke('upload-collection-image', { body: fd });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+
+        setForm((prev: Record<string, any>) => ({ ...prev, cover_image: data.cdn_url }));
+        toast.success('Cover image uploaded');
+        qc.invalidateQueries({ queryKey: ['admin-collections'] });
+      } catch (err: any) {
+        toast.error('Upload failed', { description: err.message });
+      } finally {
+        setUploading(false);
+      }
+    } else {
+      // For new collections, store the file to upload after creation
+      setForm((prev: Record<string, any>) => ({ ...prev, _pendingFile: file, _previewUrl: URL.createObjectURL(file) }));
+    }
+  };
+
+  const removeCoverImage = () => {
+    if (form._previewUrl) URL.revokeObjectURL(form._previewUrl);
+    setForm((prev: Record<string, any>) => ({ ...prev, cover_image: '', _pendingFile: null, _previewUrl: null }));
   };
 
   return (
