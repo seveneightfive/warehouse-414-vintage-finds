@@ -97,7 +97,7 @@ const AdminCollections = () => {
       name: c.name,
       slug: c.slug || '',
       description: c.description || '',
-      cover_image: c['cover-image'] || '',
+      cover_image: c.cover_image || '',
       display_order: c.display_order ?? '',
       is_active: c.is_active ?? true,
     });
