@@ -148,6 +148,8 @@ const AdminProductForm = () => {
         .eq('id', id!)
         .single();
       if (error) throw error;
+      console.log('Product images:', data?.product_images?.map((i: any) => i.image_url));
+      console.log('Featured image:', data?.featured_image_url);
       return data;
     },
     enabled: isEditing,
