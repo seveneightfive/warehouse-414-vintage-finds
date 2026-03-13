@@ -314,6 +314,20 @@ const AdminProductForm = () => {
 
   if (isEditing && isLoading) return <p className="text-muted-foreground">Loading…</p>;
 
+  const setFeaturedImage = async (imageUrl: string) => {
+    const { error } = await supabase
+      .from('products')
+      .update({ featured_image_url: imageUrl })
+      .eq('id', product.id);
+
+    if (error) {
+      toast.error('Failed to set featured image', { description: error.message });
+      return;
+    }
+
+    toast.success('Featured image updated');
+    queryClient.invalidateQueries({ queryKey: ['admin-product', id] });
+  };
 
   const ComboboxField = ({ name, label, options }: { name: keyof FormValues; label: string; options?: { id: string; name: string }[] }) => {
     const [open, setOpen] = useState(false);
