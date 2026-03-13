@@ -16,6 +16,7 @@ const navItems = [
   { to: '/admin/designers', icon: Users, label: 'Designers' },
   { to: '/admin/makers', icon: ShoppingBag, label: 'Makers' },
   { to: '/admin/categories', icon: Layers, label: 'Categories' },
+  { to: '/admin/collections', icon: Layers, label: 'Collections' },
   { to: '/admin/styles', icon: Palette, label: 'Styles' },
   { to: '/admin/periods', icon: Tag, label: 'Periods' },
   { to: '/admin/countries', icon: Globe, label: 'Countries' },
