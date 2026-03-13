@@ -63,6 +63,8 @@ const App = () => (
               <Route path="designers" element={<AdminCrudList title="Designers" tableName="designers" columns={[{ key: 'name', label: 'Name' }, { key: 'about', label: 'Bio', type: 'textarea' }]} productFk="designer_id" />} />
               <Route path="makers" element={<AdminCrudList title="Makers" tableName="makers" columns={[{ key: 'name', label: 'Name' }, { key: 'about', label: 'Bio', type: 'textarea' }]} productFk="maker_id" />} />
               <Route path="categories" element={<AdminCategoryManager />} />
+              <Route path="collections" element={<AdminCollections />} />
+              <Route path="collections/:id" element={<AdminCollectionDetail />} />
               <Route path="styles" element={<AdminCrudList title="Styles" tableName="styles" />} />
               <Route path="periods" element={<AdminCrudList title="Periods" tableName="periods" />} />
               <Route path="countries" element={<AdminCrudList title="Countries" tableName="countries" />} />
