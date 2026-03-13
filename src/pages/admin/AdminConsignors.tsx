@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -45,14 +45,13 @@ const emptyForm: ConsignorForm = {
 };
 
 const AdminConsignors = () => {
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState<ConsignorForm>(emptyForm);
 
-  const { data: consignors, isLoading } = useQuery({
+  const { data: consignors, isLoading, refetch: fetchConsignors } = useQuery({
     queryKey: ['admin-consignors'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -83,7 +82,7 @@ const AdminConsignors = () => {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-consignors'] });
+      fetchConsignors();
       toast.success(editId ? 'Consignor updated' : 'Consignor added');
       closeModal();
     },
