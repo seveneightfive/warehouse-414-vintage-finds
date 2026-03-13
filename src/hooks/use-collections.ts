@@ -9,7 +9,8 @@ export function useCollections() {
       const { data, error } = await supabase
         .from('collections')
         .select('*')
-        .order('name');
+        .eq('is_active', true)
+        .order('display_order', { ascending: true, nullsFirst: false });
       if (error) throw error;
       return (data ?? []).map((d: any) => ({
         ...d,
