@@ -31,6 +31,8 @@ const AdminCollections = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<Record<string, any>>({});
   const [editId, setEditId] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: collections, isLoading } = useQuery<CollectionRow[]>({
     queryKey: ['admin-collections'],
