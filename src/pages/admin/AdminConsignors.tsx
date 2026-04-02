@@ -201,7 +201,7 @@ const AdminConsignors = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => navigate(`/admin/products?sku=${c.consignor_code}`)}
+onClick={() => navigate(`/admin/consignors/${c.id}`)}
                           title="View Products"
                         >
                           <Eye size={14} />
