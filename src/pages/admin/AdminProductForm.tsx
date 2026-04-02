@@ -13,8 +13,23 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
-import { ArrowLeft, Save, Check, ChevronsUpDown, Upload, X, Loader2, Star, Trash2 } from 'lucide-react';
+import { ArrowLeft, Save, Check, ChevronsUpDown, Upload, Loader2, Star, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  rectSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 const SOLD_ON_OPTIONS = ['1stDibs', 'Chairish', 'eBay', 'Website', 'Direct', 'Other'];
 const STATUS_OPTIONS = [
@@ -74,7 +89,73 @@ const useTaxonomyOptions = () => {
   const periods = useQuery({ queryKey: ['taxonomy-periods'], queryFn: fetchTable('periods') });
   const countries = useQuery({ queryKey: ['taxonomy-countries'], queryFn: fetchTable('countries') });
 
-  return { designers: designers.data, makers: makers.data, categories: categories.data, styles: styles.data, periods: periods.data, countries: countries.data };
+  return {
+    designers: designers.data,
+    makers: makers.data,
+    categories: categories.data,
+    styles: styles.data,
+    periods: periods.data,
+    countries: countries.data,
+  };
+};
+
+const SortableImage = ({
+  img,
+  isFeatured,
+  onSetFeatured,
+  onDelete,
+}: {
+  img: { id: string; image_url: string };
+  isFeatured: boolean;
+  onSetFeatured: (url: string) => void;
+  onDelete: (id: string, url: string) => void;
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: img.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
+  return (
+    <div ref={setNodeRef} style={style} className="relative group cursor-grab active:cursor-grabbing">
+      <img
+        src={img.image_url}
+        alt=""
+        className={cn(
+          'w-full aspect-square object-cover rounded-md',
+          isFeatured ? 'border-2 border-primary' : 'border border-border'
+        )}
+        {...attributes}
+        {...listeners}
+      />
+      {isFeatured && (
+        <span className="absolute bottom-1 left-1 bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded">
+          Featured
+        </span>
+      )}
+      <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {!isFeatured && (
+          <button
+            type="button"
+            onClick={() => onSetFeatured(img.image_url)}
+            className="bg-accent text-accent-foreground rounded-full p-1"
+            title="Set as featured"
+          >
+            <Star size={14} />
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => onDelete(img.id, img.image_url)}
+          className="bg-destructive text-destructive-foreground rounded-full p-1"
+          title="Delete image"
+        >
+          <Trash2 size={14} />
+        </button>
+      </div>
+    </div>
+  );
 };
 
 const AdminProductForm = () => {
@@ -85,38 +166,37 @@ const AdminProductForm = () => {
   const taxonomy = useTaxonomyOptions();
 
   const form = useForm<FormValues>({
-  resolver: zodResolver(schema),
-  defaultValues: { name: '', status: 'available' },
-});
-
-const draftKey = `product-draft-${id ?? 'new'}`;
-
-// Autosave to localStorage on every change
-useEffect(() => {
-  const subscription = form.watch((values) => {
-    localStorage.setItem(draftKey, JSON.stringify(values));
+    resolver: zodResolver(schema),
+    defaultValues: { name: '', status: 'available' },
   });
-  return () => subscription.unsubscribe();
-}, [form, draftKey]);
 
-// Restore draft on mount (new products only)
-useEffect(() => {
-  if (isEditing) return;
-  const saved = localStorage.getItem(draftKey);
-  if (saved) {
-    try {
-      form.reset(JSON.parse(saved));
-      toast.info('Draft restored', { description: 'Your unsaved changes were recovered.' });
-    } catch {}
-  }
-}, []);
+  const draftKey = `product-draft-${id ?? 'new'}`;
+
+  // Autosave to localStorage on every change
+  useEffect(() => {
+    const subscription = form.watch((values) => {
+      localStorage.setItem(draftKey, JSON.stringify(values));
+    });
+    return () => subscription.unsubscribe();
+  }, [form, draftKey]);
+
+  // Restore draft on mount (new products only)
+  useEffect(() => {
+    if (isEditing) return;
+    const saved = localStorage.getItem(draftKey);
+    if (saved) {
+      try {
+        form.reset(JSON.parse(saved));
+        toast.info('Draft restored', { description: 'Your unsaved changes were recovered.' });
+      } catch {}
+    }
+  }, []);
 
   const watchStatus = form.watch('status');
   const watchCategoryId = form.watch('category_id');
   const auctionUrlRef = useRef<HTMLDivElement>(null);
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string | null>(null);
 
-  // Fetch subcategories (parent_id IS NULL) for selected category
   const { data: subcategories } = useQuery({
     queryKey: ['taxonomy-subcategories', watchCategoryId],
     queryFn: async () => {
@@ -132,7 +212,6 @@ useEffect(() => {
     enabled: !!watchCategoryId,
   });
 
-  // Fetch sub-subcategories for selected subcategory
   const { data: subSubcategories } = useQuery({
     queryKey: ['taxonomy-subsubcategories', selectedSubcategoryId],
     queryFn: async () => {
@@ -147,7 +226,6 @@ useEffect(() => {
     enabled: !!selectedSubcategoryId,
   });
 
-  // Scroll to auction URL field when status changes to at_auction
   useEffect(() => {
     if (watchStatus === 'at_auction') {
       setTimeout(() => auctionUrlRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
@@ -155,7 +233,6 @@ useEffect(() => {
   }, [watchStatus]);
 
   useEffect(() => {
-    // Only clear if user changed category (not on initial load)
     if (product && watchCategoryId === ((product as Record<string, unknown>).category_id as string)) return;
     form.setValue('subcategory_id', null);
     setSelectedSubcategoryId(null);
@@ -170,8 +247,6 @@ useEffect(() => {
         .eq('id', id!)
         .single();
       if (error) throw error;
-      console.log('Product images:', data?.product_images?.map((i: any) => i.image_url));
-      console.log('Featured image:', data?.featured_image_url);
       return data;
     },
     enabled: isEditing,
@@ -185,15 +260,12 @@ useEffect(() => {
       }
       values.price = product.price ?? undefined;
       values.sale_price = (product as Record<string, unknown>).sale_price as number ?? undefined;
-      // Convert tags array to comma string for editing
       const rawTags = (product as Record<string, unknown>).tags;
       values.tags = Array.isArray(rawTags) ? (rawTags as string[]).join(', ') : '';
       form.reset(values as FormValues);
 
-      // Initialize cascading subcategory state from saved subcategory_id
       const savedSubcategoryId = (product as Record<string, unknown>).subcategory_id as string | null;
       if (savedSubcategoryId) {
-        // Determine if this is a sub-subcategory (has parent_id) or a direct subcategory
         supabase
           .from('subcategories')
           .select('id, parent_id')
@@ -201,10 +273,8 @@ useEffect(() => {
           .single()
           .then(({ data: subRow }) => {
             if (subRow?.parent_id) {
-              // It's a sub-subcategory — set the parent as the selected subcategory
               setSelectedSubcategoryId(subRow.parent_id);
             } else {
-              // It's a direct subcategory
               setSelectedSubcategoryId(savedSubcategoryId);
             }
           });
@@ -233,15 +303,12 @@ useEffect(() => {
   const saveMutation = useMutation({
     mutationFn: async (values: FormValues) => {
       const payload: Record<string, unknown> = { ...values };
-      // Convert tags string to array
       if (typeof payload.tags === 'string' && payload.tags) {
         payload.tags = (payload.tags as string).split(',').map((t: string) => t.trim()).filter(Boolean);
       }
-      // Clean empty strings to null
       for (const [k, v] of Object.entries(payload)) {
         if (v === '' || v === undefined) payload[k] = null;
       }
-      // Auto-generate slug on create
       if (!isEditing && values.name) {
         const baseSlug = generateSlug(values.name);
         payload.slug = await ensureUniqueSlug(baseSlug);
@@ -257,20 +324,43 @@ useEffect(() => {
       }
     },
     onSuccess: (newId) => {
-  queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-  localStorage.removeItem(`product-draft-${id ?? 'new'}`);
-  toast.success(isEditing ? 'Product updated' : 'Product created');
-  if (isEditing) {
-navigate(`/admin/products?highlight=${id}&status=${form.getValues('status')}`);  } else {
-    navigate(`/admin/products/${newId}`);
-  }
-},
+      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+      localStorage.removeItem(`product-draft-${id ?? 'new'}`);
+      toast.success(isEditing ? 'Product updated' : 'Product created');
+      if (isEditing) {
+        navigate(`/admin/products?highlight=${id}&status=${form.getValues('status')}`);
+      } else {
+        navigate(`/admin/products/${newId}`);
+      }
+    },
     onError: (err) => toast.error(err.message),
   });
 
-  // Image upload
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !product?.product_images) return;
+
+    const oldIndex = product.product_images.findIndex((img: any) => img.id === active.id);
+    const newIndex = product.product_images.findIndex((img: any) => img.id === over.id);
+    const reordered = arrayMove(product.product_images, oldIndex, newIndex);
+
+    await Promise.all(
+      reordered.map((img: any, index: number) =>
+        supabase.from('product_images').update({ sort_order: index }).eq('id', img.id)
+      )
+    );
+
+    if (reordered[0]?.image_url !== product.featured_image_url) {
+      await supabase.from('products').update({ featured_image_url: reordered[0].image_url }).eq('id', product.id);
+    }
+
+    queryClient.invalidateQueries({ queryKey: ['admin-product', id] });
+  };
 
   const uploadImages = async (files: FileList) => {
     if (!id) return;
@@ -285,18 +375,13 @@ navigate(`/admin/products?highlight=${id}&status=${form.getValues('status')}`); 
     for (const file of Array.from(files)) {
       const tempId = `${file.name}-${Date.now()}`;
       setUploadingFiles(prev => [...prev, tempId]);
-
       try {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('productId', id);
         formData.append('sku', sku);
         formData.append('sort_order', String(nextSort));
-
-        const res = await supabase.functions.invoke('upload-product-images', {
-          body: formData,
-        });
-
+        const res = await supabase.functions.invoke('upload-product-images', { body: formData });
         if (res.error) throw new Error(res.error.message);
         nextSort++;
       } catch (err: unknown) {
@@ -311,46 +396,29 @@ navigate(`/admin/products?highlight=${id}&status=${form.getValues('status')}`); 
   };
 
   const deleteImage = async (imageId: string, imageUrl: string) => {
-    // Delete from product_images table
-    const { error } = await supabase
-      .from('product_images')
-      .delete()
-      .eq('id', imageId);
-
+    const { error } = await supabase.from('product_images').delete().eq('id', imageId);
     if (error) {
-      console.error('Delete error:', error);
       toast.error('Delete failed', { description: error.message });
       return;
     }
-
-    // If this was the featured image, clear it on the product
     if (product?.featured_image_url === imageUrl) {
-      await supabase
-        .from('products')
-        .update({ featured_image_url: null })
-        .eq('id', product.id);
+      await supabase.from('products').update({ featured_image_url: null }).eq('id', product.id);
     }
-
     toast.success('Image deleted');
     queryClient.invalidateQueries({ queryKey: ['admin-product', id] });
   };
 
-  if (isEditing && isLoading) return <p className="text-muted-foreground">Loading…</p>;
-
   const setFeaturedImage = async (imageUrl: string) => {
-    const { error } = await supabase
-      .from('products')
-      .update({ featured_image_url: imageUrl })
-      .eq('id', product.id);
-
+    const { error } = await supabase.from('products').update({ featured_image_url: imageUrl }).eq('id', product.id);
     if (error) {
       toast.error('Failed to set featured image', { description: error.message });
       return;
     }
-
     toast.success('Featured image updated');
     queryClient.invalidateQueries({ queryKey: ['admin-product', id] });
   };
+
+  if (isEditing && isLoading) return <p className="text-muted-foreground">Loading…</p>;
 
   const ComboboxField = ({ name, label, options }: { name: keyof FormValues; label: string; options?: { id: string; name: string }[] }) => {
     const [open, setOpen] = useState(false);
@@ -475,37 +543,28 @@ navigate(`/admin/products?highlight=${id}&status=${form.getValues('status')}`); 
           <section className="space-y-4">
             <h2 className="text-lg font-semibold text-foreground border-b border-border pb-2">Taxonomy & Attribution</h2>
             <p className="text-sm text-muted-foreground">Attribution precedes the name, e.g. "by", "in the style of", "attributed to"</p>
-
-            {/* Designer + Attribution */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <ComboboxField name="designer_id" label="Designer" options={taxonomy.designers} />
               <FormField control={form.control} name="designer_attribution" render={({ field }) => (
                 <FormItem><FormLabel>Designer Attribution</FormLabel><FormControl><Input placeholder="e.g. by, attributed to" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
               )} />
             </div>
-
-            {/* Maker + Attribution */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <ComboboxField name="maker_id" label="Maker" options={taxonomy.makers} />
               <FormField control={form.control} name="maker_attribution" render={({ field }) => (
                 <FormItem><FormLabel>Maker Attribution</FormLabel><FormControl><Input placeholder="e.g. by, in the style of" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
               )} />
             </div>
-
-            {/* Period + Attribution */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <ComboboxField name="period_id" label="Period" options={taxonomy.periods} />
               <FormField control={form.control} name="period_attribution" render={({ field }) => (
                 <FormItem><FormLabel>Period Attribution</FormLabel><FormControl><Input placeholder="e.g. from the, circa" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
               )} />
             </div>
-
-            {/* Category — cascading 3-level selector */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <ComboboxField name="category_id" label="Category" options={taxonomy.categories} />
               {watchCategoryId && subcategories && subcategories.length > 0 && (
                 <FormField control={form.control} name="subcategory_id" render={({ field }) => {
-                  // Determine displayed value: if the saved value is a sub-subcategory, show the parent
                   const displayValue = selectedSubcategoryId || '';
                   const selectedName = subcategories?.find(o => o.id === displayValue)?.name;
                   return (
@@ -533,7 +592,7 @@ navigate(`/admin/products?highlight=${id}&status=${form.getValues('status')}`); 
                                 {subcategories?.map(o => (
                                   <CommandItem key={o.id} value={o.name} onSelect={() => {
                                     setSelectedSubcategoryId(o.id);
-                                    field.onChange(o.id); // Save subcategory as subcategory_id (may be overwritten by sub-sub)
+                                    field.onChange(o.id);
                                   }}>
                                     <Check className={cn("mr-2 h-4 w-4", displayValue === o.id ? "opacity-100" : "opacity-0")} />
                                     {o.name}
@@ -551,7 +610,6 @@ navigate(`/admin/products?highlight=${id}&status=${form.getValues('status')}`); 
               )}
               {selectedSubcategoryId && subSubcategories && subSubcategories.length > 0 && (
                 <FormField control={form.control} name="subcategory_id" render={({ field }) => {
-                  // Show sub-subcategory value only if it's actually a child of selectedSubcategoryId
                   const isSubSub = subSubcategories?.some(o => o.id === field.value);
                   const displayValue = isSubSub ? field.value : '';
                   const selectedName = subSubcategories?.find(o => o.id === displayValue)?.name;
@@ -594,14 +652,10 @@ navigate(`/admin/products?highlight=${id}&status=${form.getValues('status')}`); 
                 }} />
               )}
             </div>
-
-            {/* Style, Country */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <ComboboxField name="style_id" label="Style" options={taxonomy.styles} />
               <ComboboxField name="country_id" label="Country" options={taxonomy.countries} />
             </div>
-
-            {/* Tags */}
             <FormField control={form.control} name="tags" render={({ field }) => (
               <FormItem>
                 <FormLabel>Tags</FormLabel>
@@ -610,8 +664,6 @@ navigate(`/admin/products?highlight=${id}&status=${form.getValues('status')}`); 
                 <FormMessage />
               </FormItem>
             )} />
-
-            {/* Materials, Year Created, Condition */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <FormField control={form.control} name="materials" render={({ field }) => (
                 <FormItem><FormLabel>Materials</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
@@ -694,53 +746,31 @@ navigate(`/admin/products?highlight=${id}&status=${form.getValues('status')}`); 
                 <Button type="button" variant="outline" className="gap-2" onClick={() => fileInputRef.current?.click()}>
                   <Upload size={16} /> Upload Images
                 </Button>
-                <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
-                  {product?.product_images
-                    ?.sort((a: { sort_order: number }, b: { sort_order: number }) => a.sort_order - b.sort_order)
-                    .map((img: { id: string; image_url: string }) => {
-                      const isFeatured = product.featured_image_url === img.image_url;
-                      return (
-                        <div key={img.id} className="relative group">
-                          <img
-                            src={img.image_url}
-                            alt=""
-                            className={cn(
-                              'w-full aspect-square object-cover rounded-md',
-                              isFeatured ? 'border-2 border-primary' : 'border border-border'
-                            )}
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <SortableContext
+                    items={(product?.product_images ?? []).map((img: any) => img.id)}
+                    strategy={rectSortingStrategy}
+                  >
+                    <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
+                      {(product?.product_images ?? [])
+                        .sort((a: any, b: any) => a.sort_order - b.sort_order)
+                        .map((img: any) => (
+                          <SortableImage
+                            key={img.id}
+                            img={img}
+                            isFeatured={product?.featured_image_url === img.image_url}
+                            onSetFeatured={setFeaturedImage}
+                            onDelete={deleteImage}
                           />
-                          {isFeatured && (
-                            <span className="absolute bottom-1 left-1 bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded">Featured</span>
-                          )}
-                          <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {!isFeatured && (
-                              <button
-                                type="button"
-                                onClick={() => setFeaturedImage(img.image_url)}
-                                className="bg-accent text-accent-foreground rounded-full p-1"
-                                title="Set as featured"
-                              >
-                                <Star size={14} />
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => deleteImage(img.id, img.image_url)}
-                              className="bg-destructive text-destructive-foreground rounded-full p-1"
-                              title="Delete image"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
+                        ))}
+                      {uploadingFiles.map((tempId) => (
+                        <div key={tempId} className="w-full aspect-square rounded-md border border-border flex items-center justify-center bg-muted">
+                          <Loader2 className="animate-spin text-muted-foreground" size={24} />
                         </div>
-                      );
-                    })}
-                  {uploadingFiles.map((tempId) => (
-                    <div key={tempId} className="w-full aspect-square rounded-md border border-border flex items-center justify-center bg-muted">
-                      <Loader2 className="animate-spin text-muted-foreground" size={24} />
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </SortableContext>
+                </DndContext>
               </>
             )}
           </section>
