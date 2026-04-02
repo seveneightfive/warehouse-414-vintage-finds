@@ -29,13 +29,13 @@ const AdminLayout = () => {
   const [sheetOpen, setSheetOpen] = useState(false);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        navigate('/admin', { replace: true });
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN' && session && location.pathname === '/admin/login') {
+      navigate('/admin', { replace: true });
+    }
+  });
+  return () => subscription.unsubscribe();
+}, [navigate, location.pathname]);
 
   if (loading) return <div className="flex items-center justify-center min-h-screen text-muted-foreground">Loading...</div>;
   if (!user || !isAdmin) return <Navigate to="/admin/login" replace />;
