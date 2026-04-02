@@ -85,9 +85,31 @@ const AdminProductForm = () => {
   const taxonomy = useTaxonomyOptions();
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: { name: '', status: 'available' },
+  resolver: zodResolver(schema),
+  defaultValues: { name: '', status: 'available' },
+});
+
+const draftKey = `product-draft-${id ?? 'new'}`;
+
+// Autosave to localStorage on every change
+useEffect(() => {
+  const subscription = form.watch((values) => {
+    localStorage.setItem(draftKey, JSON.stringify(values));
   });
+  return () => subscription.unsubscribe();
+}, [form, draftKey]);
+
+// Restore draft on mount (new products only)
+useEffect(() => {
+  if (isEditing) return;
+  const saved = localStorage.getItem(draftKey);
+  if (saved) {
+    try {
+      form.reset(JSON.parse(saved));
+      toast.info('Draft restored', { description: 'Your unsaved changes were recovered.' });
+    } catch {}
+  }
+}, []);
 
   const watchStatus = form.watch('status');
   const watchCategoryId = form.watch('category_id');
@@ -235,15 +257,14 @@ const AdminProductForm = () => {
       }
     },
     onSuccess: (newId) => {
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      toast.success(isEditing ? 'Product updated' : 'Product created');
-      if (isEditing) {
-        navigate(-1);
-      } else {
-        // Redirect to edit mode so images can be attached
-        navigate(`/admin/products/${newId}`);
-      }
-    },
+  queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+  localStorage.removeItem(`product-draft-${id ?? 'new'}`);
+  toast.success(isEditing ? 'Product updated' : 'Product created');
+  if (isEditing) {
+navigate(`/admin/products?highlight=${id}&status=${form.getValues('status')}`);  } else {
+    navigate(`/admin/products/${newId}`);
+  }
+},
     onError: (err) => toast.error(err.message),
   });
 

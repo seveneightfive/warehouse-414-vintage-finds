@@ -17,11 +17,11 @@ const PAGE_SIZE = 25;
 
 const AdminProducts = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const highlightId = searchParams.get('highlight');
 const consignorFilter = searchParams.get('sku'); // e.g. "MAP"
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('available');
-  const [page, setPage] = useState(0);
+const [statusFilter, setStatusFilter] = useState(searchParams.get('status') ?? 'available');  const [page, setPage] = useState(0);
   const [soldProduct, setSoldProduct] = useState<Product | null>(null);
   const [holdProduct, setHoldProduct] = useState<Product | null>(null);
 
@@ -248,8 +248,7 @@ if (statusFilter !== 'all') query = query.eq('status', statusFilter);
                 {products?.map((p) => {
                   const thumb = p.product_images?.sort((a, b) => a.sort_order - b.sort_order)?.[0];
                   return (
-                    <TableRow key={p.id}>
-                      <TableCell>
+<TableRow key={p.id} className={highlightId === p.id ? 'bg-primary/10 ring-1 ring-primary/30' : ''}>                      <TableCell>
                         {thumb ? (
                           <img src={thumb.image_url} alt="" className="w-12 h-12 rounded-sm object-cover" />
                         ) : p.featured_image_url ? (
