@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Navigate, Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -25,17 +25,7 @@ const navItems = [
 const AdminLayout = () => {
   const { user, isAdmin, loading, signOut } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
   const [sheetOpen, setSheetOpen] = useState(false);
-
-  useEffect(() => {
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-    if (event === 'SIGNED_IN' && session && location.pathname === '/admin/login') {
-      navigate('/admin', { replace: true });
-    }
-  });
-  return () => subscription.unsubscribe();
-}, [navigate, location.pathname]);
 
   if (loading) return <div className="flex items-center justify-center min-h-screen text-muted-foreground">Loading...</div>;
   if (!user || !isAdmin) return <Navigate to="/admin/login" replace />;

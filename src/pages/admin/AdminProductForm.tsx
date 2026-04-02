@@ -409,14 +409,27 @@ const AdminProductForm = () => {
   };
 
   const setFeaturedImage = async (imageUrl: string) => {
-    const { error } = await supabase.from('products').update({ featured_image_url: imageUrl }).eq('id', product.id);
-    if (error) {
-      toast.error('Failed to set featured image', { description: error.message });
-      return;
-    }
-    toast.success('Featured image updated');
-    queryClient.invalidateQueries({ queryKey: ['admin-product', id] });
-  };
+  const { error } = await supabase.from('products').update({ featured_image_url: imageUrl }).eq('id', product.id);
+  if (error) {
+    toast.error('Failed to set featured image', { description: error.message });
+    return;
+  }
+
+  // Move featured image to position 0
+  const images = [...(product.product_images ?? [])].sort((a: any, b: any) => a.sort_order - b.sort_order);
+  const featuredIndex = images.findIndex((img: any) => img.image_url === imageUrl);
+  if (featuredIndex > 0) {
+    const reordered = arrayMove(images, featuredIndex, 0);
+    await Promise.all(
+      reordered.map((img: any, index: number) =>
+        supabase.from('product_images').update({ sort_order: index }).eq('id', img.id)
+      )
+    );
+  }
+
+  toast.success('Featured image updated');
+  queryClient.invalidateQueries({ queryKey: ['admin-product', id] });
+};
 
   if (isEditing && isLoading) return <p className="text-muted-foreground">Loading…</p>;
 
