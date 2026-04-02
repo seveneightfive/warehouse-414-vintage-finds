@@ -1,4 +1,4 @@
-# Welcome to your Lovable project
+w# Welcome to your warehouse414 shop website
 
 ## Project info
 

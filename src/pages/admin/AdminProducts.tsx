@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Pencil, Eye, Trash2, Search, ChevronLeft, ChevronRight, CircleDollarSign, Clock, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Product } from '@/types/database';
@@ -16,6 +16,8 @@ import PlaceHoldDialog from '@/components/PlaceHoldDialog';
 const PAGE_SIZE = 25;
 
 const AdminProducts = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+const consignorFilter = searchParams.get('sku'); // e.g. "MAP"
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('available');
@@ -24,21 +26,23 @@ const AdminProducts = () => {
   const [holdProduct, setHoldProduct] = useState<Product | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-products', page, searchQuery, statusFilter],
+    queryKey: ['admin-products', page, searchQuery, statusFilter, consignorFilter],
     queryFn: async () => {
       let countQuery = supabase.from('products').select('*', { count: 'exact', head: true });
-      if (searchQuery) countQuery = countQuery.or(`name.ilike.%${searchQuery}%,sku.ilike.%${searchQuery}%`);
-      if (statusFilter !== 'all') countQuery = countQuery.eq('status', statusFilter);
+if (consignorFilter) countQuery = countQuery.ilike('sku', `${consignorFilter}%`);
+if (searchQuery) countQuery = countQuery.or(`name.ilike.%${searchQuery}%,sku.ilike.%${searchQuery}%`);
+if (statusFilter !== 'all') countQuery = countQuery.eq('status', statusFilter);
 
-      let query = supabase
-        .from('products')
-        .select('*, product_images(image_url, sort_order)')
-        .order('created_at', { ascending: false })
-        .order('id', { ascending: false })
-        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+let query = supabase
+  .from('products')
+  .select('*, product_images(image_url, sort_order)')
+  .order('created_at', { ascending: false })
+  .order('id', { ascending: false })
+  .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
-      if (searchQuery) query = query.or(`name.ilike.%${searchQuery}%,sku.ilike.%${searchQuery}%`);
-      if (statusFilter !== 'all') query = query.eq('status', statusFilter);
+if (consignorFilter) query = query.ilike('sku', `${consignorFilter}%`);
+if (searchQuery) query = query.or(`name.ilike.%${searchQuery}%,sku.ilike.%${searchQuery}%`);
+if (statusFilter !== 'all') query = query.eq('status', statusFilter);
 
       const [{ count }, { data: products, error }] = await Promise.all([countQuery, query]);
       if (error) throw error;
@@ -179,7 +183,21 @@ const AdminProducts = () => {
     <>
       <div>
         <div className="flex items-center justify-between mb-6">
-          <h1 className="font-display text-2xl tracking-wide text-foreground">Products</h1>
+  <div className="flex items-center gap-3">
+    {consignorFilter && (
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setSearchParams({})}
+        className="text-muted-foreground"
+      >
+        <ArrowLeft size={14} className="mr-1" /> All Products
+      </Button>
+    )}
+    <h1 className="font-display text-2xl tracking-wide text-foreground">
+      {consignorFilter ? `Products — ${consignorFilter}` : 'Products'}
+    </h1>
+  </div>
           <Link to="/admin/products/new">
             <Button className="text-xs tracking-[0.1em] uppercase">Add Product</Button>
           </Link>
