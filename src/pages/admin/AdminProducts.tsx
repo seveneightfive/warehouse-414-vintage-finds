@@ -241,7 +241,8 @@ if (statusFilter !== 'all') query = query.eq('status', statusFilter);
                   {showSoldDetails && <TableHead>Platform</TableHead>}
                   {showSoldDetails && <TableHead>Sale Date</TableHead>}
                   {!showSoldDetails && !showAuction && <TableHead>Price</TableHead>}
-                  <TableHead className="w-24">Actions</TableHead>
+<TableHead>Added</TableHead>
+<TableHead className="w-24">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -284,15 +285,18 @@ if (statusFilter !== 'all') query = query.eq('status', statusFilter);
                         <TableCell className="text-sm text-muted-foreground">{p.sale_date ? new Date(p.sale_date).toLocaleDateString() : '—'}</TableCell>
                       )}
                       {!showSoldDetails && !showAuction && (
-                        <TableCell>
-                          <div>{p.price ? `$${p.price.toLocaleString()}` : '—'}</div>
-                          {p.sale_price && (
-                            <div className="text-xs text-destructive">${p.sale_price.toLocaleString()}</div>
-                          )}
-                        </TableCell>
-                      )}
-                      <TableCell>
-                        <div className="flex gap-1">
+  <TableCell>
+    <div>{p.price ? `$${p.price.toLocaleString()}` : '—'}</div>
+    {p.sale_price && (
+      <div className="text-xs text-destructive">${p.sale_price.toLocaleString()}</div>
+    )}
+  </TableCell>
+)}
+<TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+  {p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+</TableCell>
+<TableCell>
+  <div className="flex gap-1">
                           <Link to={`/product/${p.slug}`}><Button variant="ghost" size="icon"><Eye size={14} /></Button></Link>
                           <Link to={`/admin/products/${p.id}`}><Button variant="ghost" size="icon"><Pencil size={14} /></Button></Link>
                           {p.status === 'available' && (
