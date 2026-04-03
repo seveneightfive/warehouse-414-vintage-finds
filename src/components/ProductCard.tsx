@@ -47,9 +47,27 @@ const ProductCard = ({ product }: { product: Product }) => {
         )}
       </div>
       <h3 className="text-sm font-display tracking-wide text-foreground group-hover:text-primary transition-colors line-clamp-2">
-        {product.name}
-      </h3>
-      {designerName && <p className="text-xs text-muted-foreground mt-0.5">{designerName}</p>}
+  {product.name}
+</h3>
+{(designerName || product.maker?.name) && (
+  <p className="text-xs text-muted-foreground mt-0.5">
+    {designerName ? (
+      <>
+        {product.designer_attribution && (
+          <span className="italic mr-1">{product.designer_attribution}</span>
+        )}
+        {designerName}
+      </>
+    ) : (
+      <>
+        {product.maker_attribution && (
+          <span className="italic mr-1">{product.maker_attribution}</span>
+        )}
+        {product.maker?.name}
+      </>
+    )}
+  </p>
+)}
 {product.price && product.status !== "at_auction" && (
         <p className="text-sm text-muted-foreground mt-1 font-display">
           {product.sale_price ? (
