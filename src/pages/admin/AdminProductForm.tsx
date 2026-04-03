@@ -40,6 +40,13 @@ const STATUS_OPTIONS = [
   { value: 'inventory', label: 'Inventory' },
 ];
 
+// Valid attribution values that match the database check constraint
+const ATTRIBUTION_OPTIONS = [
+  { value: 'by', label: 'by' },
+  { value: 'attributed to', label: 'attributed to' },
+  { value: 'in the style of', label: 'in the style of' },
+];
+
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
   sku: z.string().nullable().optional(),
@@ -300,14 +307,21 @@ const AdminProductForm = () => {
     return slug;
   };
 
+  const validAttributions = ['by', 'attributed to', 'in the style of'];
+
   const saveMutation = useMutation({
     mutationFn: async (values: FormValues) => {
       const payload: Record<string, unknown> = { ...values };
       if (typeof payload.tags === 'string' && payload.tags) {
         payload.tags = (payload.tags as string).split(',').map((t: string) => t.trim()).filter(Boolean);
       }
+      // Convert empty strings and undefined to null
       for (const [k, v] of Object.entries(payload)) {
         if (v === '' || v === undefined) payload[k] = null;
+      }
+      // Sanitize attribution fields — must be a valid value or null
+      for (const field of ['maker_attribution', 'designer_attribution', 'period_attribution']) {
+        if (!validAttributions.includes(payload[field] as string)) payload[field] = null;
       }
       if (!isEditing && values.name) {
         const baseSlug = generateSlug(values.name);
@@ -409,27 +423,27 @@ const AdminProductForm = () => {
   };
 
   const setFeaturedImage = async (imageUrl: string) => {
-  const { error } = await supabase.from('products').update({ featured_image_url: imageUrl }).eq('id', product.id);
-  if (error) {
-    toast.error('Failed to set featured image', { description: error.message });
-    return;
-  }
+    const { error } = await supabase.from('products').update({ featured_image_url: imageUrl }).eq('id', product.id);
+    if (error) {
+      toast.error('Failed to set featured image', { description: error.message });
+      return;
+    }
 
-  // Move featured image to position 0
-  const images = [...(product.product_images ?? [])].sort((a: any, b: any) => a.sort_order - b.sort_order);
-  const featuredIndex = images.findIndex((img: any) => img.image_url === imageUrl);
-  if (featuredIndex > 0) {
-    const reordered = arrayMove(images, featuredIndex, 0);
-    await Promise.all(
-      reordered.map((img: any, index: number) =>
-        supabase.from('product_images').update({ sort_order: index }).eq('id', img.id)
-      )
-    );
-  }
+    // Move featured image to position 0
+    const images = [...(product.product_images ?? [])].sort((a: any, b: any) => a.sort_order - b.sort_order);
+    const featuredIndex = images.findIndex((img: any) => img.image_url === imageUrl);
+    if (featuredIndex > 0) {
+      const reordered = arrayMove(images, featuredIndex, 0);
+      await Promise.all(
+        reordered.map((img: any, index: number) =>
+          supabase.from('product_images').update({ sort_order: index }).eq('id', img.id)
+        )
+      );
+    }
 
-  toast.success('Featured image updated');
-  queryClient.invalidateQueries({ queryKey: ['admin-product', id] });
-};
+    toast.success('Featured image updated');
+    queryClient.invalidateQueries({ queryKey: ['admin-product', id] });
+  };
 
   if (isEditing && isLoading) return <p className="text-muted-foreground">Loading…</p>;
 
@@ -477,6 +491,32 @@ const AdminProductForm = () => {
       }} />
     );
   };
+
+  // Reusable attribution dropdown component
+  const AttributionSelect = ({ name, label }: { name: keyof FormValues; label: string }) => (
+    <FormField control={form.control} name={name} render={({ field }) => (
+      <FormItem>
+        <FormLabel>{label}</FormLabel>
+        <Select
+          onValueChange={(val) => field.onChange(val === '__none' ? null : val)}
+          value={field.value ?? '__none'}
+        >
+          <FormControl>
+            <SelectTrigger>
+              <SelectValue placeholder="Select attribution" />
+            </SelectTrigger>
+          </FormControl>
+          <SelectContent>
+            <SelectItem value="__none">None</SelectItem>
+            {ATTRIBUTION_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <FormMessage />
+      </FormItem>
+    )} />
+  );
 
   return (
     <div className="max-w-4xl">
@@ -558,21 +598,15 @@ const AdminProductForm = () => {
             <p className="text-sm text-muted-foreground">Attribution precedes the name, e.g. "by", "in the style of", "attributed to"</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <ComboboxField name="designer_id" label="Designer" options={taxonomy.designers} />
-              <FormField control={form.control} name="designer_attribution" render={({ field }) => (
-                <FormItem><FormLabel>Designer Attribution</FormLabel><FormControl><Input placeholder="e.g. by, attributed to" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-              )} />
+              <AttributionSelect name="designer_attribution" label="Designer Attribution" />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <ComboboxField name="maker_id" label="Maker" options={taxonomy.makers} />
-              <FormField control={form.control} name="maker_attribution" render={({ field }) => (
-                <FormItem><FormLabel>Maker Attribution</FormLabel><FormControl><Input placeholder="e.g. by, in the style of" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-              )} />
+              <AttributionSelect name="maker_attribution" label="Maker Attribution" />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <ComboboxField name="period_id" label="Period" options={taxonomy.periods} />
-              <FormField control={form.control} name="period_attribution" render={({ field }) => (
-                <FormItem><FormLabel>Period Attribution</FormLabel><FormControl><Input placeholder="e.g. from the, circa" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-              )} />
+              <AttributionSelect name="period_attribution" label="Period Attribution" />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <ComboboxField name="category_id" label="Category" options={taxonomy.categories} />
