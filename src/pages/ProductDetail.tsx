@@ -137,13 +137,13 @@ const ProductDetail = () => {
               </div>
             )}
             <h1 className="font-display text-2xl md:text-3xl tracking-wide text-foreground mb-2">{product.name}</h1>
-            {product.designer && (
+         {product.designer && (
   <div className="mb-2">
     <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-0.5">designer</p>
     <p className="text-base text-foreground">
       {product.designer_attribution && (
         <span className="italic text-muted-foreground mr-1">{product.designer_attribution}</span>
-      )}
+      )}{' '}
       <Link to={`/designer/${product.designer.slug}`} className="hover:text-primary transition-colors">
         {product.designer.name}
       </Link>
@@ -156,7 +156,7 @@ const ProductDetail = () => {
     <p className="text-base text-foreground">
       {product.maker_attribution && (
         <span className="italic text-muted-foreground mr-1">{product.maker_attribution}</span>
-      )}
+      )}{' '}
       <Link to={`/maker/${product.maker.slug}`} className="hover:text-primary transition-colors">
         {product.maker.name}
       </Link>
@@ -169,24 +169,10 @@ const ProductDetail = () => {
     <p className="text-base text-foreground">
       {product.period_attribution && (
         <span className="italic text-muted-foreground mr-1">{product.period_attribution}</span>
-      )}
+      )}{' '}
       <span>{product.period.name}</span>
     </p>
   </div>
-)}
-    <Link to={`/maker/${product.maker.slug}`} className="hover:text-primary transition-colors">
-      {product.maker.name}
-    </Link>
-  </p>
-)}
-{product.period && (
-  <p className="text-muted-foreground text-base mb-1">
-    Period:{' '}
-    {product.period_attribution && (
-      <span className="italic mr-1">{product.period_attribution}</span>
-    )}
-    <span>{product.period.name}</span>
-  </p>
 )}
 {product.price && product.status !== 'at_auction' && (
               <p className="font-display text-xl md:text-2xl text-muted-foreground mt-4">
