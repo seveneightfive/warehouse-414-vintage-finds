@@ -17,6 +17,7 @@ import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminProducts from "./pages/admin/AdminProducts";
 import AdminProductForm from "./pages/admin/AdminProductForm";
+import AdminInventory from "./pages/admin/AdminInventory";
 import AdminCrudList from "./pages/admin/AdminCrudList";
 import AdminCategoryManager from "./pages/admin/AdminCategoryManager";
 import AdminCollections from "./pages/admin/AdminCollections";
@@ -57,7 +58,7 @@ const App = () => (
               <Route path="products" element={<AdminProducts />} />
               <Route path="products/new" element={<AdminProductForm />} />
               <Route path="products/:id" element={<AdminProductForm />} />
-              <Route path="/admin/inventory" element={<AdminInventory />} />
+              <Route path="inventory" element={<AdminInventory />} />
               <Route path="holds" element={<AdminHolds />} />
               <Route path="consignors" element={<AdminConsignors />} />
               <Route path="consignors/:id" element={<AdminConsignorDetail />} />
