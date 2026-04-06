@@ -9,28 +9,67 @@ import firstdibsLogo from '@/assets/1stdibs-logo.png';
 import ebayLogo from '@/assets/ebay-logo.png';
 import chairishLogo from '@/assets/chairish-logo.png';
 
+// ─── Helper: render an attribution prefix ────────────────────────────────────
+const Attribution = ({ type }: { type?: string | null }) =>
+  type && type !== 'by' ? (
+    <span className="italic text-muted-foreground mr-1">{type}</span>
+  ) : null;
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 const ProductDetail = () => {
   const { slug } = useParams();
   const { data: product, isLoading } = useProduct(slug);
-  const { data: similar } = useSimilarProducts(product?.id, product?.category_id);
-  const { data: designerProductsRaw } = useProducts(product?.designer_id ? { designer_id: product.designer_id } : undefined);
-  const { data: makerProductsRaw } = useProducts(product?.maker_id ? { maker_id: product.maker_id } : undefined);
-  const designerProducts = designerProductsRaw?.filter(p => p.id !== product?.id);
-  const makerProducts = makerProductsRaw?.filter(p => p.id !== product?.id);
+
+  // Collect all category IDs this product belongs to (for similar products)
+  const categoryIds = product?.product_categories?.map(
+    (pc: any) => pc.category?.id,
+  ).filter(Boolean) ?? [];
+
+  // Collect all designer + maker IDs for "more by" sections
+  const designerIds = product?.product_designers?.map((pd: any) => pd.designer?.id).filter(Boolean) ?? [];
+  const makerIds    = product?.product_makers?.map((pm: any) => pm.maker?.id).filter(Boolean) ?? [];
+
+  // "More by" — use the first designer/maker for the section (most common case)
+  // If a product has multiple, we only show one "more by" section to keep the page clean
+  const primaryDesignerId = designerIds[0];
+  const primaryMakerId    = makerIds[0];
+  const primaryDesignerName = product?.product_designers?.[0]?.designer?.name;
+  const primaryMakerName    = product?.product_makers?.[0]?.maker?.name;
+
+  const { data: designerProductsRaw } = useProducts(
+    primaryDesignerId ? { designer_id: primaryDesignerId } : undefined,
+  );
+  const { data: makerProductsRaw } = useProducts(
+    primaryMakerId ? { maker_id: primaryMakerId } : undefined,
+  );
+
+  const designerProducts = designerProductsRaw?.filter((p) => p.id !== product?.id);
+  const makerProducts    = makerProductsRaw?.filter((p) => p.id !== product?.id);
+
+  const { data: similar } = useSimilarProducts(product?.id, categoryIds);
+
   const [selectedImage, setSelectedImage] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
   const touchStart = useRef<number | null>(null);
 
-  const images = product?.product_images?.sort((a, b) => a.sort_order - b.sort_order) || [];
-  const allImages = images.length > 0 ? images : (product?.featured_image_url ? [{ id: 'featured', image_url: product.featured_image_url, sort_order: 0, alt_text: null, product_id: '', created_at: '' }] : []);
+  const images = product?.product_images?.sort(
+    (a: any, b: any) => a.sort_order - b.sort_order,
+  ) || [];
+  const allImages =
+    images.length > 0
+      ? images
+      : product?.featured_image_url
+        ? [{ id: 'featured', image_url: product.featured_image_url, sort_order: 0, alt_text: null, product_id: '', created_at: '' }]
+        : [];
   const currentImage = allImages[selectedImage];
 
   const goNext = useCallback(() => {
-    if (allImages.length > 1) setSelectedImage(i => (i + 1) % allImages.length);
+    if (allImages.length > 1) setSelectedImage((i) => (i + 1) % allImages.length);
   }, [allImages.length]);
   const goPrev = useCallback(() => {
-    if (allImages.length > 1) setSelectedImage(i => (i - 1 + allImages.length) % allImages.length);
+    if (allImages.length > 1) setSelectedImage((i) => (i - 1 + allImages.length) % allImages.length);
   }, [allImages.length]);
 
   const onTouchStart = (e: React.TouchEvent) => { touchStart.current = e.touches[0].clientX; };
@@ -41,6 +80,7 @@ const ProductDetail = () => {
     touchStart.current = null;
   };
 
+  // ── Loading / not found ────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <div className="container mx-auto px-5 py-12">
@@ -56,10 +96,24 @@ const ProductDetail = () => {
   }
 
   if (!product) {
-    return <div className="container mx-auto px-5 py-20 text-center text-muted-foreground">Product not found.</div>;
+    return (
+      <div className="container mx-auto px-5 py-20 text-center text-muted-foreground">
+        Product not found.
+      </div>
+    );
   }
 
   const hasDimensions = product.product_dimensions || product.box_dimensions;
+
+  // ── Detail rows (bottom table) ─────────────────────────────────────────────
+  // Categories: show all, primary first
+  const sortedCategories = [...(product.product_categories ?? [])].sort(
+    (a: any, b: any) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0),
+  );
+  const categoryLabel = sortedCategories
+    .map((pc: any) => pc.subcategory?.name ?? pc.category?.name)
+    .filter(Boolean)
+    .join(', ');
 
   const detailRows = [
     product.sku && { label: 'SKU', value: product.sku },
@@ -68,15 +122,17 @@ const ProductDetail = () => {
     product.year_created && { label: 'YEAR', value: `c. ${product.year_created}` },
     product.period && { label: 'PERIOD', value: product.period.name },
     product.country && { label: 'COUNTRY', value: product.country.name },
-    product.category && { label: 'CATEGORY', value: product.category.name },
+    categoryLabel && { label: 'CATEGORY', value: categoryLabel },
     product.style && { label: 'STYLE', value: product.style.name },
   ].filter(Boolean) as { label: string; value: string }[];
 
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="pb-24 overflow-x-hidden">
       {/* Hero: Gallery + Basic Info */}
       <div className="container mx-auto px-5 py-6 md:py-12">
         <div className="grid md:grid-cols-2 gap-6 md:gap-12">
+
           {/* Gallery */}
           <div className="w-full min-w-0 overflow-hidden">
             <div
@@ -85,9 +141,16 @@ const ProductDetail = () => {
               onTouchEnd={onTouchEnd}
             >
               {currentImage ? (
-                <img src={currentImage.image_url} alt={product.name} className="w-full h-full object-cover cursor-pointer" onClick={() => { setLightboxIndex(selectedImage); setLightboxOpen(true); }} />
+                <img
+                  src={currentImage.image_url}
+                  alt={product.name}
+                  className="w-full h-full object-cover cursor-pointer"
+                  onClick={() => { setLightboxIndex(selectedImage); setLightboxOpen(true); }}
+                />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">No Image</div>
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
+                  No Image
+                </div>
               )}
               {product.status === 'sold' && (
                 <span className="absolute top-3 left-3 bg-foreground text-background font-display text-xs tracking-[0.15em] px-3 py-1.5">sold</span>
@@ -111,11 +174,13 @@ const ProductDetail = () => {
             </div>
             {allImages.length > 1 && (
               <div className="flex gap-2 overflow-x-auto">
-                {allImages.map((img, i) => (
+                {allImages.map((img: any, i: number) => (
                   <button
                     key={img.id}
                     onClick={() => setSelectedImage(i)}
-                    className={`w-16 h-16 flex-shrink-0 rounded-sm overflow-hidden border-2 transition-colors ${i === selectedImage ? 'border-primary' : 'border-transparent'}`}
+                    className={`w-16 h-16 flex-shrink-0 rounded-sm overflow-hidden border-2 transition-colors ${
+                      i === selectedImage ? 'border-primary' : 'border-transparent'
+                    }`}
                   >
                     <img src={img.image_url} alt="" className="w-full h-full object-cover" />
                   </button>
@@ -128,53 +193,89 @@ const ProductDetail = () => {
           <div className="min-w-0">
             {product.status === 'at_auction' && (
               <div className="mb-4 border border-border bg-secondary/50 rounded-sm px-4 py-3 flex items-center gap-2">
-                <span className="font-display text-sm tracking-wide text-foreground">This item is currently at auction on Chairish</span>
+                <span className="font-display text-sm tracking-wide text-foreground">
+                  This item is currently at auction on Chairish
+                </span>
                 {(product as any).chairish_auction_url && (
-                  <a href={(product as any).chairish_auction_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-sm flex items-center gap-1">
+                  <a
+                    href={(product as any).chairish_auction_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline text-sm flex items-center gap-1"
+                  >
                     View auction <ExternalLink size={12} />
                   </a>
                 )}
               </div>
             )}
-            <h1 className="font-display text-2xl md:text-3xl tracking-wide text-foreground mb-2">{product.name}</h1>
-         {product.designer && (
-  <div className="mb-2">
-    <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-0.5">designer</p>
-    <p className="text-base text-foreground">
-      {product.designer_attribution && (
-        <span className="italic text-muted-foreground mr-1">{product.designer_attribution}</span>
-      )}{' '}
-      <Link to={`/designer/${product.designer.slug}`} className="hover:text-primary transition-colors">
-        {product.designer.name}
-      </Link>
-    </p>
-  </div>
-)}
-{product.maker && (
-  <div className="mb-2">
-    <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-0.5">maker</p>
-    <p className="text-base text-foreground">
-      {product.maker_attribution && (
-        <span className="italic text-muted-foreground mr-1">{product.maker_attribution}</span>
-      )}{' '}
-      <Link to={`/maker/${product.maker.slug}`} className="hover:text-primary transition-colors">
-        {product.maker.name}
-      </Link>
-    </p>
-  </div>
-)}
-{product.period && (
-  <div className="mb-2">
-    <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-0.5">period</p>
-    <p className="text-base text-foreground">
-      {product.period_attribution && (
-        <span className="italic text-muted-foreground mr-1">{product.period_attribution}</span>
-      )}{' '}
-      <span>{product.period.name}</span>
-    </p>
-  </div>
-)}
-{product.price && product.status !== 'at_auction' && (
+
+            <h1 className="font-display text-2xl md:text-3xl tracking-wide text-foreground mb-2">
+              {product.name}
+            </h1>
+
+            {/* ── Designers (multiple) ── */}
+            {product.product_designers && product.product_designers.length > 0 && (
+              <div className="mb-2">
+                <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-0.5">
+                  {product.product_designers.length === 1 ? 'designer' : 'designers'}
+                </p>
+                <div className="flex flex-wrap gap-x-2 gap-y-0.5">
+                  {product.product_designers.map((pd: any, i: number) => (
+                    <span key={pd.designer?.id ?? i} className="text-base text-foreground flex items-center gap-1">
+                      <Attribution type={pd.attribution_type} />
+                      {pd.designer ? (
+                        <Link to={`/designer/${pd.designer.slug}`} className="hover:text-primary transition-colors">
+                          {pd.designer.name}
+                        </Link>
+                      ) : null}
+                      {i < product.product_designers.length - 1 && (
+                        <span className="text-muted-foreground">&</span>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── Makers (multiple) ── */}
+            {product.product_makers && product.product_makers.length > 0 && (
+              <div className="mb-2">
+                <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-0.5">
+                  {product.product_makers.length === 1 ? 'maker' : 'makers'}
+                </p>
+                <div className="flex flex-wrap gap-x-2 gap-y-0.5">
+                  {product.product_makers.map((pm: any, i: number) => (
+                    <span key={pm.maker?.id ?? i} className="text-base text-foreground flex items-center gap-1">
+                      <Attribution type={pm.attribution_type} />
+                      {pm.maker ? (
+                        <Link to={`/maker/${pm.maker.slug}`} className="hover:text-primary transition-colors">
+                          {pm.maker.name}
+                        </Link>
+                      ) : null}
+                      {i < product.product_makers.length - 1 && (
+                        <span className="text-muted-foreground">&</span>
+                      )}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── Period ── */}
+            {product.period && (
+              <div className="mb-2">
+                <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-0.5">period</p>
+                <p className="text-base text-foreground">
+                  {product.period_attribution && (
+                    <span className="italic text-muted-foreground mr-1">{product.period_attribution}</span>
+                  )}{' '}
+                  <span>{product.period.name}</span>
+                </p>
+              </div>
+            )}
+
+            {/* ── Price ── */}
+            {product.price && product.status !== 'at_auction' && (
               <p className="font-display text-xl md:text-2xl text-muted-foreground mt-4">
                 {product.sale_price ? (
                   <>
@@ -186,6 +287,7 @@ const ProductDetail = () => {
                 )}
               </p>
             )}
+
             {product.short_description && (
               <div
                 className="text-base leading-relaxed text-foreground mt-4 prose prose-sm max-w-none md:pr-10"
@@ -200,13 +302,13 @@ const ProductDetail = () => {
       {(product.short_description || product.long_description) && (
         <section className="bg-secondary/50 border-t border-border">
           <div className="container mx-auto px-5 md:pr-24 py-14 md:py-20">
-            <h2 className="bg-foreground text-background font-display text-sm tracking-[0.2em] px-4 py-2 inline-block mb-8">about this piece</h2>
-            <div>
-              <div
-                className="text-lg leading-[1.9] text-foreground prose max-w-none"
-                dangerouslySetInnerHTML={{ __html: product.long_description || product.short_description || '' }}
-              />
-            </div>
+            <h2 className="bg-foreground text-background font-display text-sm tracking-[0.2em] px-4 py-2 inline-block mb-8">
+              about this piece
+            </h2>
+            <div
+              className="text-lg leading-[1.9] text-foreground prose max-w-none"
+              dangerouslySetInnerHTML={{ __html: product.long_description || product.short_description || '' }}
+            />
           </div>
         </section>
       )}
@@ -215,8 +317,12 @@ const ProductDetail = () => {
       {allImages.length > 1 && (
         <section className="container mx-auto px-5 py-8">
           <div className="flex gap-3 overflow-x-auto">
-            {allImages.map((img) => (
-              <div key={img.id} className="flex-shrink-0 w-[calc(25%-9px)] min-w-[150px] md:min-w-[200px] aspect-square overflow-hidden rounded-sm bg-muted cursor-pointer" onClick={() => { setLightboxIndex(allImages.indexOf(img)); setLightboxOpen(true); }}>
+            {allImages.map((img: any) => (
+              <div
+                key={img.id}
+                className="flex-shrink-0 w-[calc(25%-9px)] min-w-[150px] md:min-w-[200px] aspect-square overflow-hidden rounded-sm bg-muted cursor-pointer"
+                onClick={() => { setLightboxIndex(allImages.indexOf(img)); setLightboxOpen(true); }}
+              >
                 <img src={img.image_url} alt="" className="w-full h-full object-cover" />
               </div>
             ))}
@@ -230,11 +336,18 @@ const ProductDetail = () => {
           <div className="grid md:grid-cols-2 gap-6 md:gap-16">
             <div className="hidden md:block">
               {product.featured_image_url && (
-                <img src={product.featured_image_url} alt={product.name} className="w-full h-auto object-cover rounded-sm" />
+                <img
+                  src={product.featured_image_url}
+                  alt={product.name}
+                  className="w-full h-auto object-cover rounded-sm"
+                />
               )}
             </div>
             <div>
-              <h2 className="bg-foreground text-background font-display text-sm tracking-[0.2em] px-4 py-2 inline-block mb-8">product details</h2>
+              <h2 className="bg-foreground text-background font-display text-sm tracking-[0.2em] px-4 py-2 inline-block mb-8">
+                product details
+              </h2>
+
               {hasDimensions && (
                 <div className="py-4 border-b border-border">
                   <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-3">DIMENSIONS</p>
@@ -242,7 +355,7 @@ const ProductDetail = () => {
                     {product.product_dimensions && (
                       <div className={product.box_dimensions ? 'flex-1 md:pr-6' : ''}>
                         <p className="font-display text-[10px] tracking-[0.15em] text-muted-foreground mb-1.5">PRODUCT</p>
-                        {product.product_dimensions.split('\n').map((line, i) => (
+                        {product.product_dimensions.split('\n').map((line: string, i: number) => (
                           <p key={i} className="text-base text-foreground leading-relaxed">{line}</p>
                         ))}
                       </div>
@@ -256,7 +369,7 @@ const ProductDetail = () => {
                     {product.box_dimensions && (
                       <div className={product.product_dimensions ? 'flex-1 md:pl-6' : ''}>
                         <p className="font-display text-[10px] tracking-[0.15em] text-muted-foreground mb-1.5">BOXED / CRATED</p>
-                        {product.box_dimensions.split('\n').map((line, i) => (
+                        {product.box_dimensions.split('\n').map((line: string, i: number) => (
                           <p key={i} className="text-base text-foreground leading-relaxed">{line}</p>
                         ))}
                       </div>
@@ -264,6 +377,7 @@ const ProductDetail = () => {
                   </div>
                 </div>
               )}
+
               <div className="space-y-0">
                 {detailRows.map((row, i) => (
                   <div key={i} className="py-4 border-b border-border">
@@ -309,31 +423,35 @@ const ProductDetail = () => {
         <section className="container mx-auto px-5 py-16 border-t border-border">
           <h2 className="font-display text-xl tracking-[0.2em] uppercase text-foreground mb-8">similar pieces</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {similar.map((p) => (
+            {similar.map((p: any) => (
               <ProductCard key={p.id} product={p} />
             ))}
           </div>
         </section>
       )}
 
-      {/* Pieces by Designer */}
-      {designerProducts && designerProducts.length > 0 && (
+      {/* Pieces by Designer — shows primary designer only to avoid duplicate sections */}
+      {designerProducts && designerProducts.length > 0 && primaryDesignerName && (
         <section className="container mx-auto px-5 py-16 border-t border-border">
-          <h2 className="bg-foreground text-background font-display text-sm tracking-[0.2em] px-4 py-2 inline-block mb-8">pieces by {product.designer?.name}</h2>
+          <h2 className="bg-foreground text-background font-display text-sm tracking-[0.2em] px-4 py-2 inline-block mb-8">
+            pieces by {primaryDesignerName}
+          </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {designerProducts.slice(0, 4).map((p) => (
+            {designerProducts.slice(0, 4).map((p: any) => (
               <ProductCard key={p.id} product={p} />
             ))}
           </div>
         </section>
       )}
 
-      {/* Pieces by Maker */}
-      {makerProducts && makerProducts.length > 0 && (
+      {/* Pieces by Maker — only shown if different from designer section */}
+      {makerProducts && makerProducts.length > 0 && primaryMakerName && (
         <section className="container mx-auto px-5 py-16 border-t border-border">
-          <h2 className="bg-foreground text-background font-display text-sm tracking-[0.2em] px-4 py-2 inline-block mb-8">pieces by {product.maker?.name}</h2>
+          <h2 className="bg-foreground text-background font-display text-sm tracking-[0.2em] px-4 py-2 inline-block mb-8">
+            pieces by {primaryMakerName}
+          </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {makerProducts.slice(0, 4).map((p) => (
+            {makerProducts.slice(0, 4).map((p: any) => (
               <ProductCard key={p.id} product={p} />
             ))}
           </div>
@@ -343,13 +461,8 @@ const ProductDetail = () => {
       {/* Sticky Action Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-40">
         <div className="container mx-auto px-5 py-3 flex items-center gap-3">
-          {/* Spec Sheet — far left */}
           <ProductActions product={product} mode="specsheet" />
-
-          {/* Divider */}
           <div className="w-px h-6 bg-border shrink-0" />
-
-          {/* Product name + price */}
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <p className="font-display text-sm tracking-wide text-foreground truncate hidden sm:block">
               {product.name}
@@ -367,8 +480,6 @@ const ProductDetail = () => {
               </p>
             )}
           </div>
-
-          {/* Inquire / Purchase — far right */}
           <ProductActions product={product} mode="actions" />
         </div>
       </div>
