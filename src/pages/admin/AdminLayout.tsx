@@ -9,22 +9,8 @@ import {
   UserCheck, FolderOpen, Archive,
 } from 'lucide-react';
 
-const navItems = [
-  { to: '/admin',            icon: LayoutDashboard, label: 'Dashboard',   exact: true },
-  { to: '/admin/products',   icon: Package,         label: 'Products'               },
-  { to: '/admin/inventory',  icon: Archive,         label: 'Inventory'              },
-  { to: '/admin/holds',      icon: Clock,           label: 'Holds'                  },
-  { to: '/admin/consignors', icon: UserCheck,       label: 'Consignors'             },
-  { to: '/admin/offers',     icon: HandCoins,       label: 'Offers'                 },
-  { to: '/admin/inquiries',  icon: MessageSquare,   label: 'Inquiries'              },
-  { to: '/admin/designers',  icon: Users,           label: 'Designers'              },
-  { to: '/admin/makers',     icon: ShoppingBag,     label: 'Makers'                 },
-  { to: '/admin/categories', icon: Layers,          label: 'Categories'             },
-  { to: '/admin/collections',icon: FolderOpen,      label: 'Collections'            },
-  { to: '/admin/styles',     icon: Palette,         label: 'Styles'                 },
-  { to: '/admin/periods',    icon: Tag,             label: 'Periods'                },
-  { to: '/admin/countries',  icon: Globe,           label: 'Countries'              },
-];
+// Statuses that belong to the Inventory nav item
+const INVENTORY_STATUSES = new Set(['inventory', 'draft', 'deactivated']);
 
 const AdminLayout = () => {
   const { user, isAdmin, loading, signOut } = useAuth();
@@ -34,26 +20,82 @@ const AdminLayout = () => {
   if (loading) return <div className="flex items-center justify-center min-h-screen text-muted-foreground">Loading...</div>;
   if (!user || !isAdmin) return <Navigate to="/admin/login" replace />;
 
-  const isActive = (to: string, exact?: boolean) =>
-    exact ? location.pathname === to : location.pathname.startsWith(to);
+  // Parse the current status param so we can correctly highlight Products vs Inventory
+  const searchParams = new URLSearchParams(location.search);
+  const currentStatus = searchParams.get('status');
+
+  // "Products" is active when on /admin/products with NO status param,
+  // or with a products-group status (available, on_hold, at_auction, sold)
+  const isProductsActive =
+    location.pathname === '/admin/products' &&
+    (currentStatus === null || !INVENTORY_STATUSES.has(currentStatus));
+
+  // "Inventory" is active when on /admin/products with an inventory-group status,
+  // or on the /admin/inventory redirect route
+  const isInventoryActive =
+    (location.pathname === '/admin/products' && currentStatus !== null && INVENTORY_STATUSES.has(currentStatus)) ||
+    location.pathname === '/admin/inventory';
+
+  const isActive = (path: string, exact?: boolean) =>
+    exact ? location.pathname === path : location.pathname.startsWith(path);
+
+  const linkClass = (active: boolean) =>
+    `flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+      active
+        ? 'bg-primary text-primary-foreground'
+        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+    }`;
 
   const NavLinks = ({ onNavigate }: { onNavigate?: () => void }) => (
     <>
-      {navItems.map((item) => (
-        <Link
-          key={item.to}
-          to={item.to}
-          onClick={onNavigate}
-          className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
-            isActive(item.to, item.exact)
-              ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-          }`}
-        >
-          <item.icon size={16} />
-          {item.label}
-        </Link>
-      ))}
+      {/* Dashboard */}
+      <Link to="/admin" onClick={onNavigate} className={linkClass(isActive('/admin', true))}>
+        <LayoutDashboard size={16} /> Dashboard
+      </Link>
+
+      {/* Products — goes to /admin/products (defaults to available tab) */}
+      <Link to="/admin/products" onClick={onNavigate} className={linkClass(isProductsActive)}>
+        <Package size={16} /> Products
+      </Link>
+
+      {/* Inventory — goes to /admin/inventory which redirects to ?status=inventory */}
+      <Link to="/admin/inventory" onClick={onNavigate} className={linkClass(isInventoryActive)}>
+        <Archive size={16} /> Inventory
+      </Link>
+
+      <Link to="/admin/holds" onClick={onNavigate} className={linkClass(isActive('/admin/holds'))}>
+        <Clock size={16} /> Holds
+      </Link>
+      <Link to="/admin/consignors" onClick={onNavigate} className={linkClass(isActive('/admin/consignors'))}>
+        <UserCheck size={16} /> Consignors
+      </Link>
+      <Link to="/admin/offers" onClick={onNavigate} className={linkClass(isActive('/admin/offers'))}>
+        <HandCoins size={16} /> Offers
+      </Link>
+      <Link to="/admin/inquiries" onClick={onNavigate} className={linkClass(isActive('/admin/inquiries'))}>
+        <MessageSquare size={16} /> Inquiries
+      </Link>
+      <Link to="/admin/designers" onClick={onNavigate} className={linkClass(isActive('/admin/designers'))}>
+        <Users size={16} /> Designers
+      </Link>
+      <Link to="/admin/makers" onClick={onNavigate} className={linkClass(isActive('/admin/makers'))}>
+        <ShoppingBag size={16} /> Makers
+      </Link>
+      <Link to="/admin/categories" onClick={onNavigate} className={linkClass(isActive('/admin/categories'))}>
+        <Layers size={16} /> Categories
+      </Link>
+      <Link to="/admin/collections" onClick={onNavigate} className={linkClass(isActive('/admin/collections'))}>
+        <FolderOpen size={16} /> Collections
+      </Link>
+      <Link to="/admin/styles" onClick={onNavigate} className={linkClass(isActive('/admin/styles'))}>
+        <Palette size={16} /> Styles
+      </Link>
+      <Link to="/admin/periods" onClick={onNavigate} className={linkClass(isActive('/admin/periods'))}>
+        <Tag size={16} /> Periods
+      </Link>
+      <Link to="/admin/countries" onClick={onNavigate} className={linkClass(isActive('/admin/countries'))}>
+        <Globe size={16} /> Countries
+      </Link>
     </>
   );
 
