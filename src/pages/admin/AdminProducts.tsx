@@ -57,9 +57,11 @@ const AdminProducts = () => {
   const queryClient     = useQueryClient();
 
   const [searchQuery,  setSearchQuery]  = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusValue>(
-    (searchParams.get('status') as StatusValue) ?? 'available',
-  );
+  const statusFilter: StatusValue = (searchParams.get('status') as StatusValue) ?? 'available';
+const setStatusFilter = (value: StatusValue) => {
+  setSearchParams(prev => { prev.set('status', value); return prev; });
+  setPage(0);
+};
   const [page,        setPage]        = useState(0);
   const [soldProduct, setSoldProduct] = useState<Product | null>(null);
   const [holdProduct, setHoldProduct] = useState<Product | null>(null);
