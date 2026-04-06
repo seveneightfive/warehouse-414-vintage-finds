@@ -13,73 +13,82 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
-import { ArrowLeft, Save, Check, ChevronsUpDown, Upload, Loader2, Star, Trash2, Plus, X } from 'lucide-react';
+import { ArrowLeft, Save, Check, ChevronsUpDown, Upload, Loader2, Star, Trash2, Plus, X, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
+  DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent,
 } from '@dnd-kit/core';
 import {
-  SortableContext,
-  rectSortingStrategy,
-  useSortable,
-  arrayMove,
+  SortableContext, rectSortingStrategy, useSortable, arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const SOLD_ON_OPTIONS = ['1stDibs', 'Chairish', 'eBay', 'Website', 'Direct', 'Other'];
+
 const STATUS_OPTIONS = [
-  { value: 'available', label: 'Available' },
-  { value: 'on_hold', label: 'On Hold' },
-  { value: 'at_auction', label: 'At Auction' },
-  { value: 'sold', label: 'Sold' },
-  { value: 'inventory', label: 'Inventory' },
+  { value: 'available',  label: 'Available'  },
+  { value: 'on_hold',    label: 'On Hold'     },
+  { value: 'at_auction', label: 'At Auction'  },
+  { value: 'sold',       label: 'Sold'        },
+  { value: 'inventory',  label: 'Inventory'   },
+  { value: 'draft',      label: 'Draft'       },
 ];
+
 const ATTRIBUTION_OPTIONS = [
-  { value: 'by', label: 'by' },
-  { value: 'attributed to', label: 'attributed to' },
+  { value: 'by',              label: 'by'              },
+  { value: 'attributed to',   label: 'attributed to'   },
   { value: 'in the style of', label: 'in the style of' },
 ];
 
-// ─── Junction row types (local state) ────────────────────────────────────────
+// ─── Section heading — black bar full width ───────────────────────────────────
+
+const SectionHeading = ({ children }: { children: React.ReactNode }) => (
+  <div className="w-full bg-foreground px-4 py-2.5">
+    <h2 className="text-sm font-semibold tracking-[0.15em] uppercase text-background">{children}</h2>
+  </div>
+);
+
+// ─── All-caps label ───────────────────────────────────────────────────────────
+
+const FieldLabel = ({ children }: { children: React.ReactNode }) => (
+  <span className="text-[11px] font-semibold tracking-[0.1em] uppercase text-foreground/70">{children}</span>
+);
+
+// ─── Junction row types ───────────────────────────────────────────────────────
 
 type DesignerRow = { designer_id: string | null; attribution_type: string };
-type MakerRow    = { maker_id: string | null;    attribution_type: string };
-type CategoryRow = { category_id: string | null; subcategory_id: string | null };
+type MakerRow    = { maker_id:    string | null; attribution_type: string };
+type CategoryRow = { category_id: string | null; subcategory_id:  string | null };
 
-// ─── Zod schema — no longer includes designer_id/maker_id/category_id ────────
+// ─── Zod schema ───────────────────────────────────────────────────────────────
 
 const schema = z.object({
-  name: z.string().min(1, 'Name is required'),
-  sku: z.string().nullable().optional(),
-  short_description: z.string().nullable().optional(),
-  long_description: z.string().nullable().optional(),
-  price: z.coerce.number().nullable().optional(),
-  sale_price: z.coerce.number().nullable().optional(),
-  status: z.enum(['available', 'on_hold', 'sold', 'inventory', 'at_auction']).default('available'),
-  style_id: z.string().nullable().optional(),
-  period_id: z.string().nullable().optional(),
-  country_id: z.string().nullable().optional(),
-  period_attribution: z.string().nullable().optional(),
-  product_dimensions: z.string().nullable().optional(),
-  box_dimensions: z.string().nullable().optional(),
-  dimension_notes: z.string().nullable().optional(),
-  materials: z.string().nullable().optional(),
-  condition: z.string().nullable().optional(),
-  year_created: z.string().nullable().optional(),
-  tags: z.string().nullable().optional(),
-  firstdibs_url: z.string().url().nullable().optional().or(z.literal('')),
-  chairish_url: z.string().url().nullable().optional().or(z.literal('')),
-  ebay_url: z.string().url().nullable().optional().or(z.literal('')),
+  name:                 z.string().min(1, 'Name is required'),
+  sku:                  z.string().nullable().optional(),
+  short_description:    z.string().nullable().optional(),
+  long_description:     z.string().nullable().optional(),
+  price:                z.coerce.number().nullable().optional(),
+  sale_price:           z.coerce.number().nullable().optional(),
+  status:               z.enum(['available', 'on_hold', 'sold', 'inventory', 'at_auction', 'draft']).default('available'),
+  style_id:             z.string().nullable().optional(),
+  period_id:            z.string().nullable().optional(),
+  country_id:           z.string().nullable().optional(),
+  period_attribution:   z.string().nullable().optional(),
+  product_dimensions:   z.string().nullable().optional(),
+  box_dimensions:       z.string().nullable().optional(),
+  dimension_notes:      z.string().nullable().optional(),
+  materials:            z.string().nullable().optional(),
+  condition:            z.string().nullable().optional(),
+  year_created:         z.string().nullable().optional(),
+  tags:                 z.string().nullable().optional(),
+  firstdibs_url:        z.string().url().nullable().optional().or(z.literal('')),
+  chairish_url:         z.string().url().nullable().optional().or(z.literal('')),
+  ebay_url:             z.string().url().nullable().optional().or(z.literal('')),
   chairish_auction_url: z.string().url().nullable().optional().or(z.literal('')),
-  sold_on: z.string().nullable().optional(),
-  notes: z.string().nullable().optional(),
+  sold_on:              z.string().nullable().optional(),
+  notes:                z.string().nullable().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -87,85 +96,75 @@ type FormValues = z.infer<typeof schema>;
 // ─── Taxonomy hook ────────────────────────────────────────────────────────────
 
 const useTaxonomyOptions = () => {
-  const fetchTable = (table: string) => async () => {
+  const fetch = (table: string) => async () => {
     const { data, error } = await supabase.from(table).select('id, name').order('name');
     if (error) throw error;
     return data as { id: string; name: string }[];
   };
   return {
-    designers: useQuery({ queryKey: ['taxonomy-designers'], queryFn: fetchTable('designers') }).data,
-    makers:    useQuery({ queryKey: ['taxonomy-makers'],    queryFn: fetchTable('makers')    }).data,
-    categories:useQuery({ queryKey: ['taxonomy-categories'],queryFn: fetchTable('categories')}).data,
-    styles:    useQuery({ queryKey: ['taxonomy-styles'],    queryFn: fetchTable('styles')    }).data,
-    periods:   useQuery({ queryKey: ['taxonomy-periods'],   queryFn: fetchTable('periods')   }).data,
-    countries: useQuery({ queryKey: ['taxonomy-countries'], queryFn: fetchTable('countries') }).data,
+    designers:  useQuery({ queryKey: ['taxonomy-designers'],  queryFn: fetch('designers')  }).data,
+    makers:     useQuery({ queryKey: ['taxonomy-makers'],     queryFn: fetch('makers')     }).data,
+    categories: useQuery({ queryKey: ['taxonomy-categories'], queryFn: fetch('categories') }).data,
+    styles:     useQuery({ queryKey: ['taxonomy-styles'],     queryFn: fetch('styles')     }).data,
+    periods:    useQuery({ queryKey: ['taxonomy-periods'],    queryFn: fetch('periods')    }).data,
+    countries:  useQuery({ queryKey: ['taxonomy-countries'],  queryFn: fetch('countries')  }).data,
   };
 };
 
 // ─── Sortable image ───────────────────────────────────────────────────────────
 
-const SortableImage = ({
-  img, isFeatured, onSetFeatured, onDelete,
-}: {
+const SortableImage = ({ img, isFeatured, onSetFeatured, onDelete }: {
   img: { id: string; image_url: string };
   isFeatured: boolean;
   onSetFeatured: (url: string) => void;
   onDelete: (id: string, url: string) => void;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: img.id });
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 10 : undefined };
   return (
-    <div ref={setNodeRef} style={style} className="relative group cursor-grab active:cursor-grabbing">
+    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 10 : undefined }} className="relative group cursor-grab active:cursor-grabbing">
       <img src={img.image_url} alt="" className={cn('w-full aspect-square object-cover rounded-md', isFeatured ? 'border-2 border-primary' : 'border border-border')} {...attributes} {...listeners} />
       {isFeatured && <span className="absolute bottom-1 left-1 bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded">Featured</span>}
       <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         {!isFeatured && (
-          <button type="button" onClick={() => onSetFeatured(img.image_url)} className="bg-accent text-accent-foreground rounded-full p-1" title="Set as featured">
-            <Star size={14} />
-          </button>
+          <button type="button" onClick={() => onSetFeatured(img.image_url)} className="bg-accent text-accent-foreground rounded-full p-1"><Star size={14} /></button>
         )}
-        <button type="button" onClick={() => onDelete(img.id, img.image_url)} className="bg-destructive text-destructive-foreground rounded-full p-1" title="Delete image">
-          <Trash2 size={14} />
-        </button>
+        <button type="button" onClick={() => onDelete(img.id, img.image_url)} className="bg-destructive text-destructive-foreground rounded-full p-1"><Trash2 size={14} /></button>
       </div>
     </div>
   );
 };
 
-// ─── Inline combobox (not a FormField — used in junction row UIs) ─────────────
+// ─── Inline combobox ─────────────────────────────────────────────────────────
 
-const InlineCombobox = ({
-  value, onChange, options, placeholder,
-}: {
+const InlineCombobox = ({ value, onChange, options, placeholder, className }: {
   value: string | null;
   onChange: (id: string | null) => void;
   options?: { id: string; name: string }[];
   placeholder: string;
+  className?: string;
 }) => {
   const [open, setOpen] = useState(false);
   const selectedName = options?.find((o) => o.id === value)?.name;
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" role="combobox" className={cn('justify-between font-normal flex-1 min-w-0', !value && 'text-muted-foreground')}>
+        <Button variant="outline" role="combobox" className={cn('justify-between font-normal min-w-0', !value && 'text-muted-foreground', className)}>
           <span className="truncate">{selectedName || placeholder}</span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-72 p-0">
         <Command>
-          <CommandInput placeholder={`Search…`} />
+          <CommandInput placeholder="Search…" />
           <CommandList>
             <CommandEmpty>No results.</CommandEmpty>
             <CommandGroup>
               <CommandItem value="__none" onSelect={() => { onChange(null); setOpen(false); }}>
-                <Check className={cn('mr-2 h-4 w-4', !value ? 'opacity-100' : 'opacity-0')} />
-                None
+                <Check className={cn('mr-2 h-4 w-4', !value ? 'opacity-100' : 'opacity-0')} /> None
               </CommandItem>
               {options?.map((o) => (
                 <CommandItem key={o.id} value={o.name} onSelect={() => { onChange(o.id); setOpen(false); }}>
-                  <Check className={cn('mr-2 h-4 w-4', value === o.id ? 'opacity-100' : 'opacity-0')} />
-                  {o.name}
+                  <Check className={cn('mr-2 h-4 w-4', value === o.id ? 'opacity-100' : 'opacity-0')} /> {o.name}
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -176,39 +175,22 @@ const InlineCombobox = ({
   );
 };
 
-// ─── SubcategoryCombobox — fetches based on category_id ──────────────────────
+// ─── Subcategory combobox ─────────────────────────────────────────────────────
 
-const SubcategoryCombobox = ({
-  categoryId, value, onChange,
-}: {
-  categoryId: string;
-  value: string | null;
-  onChange: (id: string | null) => void;
+const SubcategoryCombobox = ({ categoryId, value, onChange }: {
+  categoryId: string; value: string | null; onChange: (id: string | null) => void;
 }) => {
-  const { data: subcategories } = useQuery({
+  const { data } = useQuery({
     queryKey: ['taxonomy-subcategories', categoryId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('subcategories')
-        .select('id, name')
-        .eq('category_id', categoryId)
-        .order('name');
+      const { data, error } = await supabase.from('subcategories').select('id, name').eq('category_id', categoryId).order('name');
       if (error) throw error;
       return data as { id: string; name: string }[];
     },
     enabled: !!categoryId,
   });
-
-  if (!subcategories || subcategories.length === 0) return null;
-
-  return (
-    <InlineCombobox
-      value={value}
-      onChange={onChange}
-      options={subcategories}
-      placeholder="Subcategory (optional)"
-    />
-  );
+  if (!data || data.length === 0) return null;
+  return <InlineCombobox value={value} onChange={onChange} options={data} placeholder="Subcategory (optional)" className="flex-1" />;
 };
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -220,24 +202,18 @@ const AdminProductForm = () => {
   const isEditing = !!id;
   const taxonomy = useTaxonomyOptions();
 
-  // ── Junction state ──────────────────────────────────────────────────────────
-  const [designers, setDesigners] = useState<DesignerRow[]>([{ designer_id: null, attribution_type: 'by' }]);
-  const [makers,    setMakers]    = useState<MakerRow[]>([{ maker_id: null, attribution_type: 'by' }]);
+  const [designers,  setDesigners]  = useState<DesignerRow[]>([{ designer_id: null, attribution_type: 'by' }]);
+  const [makers,     setMakers]     = useState<MakerRow[]>([{ maker_id: null, attribution_type: 'by' }]);
   const [categories, setCategories] = useState<CategoryRow[]>([{ category_id: null, subcategory_id: null }]);
 
-  // ── Form ────────────────────────────────────────────────────────────────────
-  const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: { name: '', status: 'available' },
-  });
-
+  const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { name: '', status: 'available' } });
   const draftKey = `product-draft-${id ?? 'new'}`;
 
   useEffect(() => {
-    const subscription = form.watch((values) => {
+    const sub = form.watch((values) => {
       localStorage.setItem(draftKey, JSON.stringify({ form: values, designers, makers, categories }));
     });
-    return () => subscription.unsubscribe();
+    return () => sub.unsubscribe();
   }, [form, draftKey, designers, makers, categories]);
 
   useEffect(() => {
@@ -245,11 +221,11 @@ const AdminProductForm = () => {
     const saved = localStorage.getItem(draftKey);
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        form.reset(parsed.form ?? parsed);
-        if (parsed.designers) setDesigners(parsed.designers);
-        if (parsed.makers)    setMakers(parsed.makers);
-        if (parsed.categories) setCategories(parsed.categories);
+        const p = JSON.parse(saved);
+        form.reset(p.form ?? p);
+        if (p.designers)  setDesigners(p.designers);
+        if (p.makers)     setMakers(p.makers);
+        if (p.categories) setCategories(p.categories);
         toast.info('Draft restored', { description: 'Your unsaved changes were recovered.' });
       } catch {}
     }
@@ -257,28 +233,17 @@ const AdminProductForm = () => {
 
   const watchStatus = form.watch('status');
   const auctionUrlRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
-    if (watchStatus === 'at_auction') {
-      setTimeout(() => auctionUrlRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
-    }
+    if (watchStatus === 'at_auction') setTimeout(() => auctionUrlRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
   }, [watchStatus]);
 
-  // ── Load existing product ───────────────────────────────────────────────────
+  // Load existing product
   const { data: product, isLoading } = useQuery({
     queryKey: ['admin-product', id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          *,
-          product_images(id, image_url, sort_order),
-          product_designers(designer_id, attribution_type),
-          product_makers(maker_id, attribution_type),
-          product_categories(category_id, subcategory_id, is_primary)
-        `)
-        .eq('id', id!)
-        .single();
+      const { data, error } = await supabase.from('products')
+        .select(`*, product_images(id, image_url, sort_order), product_designers(designer_id, attribution_type), product_makers(maker_id, attribution_type), product_categories(category_id, subcategory_id, is_primary)`)
+        .eq('id', id!).single();
       if (error) throw error;
       return data;
     },
@@ -287,8 +252,6 @@ const AdminProductForm = () => {
 
   useEffect(() => {
     if (!product) return;
-
-    // Reset main form fields
     const values: Partial<FormValues> = {};
     for (const key of Object.keys(schema.shape)) {
       (values as Record<string, unknown>)[key] = (product as Record<string, unknown>)[key] ?? '';
@@ -299,139 +262,105 @@ const AdminProductForm = () => {
     values.tags = Array.isArray(rawTags) ? (rawTags as string[]).join(', ') : '';
     form.reset(values as FormValues);
 
-    // Populate junction state from DB
-    const dbDesigners: DesignerRow[] = (product as any).product_designers?.map((r: any) => ({
-      designer_id: r.designer_id,
-      attribution_type: r.attribution_type || 'by',
-    })) ?? [];
-    setDesigners(dbDesigners.length > 0 ? dbDesigners : [{ designer_id: null, attribution_type: 'by' }]);
+    const dbD: DesignerRow[] = (product as any).product_designers?.map((r: any) => ({ designer_id: r.designer_id, attribution_type: r.attribution_type || 'by' })) ?? [];
+    setDesigners(dbD.length > 0 ? dbD : [{ designer_id: null, attribution_type: 'by' }]);
 
-    const dbMakers: MakerRow[] = (product as any).product_makers?.map((r: any) => ({
-      maker_id: r.maker_id,
-      attribution_type: r.attribution_type || 'by',
-    })) ?? [];
-    setMakers(dbMakers.length > 0 ? dbMakers : [{ maker_id: null, attribution_type: 'by' }]);
+    const dbM: MakerRow[] = (product as any).product_makers?.map((r: any) => ({ maker_id: r.maker_id, attribution_type: r.attribution_type || 'by' })) ?? [];
+    setMakers(dbM.length > 0 ? dbM : [{ maker_id: null, attribution_type: 'by' }]);
 
-    const dbCats: CategoryRow[] = [...((product as any).product_categories ?? [])]
+    const dbC: CategoryRow[] = [...((product as any).product_categories ?? [])]
       .sort((a: any, b: any) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0))
       .map((r: any) => ({ category_id: r.category_id, subcategory_id: r.subcategory_id ?? null }));
-    setCategories(dbCats.length > 0 ? dbCats : [{ category_id: null, subcategory_id: null }]);
+    setCategories(dbC.length > 0 ? dbC : [{ category_id: null, subcategory_id: null }]);
   }, [product, form]);
 
-  // ── Slug helpers ────────────────────────────────────────────────────────────
   const generateSlug = (name: string) =>
     name.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-
-  const ensureUniqueSlug = async (slug: string): Promise<string> => {
+  const ensureUniqueSlug = async (slug: string) => {
     const { data } = await supabase.from('products').select('id').eq('slug', slug).maybeSingle();
-    if (data) return `${slug}-${Math.floor(1000 + Math.random() * 9000)}`;
-    return slug;
+    return data ? `${slug}-${Math.floor(1000 + Math.random() * 9000)}` : slug;
   };
 
-  // ── Save mutation ───────────────────────────────────────────────────────────
+  // Core save — shared by both buttons
+  const performSave = async (values: FormValues, overrideStatus?: string) => {
+    const payload: Record<string, unknown> = { ...values };
+    if (overrideStatus) payload.status = overrideStatus;
+    if (typeof payload.tags === 'string' && payload.tags) {
+      payload.tags = (payload.tags as string).split(',').map((t: string) => t.trim()).filter(Boolean);
+    }
+    for (const [k, v] of Object.entries(payload)) if (v === '' || v === undefined) payload[k] = null;
+    const validAttr = ['by', 'attributed to', 'in the style of'];
+    if (!validAttr.includes(payload.period_attribution as string)) payload.period_attribution = null;
+
+    const firstD = designers.find((d) => d.designer_id);
+    const firstM = makers.find((m) => m.maker_id);
+    const firstC = categories.find((c) => c.category_id);
+    payload.designer_id          = firstD?.designer_id ?? null;
+    payload.designer_attribution = firstD?.attribution_type ?? null;
+    payload.maker_id             = firstM?.maker_id ?? null;
+    payload.maker_attribution    = firstM?.attribution_type ?? null;
+    payload.category_id          = firstC?.category_id ?? null;
+    payload.subcategory_id       = firstC?.subcategory_id ?? null;
+
+    if (!isEditing && values.name) payload.slug = await ensureUniqueSlug(generateSlug(values.name));
+
+    let productId: string;
+    if (isEditing) {
+      const { error } = await supabase.from('products').update(payload).eq('id', id!);
+      if (error) throw error;
+      productId = id!;
+    } else {
+      const { data, error } = await supabase.from('products').insert(payload).select('id').single();
+      if (error) throw error;
+      productId = data.id;
+    }
+
+    await supabase.from('product_designers').delete().eq('product_id', productId);
+    const vD = designers.filter((d) => d.designer_id);
+    if (vD.length > 0) {
+      const { error } = await supabase.from('product_designers').insert(vD.map((d) => ({ product_id: productId, designer_id: d.designer_id, attribution_type: d.attribution_type || 'by' })));
+      if (error) throw error;
+    }
+
+    await supabase.from('product_makers').delete().eq('product_id', productId);
+    const vM = makers.filter((m) => m.maker_id);
+    if (vM.length > 0) {
+      const { error } = await supabase.from('product_makers').insert(vM.map((m) => ({ product_id: productId, maker_id: m.maker_id, attribution_type: m.attribution_type || 'by' })));
+      if (error) throw error;
+    }
+
+    await supabase.from('product_categories').delete().eq('product_id', productId);
+    const vC = categories.filter((c) => c.category_id);
+    if (vC.length > 0) {
+      const { error } = await supabase.from('product_categories').insert(vC.map((c, i) => ({ product_id: productId, category_id: c.category_id, subcategory_id: c.subcategory_id ?? null, is_primary: i === 0 })));
+      if (error) throw error;
+    }
+
+    return productId;
+  };
+
+  const onSuccess = (newId: string, statusLabel: string) => {
+    queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-product', newId] });
+    localStorage.removeItem(draftKey);
+    toast.success(statusLabel);
+    if (isEditing) navigate(`/admin/products?highlight=${id}&status=${form.getValues('status')}`);
+    else navigate(`/admin/products/${newId}`);
+  };
+
   const saveMutation = useMutation({
-    mutationFn: async (values: FormValues) => {
-      // Build product payload
-      const payload: Record<string, unknown> = { ...values };
-      if (typeof payload.tags === 'string' && payload.tags) {
-        payload.tags = (payload.tags as string).split(',').map((t: string) => t.trim()).filter(Boolean);
-      }
-      for (const [k, v] of Object.entries(payload)) {
-        if (v === '' || v === undefined) payload[k] = null;
-      }
-      const validAttributions = ['by', 'attributed to', 'in the style of'];
-      if (!validAttributions.includes(payload.period_attribution as string)) payload.period_attribution = null;
-
-      // Write legacy single-value columns for backwards compat
-      // Use the first valid entry from each junction list
-      const firstDesigner = designers.find((d) => d.designer_id);
-      const firstMaker    = makers.find((m) => m.maker_id);
-      const firstCategory = categories.find((c) => c.category_id);
-      payload.designer_id          = firstDesigner?.designer_id ?? null;
-      payload.designer_attribution = firstDesigner?.attribution_type ?? null;
-      payload.maker_id             = firstMaker?.maker_id ?? null;
-      payload.maker_attribution    = firstMaker?.attribution_type ?? null;
-      payload.category_id          = firstCategory?.category_id ?? null;
-      payload.subcategory_id       = firstCategory?.subcategory_id ?? null;
-
-      if (!isEditing && values.name) {
-        payload.slug = await ensureUniqueSlug(generateSlug(values.name));
-      }
-
-      let productId: string;
-
-      if (isEditing) {
-        const { error } = await supabase.from('products').update(payload).eq('id', id!);
-        if (error) throw error;
-        productId = id!;
-      } else {
-        const { data, error } = await supabase.from('products').insert(payload).select('id').single();
-        if (error) throw error;
-        productId = data.id;
-      }
-
-      // ── Sync junction tables (delete-all-then-reinsert) ───────────────────
-
-      // Designers
-      await supabase.from('product_designers').delete().eq('product_id', productId);
-      const validDesigners = designers.filter((d) => d.designer_id);
-      if (validDesigners.length > 0) {
-        const { error } = await supabase.from('product_designers').insert(
-          validDesigners.map((d) => ({
-            product_id: productId,
-            designer_id: d.designer_id,
-            attribution_type: d.attribution_type || 'by',
-          }))
-        );
-        if (error) throw error;
-      }
-
-      // Makers
-      await supabase.from('product_makers').delete().eq('product_id', productId);
-      const validMakers = makers.filter((m) => m.maker_id);
-      if (validMakers.length > 0) {
-        const { error } = await supabase.from('product_makers').insert(
-          validMakers.map((m) => ({
-            product_id: productId,
-            maker_id: m.maker_id,
-            attribution_type: m.attribution_type || 'by',
-          }))
-        );
-        if (error) throw error;
-      }
-
-      // Categories
-      await supabase.from('product_categories').delete().eq('product_id', productId);
-      const validCategories = categories.filter((c) => c.category_id);
-      if (validCategories.length > 0) {
-        const { error } = await supabase.from('product_categories').insert(
-          validCategories.map((c, i) => ({
-            product_id: productId,
-            category_id: c.category_id,
-            subcategory_id: c.subcategory_id ?? null,
-            is_primary: i === 0,
-          }))
-        );
-        if (error) throw error;
-      }
-
-      return productId;
-    },
-    onSuccess: (newId) => {
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-product', newId] });
-      localStorage.removeItem(`product-draft-${id ?? 'new'}`);
-      toast.success(isEditing ? 'Product updated' : 'Product created');
-      if (isEditing) {
-        navigate(`/admin/products?highlight=${id}&status=${form.getValues('status')}`);
-      } else {
-        navigate(`/admin/products/${newId}`);
-      }
-    },
+    mutationFn: (v: FormValues) => performSave(v),
+    onSuccess: (id) => onSuccess(id, isEditing ? 'Product updated' : 'Product created'),
     onError: (err: Error) => toast.error(err.message),
   });
 
-  // ── Images ──────────────────────────────────────────────────────────────────
+  const draftMutation = useMutation({
+    mutationFn: (v: FormValues) => performSave(v, 'draft'),
+    onSuccess: (id) => onSuccess(id, 'Saved as draft'),
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  // Images
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -439,13 +368,12 @@ const AdminProductForm = () => {
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id || !product?.product_images) return;
-    const oldIndex = product.product_images.findIndex((img: any) => img.id === active.id);
-    const newIndex = product.product_images.findIndex((img: any) => img.id === over.id);
-    const reordered = arrayMove(product.product_images, oldIndex, newIndex);
-    await Promise.all(reordered.map((img: any, index: number) => supabase.from('product_images').update({ sort_order: index }).eq('id', img.id)));
-    if (reordered[0]?.image_url !== product.featured_image_url) {
+    const reordered = arrayMove(product.product_images,
+      product.product_images.findIndex((img: any) => img.id === active.id),
+      product.product_images.findIndex((img: any) => img.id === over.id));
+    await Promise.all(reordered.map((img: any, i: number) => supabase.from('product_images').update({ sort_order: i }).eq('id', img.id)));
+    if (reordered[0]?.image_url !== product.featured_image_url)
       await supabase.from('products').update({ featured_image_url: reordered[0].image_url }).eq('id', product.id);
-    }
     queryClient.invalidateQueries({ queryKey: ['admin-product', id] });
   };
 
@@ -455,18 +383,14 @@ const AdminProductForm = () => {
     if (!sku) { toast.error('Product must have a SKU before uploading images'); return; }
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) { toast.error('Not authenticated'); return; }
-    const currentImages = product?.product_images || [];
-    let nextSort = currentImages.length;
+    let nextSort = (product?.product_images || []).length;
     for (const file of Array.from(files)) {
       const tempId = `${file.name}-${Date.now()}`;
       setUploadingFiles((prev) => [...prev, tempId]);
       try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('productId', id);
-        formData.append('sku', sku);
-        formData.append('sort_order', String(nextSort));
-        const res = await supabase.functions.invoke('upload-product-images', { body: formData });
+        const fd = new FormData();
+        fd.append('file', file); fd.append('productId', id); fd.append('sku', sku); fd.append('sort_order', String(nextSort));
+        const res = await supabase.functions.invoke('upload-product-images', { body: fd });
         if (res.error) throw new Error(res.error.message);
         nextSort++;
       } catch (err: unknown) {
@@ -482,9 +406,7 @@ const AdminProductForm = () => {
   const deleteImage = async (imageId: string, imageUrl: string) => {
     const { error } = await supabase.from('product_images').delete().eq('id', imageId);
     if (error) { toast.error('Delete failed', { description: error.message }); return; }
-    if (product?.featured_image_url === imageUrl) {
-      await supabase.from('products').update({ featured_image_url: null }).eq('id', product.id);
-    }
+    if (product?.featured_image_url === imageUrl) await supabase.from('products').update({ featured_image_url: null }).eq('id', product.id);
     toast.success('Image deleted');
     queryClient.invalidateQueries({ queryKey: ['admin-product', id] });
   };
@@ -493,10 +415,10 @@ const AdminProductForm = () => {
     const { error } = await supabase.from('products').update({ featured_image_url: imageUrl }).eq('id', product.id);
     if (error) { toast.error('Failed to set featured image', { description: error.message }); return; }
     const images = [...(product.product_images ?? [])].sort((a: any, b: any) => a.sort_order - b.sort_order);
-    const featuredIndex = images.findIndex((img: any) => img.image_url === imageUrl);
-    if (featuredIndex > 0) {
-      const reordered = arrayMove(images, featuredIndex, 0);
-      await Promise.all(reordered.map((img: any, index: number) => supabase.from('product_images').update({ sort_order: index }).eq('id', img.id)));
+    const idx = images.findIndex((img: any) => img.image_url === imageUrl);
+    if (idx > 0) {
+      const reordered = arrayMove(images, idx, 0);
+      await Promise.all(reordered.map((img: any, i: number) => supabase.from('product_images').update({ sort_order: i }).eq('id', img.id)));
     }
     toast.success('Featured image updated');
     queryClient.invalidateQueries({ queryKey: ['admin-product', id] });
@@ -504,9 +426,7 @@ const AdminProductForm = () => {
 
   if (isEditing && isLoading) return <p className="text-muted-foreground">Loading…</p>;
 
-  // ── Shared sub-components ───────────────────────────────────────────────────
-
-  /** FormField combobox — for fields still on the product row (period, style etc.) */
+  // Shared FormField combobox
   const ComboboxField = ({ name, label, options }: { name: keyof FormValues; label: string; options?: { id: string; name: string }[] }) => {
     const [open, setOpen] = useState(false);
     return (
@@ -514,7 +434,7 @@ const AdminProductForm = () => {
         const selectedName = options?.find((o) => o.id === field.value)?.name;
         return (
           <FormItem className="flex flex-col">
-            <FormLabel>{label}</FormLabel>
+            <FormLabel><FieldLabel>{label}</FieldLabel></FormLabel>
             <Popover open={open} onOpenChange={setOpen}>
               <PopoverTrigger asChild>
                 <FormControl>
@@ -531,13 +451,11 @@ const AdminProductForm = () => {
                     <CommandEmpty>No results.</CommandEmpty>
                     <CommandGroup>
                       <CommandItem value="__none" onSelect={() => { field.onChange(null); setOpen(false); }}>
-                        <Check className={cn('mr-2 h-4 w-4', !field.value ? 'opacity-100' : 'opacity-0')} />
-                        None
+                        <Check className={cn('mr-2 h-4 w-4', !field.value ? 'opacity-100' : 'opacity-0')} /> None
                       </CommandItem>
                       {options?.map((o) => (
                         <CommandItem key={o.id} value={o.name} onSelect={() => { field.onChange(o.id); setOpen(false); }}>
-                          <Check className={cn('mr-2 h-4 w-4', field.value === o.id ? 'opacity-100' : 'opacity-0')} />
-                          {o.name}
+                          <Check className={cn('mr-2 h-4 w-4', field.value === o.id ? 'opacity-100' : 'opacity-0')} /> {o.name}
                         </CommandItem>
                       ))}
                     </CommandGroup>
@@ -555,7 +473,7 @@ const AdminProductForm = () => {
   const AttributionSelect = ({ name, label }: { name: keyof FormValues; label: string }) => (
     <FormField control={form.control} name={name} render={({ field }) => (
       <FormItem>
-        <FormLabel>{label}</FormLabel>
+        <FormLabel><FieldLabel>{label}</FieldLabel></FormLabel>
         <Select onValueChange={(val) => field.onChange(val === '__none' ? null : val)} value={field.value ?? '__none'}>
           <FormControl><SelectTrigger><SelectValue placeholder="Select attribution" /></SelectTrigger></FormControl>
           <SelectContent>
@@ -568,7 +486,8 @@ const AdminProductForm = () => {
     )} />
   );
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  const isBusy = saveMutation.isPending || draftMutation.isPending;
+
   return (
     <div className="max-w-4xl">
       <div className="flex items-center gap-3 mb-8">
@@ -581,27 +500,32 @@ const AdminProductForm = () => {
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit((v) => saveMutation.mutate(v))} className="space-y-10">
+        <form onSubmit={form.handleSubmit((v) => saveMutation.mutate(v))} className="space-y-0">
 
-          {/* ── Basic Info ── */}
-          <section className="space-y-4">
-            <h2 className="text-lg font-semibold text-foreground border-b border-border pb-2">Basic Info</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FormField control={form.control} name="name" render={({ field }) => (
-                <FormItem className="md:col-span-3"><FormLabel>Name *</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
+          {/* ── BASIC INFO ── */}
+          <section className="pb-8 space-y-4">
+            <SectionHeading>Basic Info</SectionHeading>
+
+            <FormField control={form.control} name="name" render={({ field }) => (
+              <FormItem>
+                <FormLabel><FieldLabel>Name *</FieldLabel></FormLabel>
+                <FormControl><Input {...field} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            {/* SKU | Status */}
+            <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="sku" render={({ field }) => (
-                <FormItem><FormLabel>SKU</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <FormField control={form.control} name="price" render={({ field }) => (
-                <FormItem><FormLabel>Price</FormLabel><FormControl><Input type="number" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <FormField control={form.control} name="sale_price" render={({ field }) => (
-                <FormItem><FormLabel>Sale Price</FormLabel><FormControl><Input type="number" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                <FormItem>
+                  <FormLabel><FieldLabel>SKU</FieldLabel></FormLabel>
+                  <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
+                  <FormMessage />
+                </FormItem>
               )} />
               <FormField control={form.control} name="status" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Status</FormLabel>
+                  <FormLabel><FieldLabel>Status</FieldLabel></FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                     <SelectContent>
@@ -611,321 +535,356 @@ const AdminProductForm = () => {
                   <FormMessage />
                 </FormItem>
               )} />
-              {watchStatus === 'at_auction' && (
-                <p className="text-xs text-muted-foreground md:col-span-3">
-                  Don't forget to add the{' '}
-                  <button type="button" className="underline text-primary" onClick={() => auctionUrlRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>
-                    Chairish Auction URL
-                  </button>{' '}below.
-                </p>
-              )}
-              {watchStatus === 'sold' && (
-                <FormField control={form.control} name="sold_on" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sold On</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value as string || ''}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Select platform" /></SelectTrigger></FormControl>
-                      <SelectContent>
-                        {SOLD_ON_OPTIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              )}
             </div>
+
+            {watchStatus === 'at_auction' && (
+              <p className="text-xs text-muted-foreground">
+                Don't forget to add the{' '}
+                <button type="button" className="underline text-primary" onClick={() => auctionUrlRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>Chairish Auction URL</button>{' '}below.
+              </p>
+            )}
+
+            {/* Price | Sale Price */}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField control={form.control} name="price" render={({ field }) => (
+                <FormItem>
+                  <FormLabel><FieldLabel>Price</FieldLabel></FormLabel>
+                  <FormControl><Input type="number" {...field} value={field.value ?? ''} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="sale_price" render={({ field }) => (
+                <FormItem>
+                  <FormLabel><FieldLabel>Sale Price</FieldLabel></FormLabel>
+                  <FormControl><Input type="number" {...field} value={field.value ?? ''} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
+
+            {watchStatus === 'sold' && (
+              <FormField control={form.control} name="sold_on" render={({ field }) => (
+                <FormItem className="max-w-xs">
+                  <FormLabel><FieldLabel>Sold On</FieldLabel></FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value as string || ''}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Select platform" /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      {SOLD_ON_OPTIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            )}
+
             <FormField control={form.control} name="short_description" render={({ field }) => (
-              <FormItem><FormLabel>Short Description</FormLabel><FormControl><Textarea rows={2} {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+              <FormItem>
+                <FormLabel><FieldLabel>Short Description</FieldLabel></FormLabel>
+                <FormControl><Textarea rows={5} {...field} value={field.value ?? ''} /></FormControl>
+                <FormMessage />
+              </FormItem>
             )} />
+
             <FormField control={form.control} name="long_description" render={({ field }) => (
-              <FormItem><FormLabel>Long Description</FormLabel><FormControl><Textarea rows={7} {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+              <FormItem>
+                <FormLabel><FieldLabel>Long Description</FieldLabel></FormLabel>
+                <FormControl><Textarea rows={10} {...field} value={field.value ?? ''} /></FormControl>
+                <FormMessage />
+              </FormItem>
             )} />
           </section>
 
-          {/* ── Taxonomy & Attribution ── */}
-          <section className="space-y-6">
-            <h2 className="text-lg font-semibold text-foreground border-b border-border pb-2">Taxonomy & Attribution</h2>
-            <p className="text-sm text-muted-foreground -mt-2">Attribution precedes the name, e.g. "by", "in the style of", "attributed to"</p>
+          {/* ── TAXONOMY & ATTRIBUTION ── */}
+          <section className="pb-8 space-y-5">
+            <SectionHeading>Taxonomy &amp; Attribution</SectionHeading>
+            <p className="text-xs text-muted-foreground">Attribution precedes the name, e.g. "by", "in the style of", "attributed to"</p>
 
-            {/* Designers — multi-row */}
+            {/* Categories — first in section */}
             <div className="space-y-2">
-              <p className="text-sm font-medium text-foreground">Designers</p>
-              {designers.map((row, i) => (
+              <div className="flex items-center gap-2">
+                <p className="text-[11px] font-semibold tracking-[0.1em] uppercase text-foreground/70">Categories</p>
+                <span className="text-xs text-muted-foreground">(first row is the primary)</span>
+              </div>
+              {categories.map((row, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  {/* Attribution */}
-                  <Select
-                    value={row.attribution_type || 'by'}
-                    onValueChange={(val) => setDesigners((prev) => prev.map((r, j) => j === i ? { ...r, attribution_type: val } : r))}
-                  >
-                    <SelectTrigger className="w-40 shrink-0">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ATTRIBUTION_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  {/* Designer combobox */}
+                  {i === 0
+                    ? <span className="text-[10px] font-semibold tracking-wide text-primary bg-primary/10 px-1.5 py-0.5 rounded shrink-0 whitespace-nowrap">PRIMARY</span>
+                    : <span className="w-[58px] shrink-0" />
+                  }
                   <InlineCombobox
-                    value={row.designer_id}
-                    onChange={(val) => setDesigners((prev) => prev.map((r, j) => j === i ? { ...r, designer_id: val } : r))}
-                    options={taxonomy.designers}
-                    placeholder="Select designer…"
+                    value={row.category_id}
+                    onChange={(val) => setCategories((prev) => prev.map((r, j) => j === i ? { ...r, category_id: val, subcategory_id: null } : r))}
+                    options={taxonomy.categories}
+                    placeholder="Select category…"
+                    className="flex-1"
                   />
-                  {/* Remove row (only if more than one) */}
-                  {designers.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => setDesigners((prev) => prev.filter((_, j) => j !== i))}
-                      className="shrink-0 text-muted-foreground hover:text-destructive transition-colors"
-                    >
+                  {row.category_id && (
+                    <SubcategoryCombobox
+                      categoryId={row.category_id}
+                      value={row.subcategory_id}
+                      onChange={(val) => setCategories((prev) => prev.map((r, j) => j === i ? { ...r, subcategory_id: val } : r))}
+                    />
+                  )}
+                  {categories.length > 1 && (
+                    <button type="button" onClick={() => setCategories((prev) => prev.filter((_, j) => j !== i))} className="shrink-0 text-muted-foreground hover:text-destructive transition-colors">
                       <X size={16} />
                     </button>
                   )}
                 </div>
               ))}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-1.5 mt-1"
-                onClick={() => setDesigners((prev) => [...prev, { designer_id: null, attribution_type: 'by' }])}
-              >
-                <Plus size={14} /> Add another designer
+              <Button type="button" variant="outline" size="sm" className="gap-1.5"
+                onClick={() => setCategories((prev) => [...prev, { category_id: null, subcategory_id: null }])}>
+                <Plus size={14} /> Add another category
               </Button>
             </div>
 
-            {/* Makers — multi-row */}
+            {/* Designers — 25% | 50% | 25% */}
             <div className="space-y-2">
-              <p className="text-sm font-medium text-foreground">Makers</p>
+              <p className="text-[11px] font-semibold tracking-[0.1em] uppercase text-foreground/70">Designers</p>
+              {designers.map((row, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Select value={row.attribution_type || 'by'} onValueChange={(val) => setDesigners((prev) => prev.map((r, j) => j === i ? { ...r, attribution_type: val } : r))}>
+                    <SelectTrigger className="w-[25%] shrink-0"><SelectValue /></SelectTrigger>
+                    <SelectContent>{ATTRIBUTION_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <InlineCombobox
+                    value={row.designer_id}
+                    onChange={(val) => setDesigners((prev) => prev.map((r, j) => j === i ? { ...r, designer_id: val } : r))}
+                    options={taxonomy.designers}
+                    placeholder="Select designer…"
+                    className="flex-1"
+                  />
+                  <div className="w-[25%] flex justify-end items-center gap-1 shrink-0">
+                    {i === designers.length - 1 && (
+                      <Button type="button" variant="outline" size="sm" className="gap-1 text-xs whitespace-nowrap"
+                        onClick={() => setDesigners((prev) => [...prev, { designer_id: null, attribution_type: 'by' }])}>
+                        <Plus size={12} /> Add
+                      </Button>
+                    )}
+                    {designers.length > 1 && (
+                      <button type="button" onClick={() => setDesigners((prev) => prev.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-destructive transition-colors p-1">
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Makers — 25% | 50% | 25% */}
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold tracking-[0.1em] uppercase text-foreground/70">Makers</p>
               {makers.map((row, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <Select
-                    value={row.attribution_type || 'by'}
-                    onValueChange={(val) => setMakers((prev) => prev.map((r, j) => j === i ? { ...r, attribution_type: val } : r))}
-                  >
-                    <SelectTrigger className="w-40 shrink-0">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ATTRIBUTION_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                    </SelectContent>
+                  <Select value={row.attribution_type || 'by'} onValueChange={(val) => setMakers((prev) => prev.map((r, j) => j === i ? { ...r, attribution_type: val } : r))}>
+                    <SelectTrigger className="w-[25%] shrink-0"><SelectValue /></SelectTrigger>
+                    <SelectContent>{ATTRIBUTION_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                   </Select>
                   <InlineCombobox
                     value={row.maker_id}
                     onChange={(val) => setMakers((prev) => prev.map((r, j) => j === i ? { ...r, maker_id: val } : r))}
                     options={taxonomy.makers}
                     placeholder="Select maker…"
+                    className="flex-1"
                   />
-                  {makers.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => setMakers((prev) => prev.filter((_, j) => j !== i))}
-                      className="shrink-0 text-muted-foreground hover:text-destructive transition-colors"
-                    >
-                      <X size={16} />
-                    </button>
-                  )}
+                  <div className="w-[25%] flex justify-end items-center gap-1 shrink-0">
+                    {i === makers.length - 1 && (
+                      <Button type="button" variant="outline" size="sm" className="gap-1 text-xs whitespace-nowrap"
+                        onClick={() => setMakers((prev) => [...prev, { maker_id: null, attribution_type: 'by' }])}>
+                        <Plus size={12} /> Add
+                      </Button>
+                    )}
+                    {makers.length > 1 && (
+                      <button type="button" onClick={() => setMakers((prev) => prev.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-destructive transition-colors p-1">
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-1.5 mt-1"
-                onClick={() => setMakers((prev) => [...prev, { maker_id: null, attribution_type: 'by' }])}
-              >
-                <Plus size={14} /> Add another maker
-              </Button>
             </div>
 
             {/* Period */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <ComboboxField name="period_id" label="Period" options={taxonomy.periods} />
               <AttributionSelect name="period_attribution" label="Period Attribution" />
             </div>
 
-            {/* Categories — multi-row */}
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-medium text-foreground">Categories</p>
-                <span className="text-xs text-muted-foreground">(first row is the primary)</span>
-              </div>
-              {categories.map((row, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  {i === 0 && (
-                    <span className="text-[10px] font-medium tracking-wide text-primary bg-primary/10 px-1.5 py-0.5 rounded shrink-0">
-                      PRIMARY
-                    </span>
-                  )}
-                  {i > 0 && <span className="w-[58px] shrink-0" />}
-                  {/* Category */}
-                  <InlineCombobox
-                    value={row.category_id}
-                    onChange={(val) =>
-                      setCategories((prev) =>
-                        prev.map((r, j) => j === i ? { ...r, category_id: val, subcategory_id: null } : r)
-                      )
-                    }
-                    options={taxonomy.categories}
-                    placeholder="Select category…"
-                  />
-                  {/* Subcategory — only shown when a category is chosen */}
-                  {row.category_id && (
-                    <SubcategoryCombobox
-                      categoryId={row.category_id}
-                      value={row.subcategory_id}
-                      onChange={(val) =>
-                        setCategories((prev) =>
-                          prev.map((r, j) => j === i ? { ...r, subcategory_id: val } : r)
-                        )
-                      }
-                    />
-                  )}
-                  {categories.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => setCategories((prev) => prev.filter((_, j) => j !== i))}
-                      className="shrink-0 text-muted-foreground hover:text-destructive transition-colors"
-                    >
-                      <X size={16} />
-                    </button>
-                  )}
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-1.5 mt-1"
-                onClick={() => setCategories((prev) => [...prev, { category_id: null, subcategory_id: null }])}
-              >
-                <Plus size={14} /> Add another category
-              </Button>
-            </div>
-
             {/* Style + Country */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <ComboboxField name="style_id" label="Style" options={taxonomy.styles} />
               <ComboboxField name="country_id" label="Country" options={taxonomy.countries} />
             </div>
 
-            {/* Tags + Materials + Year + Condition */}
-            <FormField control={form.control} name="tags" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Tags</FormLabel>
-                <FormControl><Input placeholder="Comma-separated tags" {...field} value={field.value ?? ''} /></FormControl>
-                <p className="text-xs text-muted-foreground">Separate with commas, e.g. mid-century, brass, sculptural</p>
-                <FormMessage />
-              </FormItem>
-            )} />
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Materials + Year Created */}
+            <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="materials" render={({ field }) => (
-                <FormItem><FormLabel>Materials</FormLabel><FormControl><Input {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                <FormItem>
+                  <FormLabel><FieldLabel>Materials</FieldLabel></FormLabel>
+                  <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
+                  <FormMessage />
+                </FormItem>
               )} />
               <FormField control={form.control} name="year_created" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Year Created</FormLabel>
+                  <FormLabel><FieldLabel>Year Created</FieldLabel></FormLabel>
                   <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
                   <p className="text-xs text-muted-foreground">No apostrophe, e.g. 1950s</p>
                   <FormMessage />
                 </FormItem>
               )} />
-              <FormField control={form.control} name="condition" render={({ field }) => (
-                <FormItem><FormLabel>Condition Notes</FormLabel><FormControl><Textarea rows={2} {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-              )} />
             </div>
-          </section>
 
-          {/* ── Dimensions ── */}
-          <section className="space-y-4">
-            <h2 className="text-lg font-semibold text-foreground border-b border-border pb-2">Dimensions</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField control={form.control} name="product_dimensions" render={({ field }) => (
-                <FormItem><FormLabel>Product Dimensions</FormLabel><FormControl><Textarea rows={8} className="max-w-sm font-mono text-sm" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <FormField control={form.control} name="box_dimensions" render={({ field }) => (
-                <FormItem><FormLabel>Box / Shipping Dimensions</FormLabel><FormControl><Textarea rows={8} className="max-w-sm font-mono text-sm" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <FormField control={form.control} name="dimension_notes" render={({ field }) => (
-                <FormItem className="md:col-span-2"><FormLabel>Dimension Notes</FormLabel><FormControl><Textarea rows={2} {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-              )} />
-            </div>
-          </section>
+            {/* Tags — after Materials/Year */}
+            <FormField control={form.control} name="tags" render={({ field }) => (
+              <FormItem>
+                <FormLabel><FieldLabel>Tags</FieldLabel></FormLabel>
+                <FormControl><Input placeholder="Comma-separated tags" {...field} value={field.value ?? ''} /></FormControl>
+                <p className="text-xs text-muted-foreground">Separate with commas, e.g. mid-century, brass, sculptural</p>
+                <FormMessage />
+              </FormItem>
+            )} />
 
-          {/* ── Cross-Listing URLs ── */}
-          <section className="space-y-4">
-            <h2 className="text-lg font-semibold text-foreground border-b border-border pb-2">Cross-Listing URLs</h2>
-            <div className="grid grid-cols-1 gap-4">
-              <FormField control={form.control} name="firstdibs_url" render={({ field }) => (
-                <FormItem><FormLabel>1stDibs URL</FormLabel><FormControl><Input type="url" placeholder="https://www.1stdibs.com/..." {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <FormField control={form.control} name="chairish_url" render={({ field }) => (
-                <FormItem><FormLabel>Chairish URL</FormLabel><FormControl><Input type="url" placeholder="https://www.chairish.com/..." {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <FormField control={form.control} name="ebay_url" render={({ field }) => (
-                <FormItem><FormLabel>eBay URL</FormLabel><FormControl><Input type="url" placeholder="https://www.ebay.com/..." {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <div ref={auctionUrlRef}>
-                <FormField control={form.control} name="chairish_auction_url" render={({ field }) => (
-                  <FormItem><FormLabel>Chairish Auction URL</FormLabel><FormControl><Input type="url" placeholder="https://www.chairish.com/..." {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
-                )} />
-              </div>
-            </div>
-          </section>
-
-          {/* ── Notes ── */}
-          <section className="space-y-4">
-            <h2 className="text-lg font-semibold text-foreground border-b border-border pb-2">Notes</h2>
-            <FormField control={form.control} name="notes" render={({ field }) => (
-              <FormItem><FormLabel>Internal Notes</FormLabel><FormControl><Textarea rows={3} {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+            {/* Condition Notes — full width, 4 rows */}
+            <FormField control={form.control} name="condition" render={({ field }) => (
+              <FormItem>
+                <FormLabel><FieldLabel>Condition Notes</FieldLabel></FormLabel>
+                <FormControl><Textarea rows={4} {...field} value={field.value ?? ''} /></FormControl>
+                <FormMessage />
+              </FormItem>
             )} />
           </section>
 
-          {/* ── Images ── */}
-          <section className="space-y-4">
-            <h2 className="text-lg font-semibold text-foreground border-b border-border pb-2">Images</h2>
-            {!isEditing && (
-              <p className="text-sm text-muted-foreground">Save the product first, then you can upload images.</p>
-            )}
-            {isEditing && (
-              <>
-                <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => e.target.files && uploadImages(e.target.files)} />
-                <Button type="button" variant="outline" className="gap-2" onClick={() => fileInputRef.current?.click()}>
-                  <Upload size={16} /> Upload Images
-                </Button>
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                  <SortableContext items={(product?.product_images ?? []).map((img: any) => img.id)} strategy={rectSortingStrategy}>
-                    <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
-                      {(product?.product_images ?? [])
-                        .sort((a: any, b: any) => a.sort_order - b.sort_order)
-                        .map((img: any) => (
-                          <SortableImage
-                            key={img.id}
-                            img={img}
-                            isFeatured={product?.featured_image_url === img.image_url}
-                            onSetFeatured={setFeaturedImage}
-                            onDelete={deleteImage}
-                          />
-                        ))}
-                      {uploadingFiles.map((tempId) => (
-                        <div key={tempId} className="w-full aspect-square rounded-md border border-border flex items-center justify-center bg-muted">
-                          <Loader2 className="animate-spin text-muted-foreground" size={24} />
-                        </div>
-                      ))}
-                    </div>
-                  </SortableContext>
-                </DndContext>
-              </>
-            )}
+          {/* ── DIMENSIONS ── */}
+          <section className="pb-8 space-y-4">
+            <SectionHeading>Dimensions</SectionHeading>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField control={form.control} name="product_dimensions" render={({ field }) => (
+                <FormItem>
+                  <FormLabel><FieldLabel>Product Dimensions</FieldLabel></FormLabel>
+                  <FormControl><Textarea rows={8} className="font-mono text-sm" {...field} value={field.value ?? ''} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="box_dimensions" render={({ field }) => (
+                <FormItem>
+                  <FormLabel><FieldLabel>Box / Shipping Dimensions</FieldLabel></FormLabel>
+                  <FormControl><Textarea rows={8} className="font-mono text-sm" {...field} value={field.value ?? ''} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
+            <FormField control={form.control} name="dimension_notes" render={({ field }) => (
+              <FormItem>
+                <FormLabel><FieldLabel>Dimension Notes</FieldLabel></FormLabel>
+                <FormControl><Textarea rows={2} {...field} value={field.value ?? ''} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
           </section>
 
-          <div className="flex gap-3 pt-4 border-t border-border">
-            <Button type="submit" disabled={saveMutation.isPending} className="gap-2">
+          {/* ── CROSS-LISTING URLS ── */}
+          <section className="pb-8 space-y-4">
+            <SectionHeading>Cross-Listing URLs</SectionHeading>
+            <FormField control={form.control} name="firstdibs_url" render={({ field }) => (
+              <FormItem>
+                <FormLabel><FieldLabel>1stDibs URL</FieldLabel></FormLabel>
+                <FormControl><Input type="url" placeholder="https://www.1stdibs.com/..." {...field} value={field.value ?? ''} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="chairish_url" render={({ field }) => (
+              <FormItem>
+                <FormLabel><FieldLabel>Chairish URL</FieldLabel></FormLabel>
+                <FormControl><Input type="url" placeholder="https://www.chairish.com/..." {...field} value={field.value ?? ''} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <FormField control={form.control} name="ebay_url" render={({ field }) => (
+              <FormItem>
+                <FormLabel><FieldLabel>eBay URL</FieldLabel></FormLabel>
+                <FormControl><Input type="url" placeholder="https://www.ebay.com/..." {...field} value={field.value ?? ''} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+            <div ref={auctionUrlRef}>
+              <FormField control={form.control} name="chairish_auction_url" render={({ field }) => (
+                <FormItem>
+                  <FormLabel><FieldLabel>Chairish Auction URL</FieldLabel></FormLabel>
+                  <FormControl><Input type="url" placeholder="https://www.chairish.com/..." {...field} value={field.value ?? ''} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
+          </section>
+
+          {/* ── NOTES ── */}
+          <section className="pb-8 space-y-4">
+            <SectionHeading>Notes</SectionHeading>
+            <FormField control={form.control} name="notes" render={({ field }) => (
+              <FormItem>
+                <FormLabel><FieldLabel>Internal Notes</FieldLabel></FormLabel>
+                <FormControl><Textarea rows={3} {...field} value={field.value ?? ''} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+          </section>
+
+          {/* ── IMAGES ── */}
+          <section className="pb-8 space-y-4">
+            <SectionHeading>Images</SectionHeading>
+            {!isEditing
+              ? <p className="text-sm text-muted-foreground">Save the product first, then you can upload images.</p>
+              : (
+                <>
+                  <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => e.target.files && uploadImages(e.target.files)} />
+                  <Button type="button" variant="outline" className="gap-2" onClick={() => fileInputRef.current?.click()}>
+                    <Upload size={16} /> Upload Images
+                  </Button>
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                    <SortableContext items={(product?.product_images ?? []).map((img: any) => img.id)} strategy={rectSortingStrategy}>
+                      <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
+                        {(product?.product_images ?? [])
+                          .sort((a: any, b: any) => a.sort_order - b.sort_order)
+                          .map((img: any) => (
+                            <SortableImage key={img.id} img={img} isFeatured={product?.featured_image_url === img.image_url} onSetFeatured={setFeaturedImage} onDelete={deleteImage} />
+                          ))}
+                        {uploadingFiles.map((tempId) => (
+                          <div key={tempId} className="w-full aspect-square rounded-md border border-border flex items-center justify-center bg-muted">
+                            <Loader2 className="animate-spin text-muted-foreground" size={24} />
+                          </div>
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                </>
+              )}
+          </section>
+
+          {/* ── ACTION BUTTONS ── */}
+          <div className="flex flex-wrap gap-3 pt-6 border-t border-border">
+            <Button type="submit" disabled={isBusy} className="gap-2">
               <Save size={16} />
               {saveMutation.isPending ? 'Saving…' : isEditing ? 'Update Product' : 'Create Product'}
             </Button>
-            <Button type="button" variant="outline" onClick={() => navigate('/admin/products')}>Cancel</Button>
+
+            {/* Save as Draft — always overrides status to 'draft' */}
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isBusy}
+              className="gap-2"
+              onClick={form.handleSubmit((v) => draftMutation.mutate(v))}
+            >
+              <FileText size={16} />
+              {draftMutation.isPending ? 'Saving…' : 'Save as Draft'}
+            </Button>
+
+            <Button type="button" variant="ghost" onClick={() => navigate('/admin/products')}>
+              Cancel
+            </Button>
           </div>
+
         </form>
       </Form>
     </div>
