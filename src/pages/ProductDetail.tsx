@@ -255,7 +255,7 @@ const ProductDetail = () => {
                     )}
                     {product.box_dimensions && (
                       <div className={product.product_dimensions ? 'flex-1 md:pl-6' : ''}>
-                        <p className="font-display text-[10px] tracking-[0.15em] text-muted-foreground mb-1.5">SHIPPING / CRATED</p>
+                        <p className="font-display text-[10px] tracking-[0.15em] text-muted-foreground mb-1.5">BOXED / CRATED</p>
                         {product.box_dimensions.split('\n').map((line, i) => (
                           <p key={i} className="text-base text-foreground leading-relaxed">{line}</p>
                         ))}
