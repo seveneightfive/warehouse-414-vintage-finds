@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -20,9 +19,22 @@ const PAGE_SIZE = 25;
 
 type StatusValue = 'available' | 'on_hold' | 'at_auction' | 'sold' | 'inventory' | 'draft' | 'deactivated';
 
-// Which statuses live under "Products" nav vs "Inventory" nav
-const PRODUCTS_STATUSES: StatusValue[] = ['available', 'on_hold', 'at_auction', 'sold'];
-const INVENTORY_STATUSES: StatusValue[] = ['inventory', 'draft', 'deactivated'];
+const PRODUCTS_TABS: { value: StatusValue; label: string }[] = [
+  { value: 'available',  label: 'Available'  },
+  { value: 'on_hold',    label: 'On Hold'    },
+  { value: 'at_auction', label: 'At Auction' },
+  { value: 'sold',       label: 'Sold'       },
+];
+
+const INVENTORY_TABS: { value: StatusValue; label: string }[] = [
+  { value: 'inventory',   label: 'Inventory'   },
+  { value: 'draft',       label: 'Drafts'      },
+  { value: 'deactivated', label: 'Deactivated' },
+];
+
+const INVENTORY_STATUSES = new Set<StatusValue>(['inventory', 'draft', 'deactivated']);
+// statuses where Mark Sold should not appear
+const NO_SOLD_STATUSES   = new Set<string>(['sold', 'inventory', 'draft', 'deactivated']);
 
 type HoldDetail = {
   id: string;
@@ -36,6 +48,8 @@ type HoldDetail = {
   notes: string | null;
 };
 
+// ─── Component ────────────────────────────────────────────────────────────────
+
 const AdminProducts = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const highlightId     = searchParams.get('highlight');
@@ -44,65 +58,57 @@ const AdminProducts = () => {
 
   const [searchQuery,  setSearchQuery]  = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusValue>(
-    (searchParams.get('status') as StatusValue) ?? 'available'
+    (searchParams.get('status') as StatusValue) ?? 'available',
   );
   const [page,        setPage]        = useState(0);
   const [soldProduct, setSoldProduct] = useState<Product | null>(null);
   const [holdProduct, setHoldProduct] = useState<Product | null>(null);
-  // which product row has its hold accordion open
   const [openHoldId,  setOpenHoldId]  = useState<string | null>(null);
 
-  const isInventorySection = INVENTORY_STATUSES.includes(statusFilter);
+  const isInventorySection = INVENTORY_STATUSES.has(statusFilter);
 
-  // ── Main products query ────────────────────────────────────────────────────
+  // ── Data ───────────────────────────────────────────────────────────────────
   const { data, isLoading } = useQuery({
     queryKey: ['admin-products', page, searchQuery, statusFilter, consignorFilter],
     queryFn: async () => {
-      let countQuery = supabase.from('products').select('*', { count: 'exact', head: true }).eq('status', statusFilter);
-      if (consignorFilter) countQuery = countQuery.ilike('sku', `${consignorFilter}%`);
-      if (searchQuery) countQuery = countQuery.or(`name.ilike.%${searchQuery}%,sku.ilike.%${searchQuery}%`);
+      let countQ = supabase.from('products').select('*', { count: 'exact', head: true }).eq('status', statusFilter);
+      if (consignorFilter) countQ = countQ.ilike('sku', `${consignorFilter}%`);
+      if (searchQuery)     countQ = countQ.or(`name.ilike.%${searchQuery}%,sku.ilike.%${searchQuery}%`);
 
-      let query = supabase
+      let q = supabase
         .from('products')
         .select('*, product_images(image_url, sort_order)')
         .eq('status', statusFilter)
         .order('created_at', { ascending: false })
         .order('id', { ascending: false })
         .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-      if (consignorFilter) query = query.ilike('sku', `${consignorFilter}%`);
-      if (searchQuery) query = query.or(`name.ilike.%${searchQuery}%,sku.ilike.%${searchQuery}%`);
+      if (consignorFilter) q = q.ilike('sku', `${consignorFilter}%`);
+      if (searchQuery)     q = q.or(`name.ilike.%${searchQuery}%,sku.ilike.%${searchQuery}%`);
 
-      const [{ count }, { data: products, error }] = await Promise.all([countQuery, query]);
+      const [{ count }, { data: products, error }] = await Promise.all([countQ, q]);
       if (error) throw error;
 
-      // Fetch full hold details for on_hold view
+      // Full hold details for on_hold tab
       let holdsMap: Record<string, HoldDetail> = {};
-      if (statusFilter === 'on_hold' && products && products.length > 0) {
-        const productIds = products.map((p: any) => p.id);
+      if (statusFilter === 'on_hold' && products?.length) {
         const { data: holds } = await supabase
           .from('product_holds')
           .select('*')
-          .in('product_id', productIds)
+          .in('product_id', products.map((p: any) => p.id))
           .order('created_at', { ascending: false });
-        if (holds) {
-          // Keep most recent hold per product
-          holds.forEach((h: any) => {
-            if (!holdsMap[h.product_id]) holdsMap[h.product_id] = h;
-          });
-        }
+        holds?.forEach((h: any) => { if (!holdsMap[h.product_id]) holdsMap[h.product_id] = h; });
       }
 
       return { products: products as Product[], total: count ?? 0, holdsMap };
     },
   });
 
-  // ── Status counts ──────────────────────────────────────────────────────────
   const { data: statusCounts } = useQuery({
     queryKey: ['admin-product-counts'],
     queryFn: async () => {
       const statuses: StatusValue[] = ['available', 'on_hold', 'at_auction', 'sold', 'inventory', 'draft', 'deactivated'];
       const results = await Promise.all(
-        statuses.map((s) => supabase.from('products').select('*', { count: 'exact', head: true }).eq('status', s))
+        statuses.map((s) => supabase.from('products').select('*', { count: 'exact', head: true }).eq('status', s)),
       );
       return Object.fromEntries(statuses.map((s, i) => [s, results[i].count ?? 0])) as Record<StatusValue, number>;
     },
@@ -116,19 +122,19 @@ const AdminProducts = () => {
   const showSoldDetails = statusFilter === 'sold';
   const showAuction    = statusFilter === 'at_auction';
   const showPrice      = !showSoldDetails && !showAuction;
-  const isInventory    = statusFilter === 'inventory';
 
   // ── Mutations ──────────────────────────────────────────────────────────────
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-product-counts'] });
+  };
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('products').delete().eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-product-counts'] });
-      toast.success('Product deleted');
-    },
+    onSuccess: () => { invalidate(); toast.success('Product deleted'); },
     onError: (err: Error) => toast.error(err.message),
   });
 
@@ -137,11 +143,7 @@ const AdminProducts = () => {
       const { error } = await supabase.from('products').update({ status: 'available', chairish_auction_url: null } as any).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-product-counts'] });
-      toast.success('Released from auction');
-    },
+    onSuccess: () => { invalidate(); toast.success('Released from auction'); },
     onError: (err: Error) => toast.error(err.message),
   });
 
@@ -150,28 +152,18 @@ const AdminProducts = () => {
       const { error } = await supabase.from('products').update({ status: 'available' } as any).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-product-counts'] });
-      toast.success('Released from hold — now Available');
-    },
+    onSuccess: () => { invalidate(); toast.success('Released from hold → Available'); },
     onError: (err: Error) => toast.error(err.message),
   });
 
   const extendHoldMutation = useMutation({
-    mutationFn: async ({ productId, holdId }: { productId: string; holdId: string }) => {
+    mutationFn: async ({ holdId }: { holdId: string }) => {
       const newExpiry = new Date();
       newExpiry.setHours(newExpiry.getHours() + 48);
-      const { error } = await supabase
-        .from('product_holds')
-        .update({ expires_at: newExpiry.toISOString(), hold_duration_hours: 48 })
-        .eq('id', holdId);
+      const { error } = await supabase.from('product_holds').update({ expires_at: newExpiry.toISOString(), hold_duration_hours: 48 }).eq('id', holdId);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      toast.success('Hold extended by 48 hours');
-    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-products'] }); toast.success('Hold extended 48 hours'); },
     onError: (err: Error) => toast.error(err.message),
   });
 
@@ -180,12 +172,7 @@ const AdminProducts = () => {
       const { error } = await supabase.from('products').update({ status: 'sold', sold_price, sale_platform, sale_date } as any).eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-product-counts'] });
-      toast.success('Marked as sold');
-      setSoldProduct(null);
-    },
+    onSuccess: () => { invalidate(); toast.success('Marked as sold'); setSoldProduct(null); },
     onError: (err: Error) => toast.error(err.message),
   });
 
@@ -194,27 +181,21 @@ const AdminProducts = () => {
       product_id: string; customer_name: string; customer_email: string; customer_phone: string;
       hold_duration_hours: number; expires_at: string; notes: string;
     }) => {
-      const { error: holdError } = await supabase.from('product_holds').insert({ product_id, customer_name, customer_email, customer_phone: customer_phone || null, hold_duration_hours, expires_at, notes: notes || null });
-      if (holdError) throw holdError;
-      const { error: statusError } = await supabase.from('products').update({ status: 'on_hold' } as any).eq('id', product_id);
-      if (statusError) throw statusError;
+      const { error: hErr } = await supabase.from('product_holds').insert({ product_id, customer_name, customer_email, customer_phone: customer_phone || null, hold_duration_hours, expires_at, notes: notes || null });
+      if (hErr) throw hErr;
+      const { error: pErr } = await supabase.from('products').update({ status: 'on_hold' } as any).eq('id', product_id);
+      if (pErr) throw pErr;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-product-counts'] });
-      toast.success('Hold placed');
-      setHoldProduct(null);
-    },
+    onSuccess: () => { invalidate(); toast.success('Hold placed'); setHoldProduct(null); },
     onError: (err: Error) => toast.error(err.message),
   });
 
-  const handleSearch = (value: string) => { setSearchQuery(value); setPage(0); };
-  const handleStatusFilter = (value: string) => { if (value) { setStatusFilter(value as StatusValue); setPage(0); } };
+  const handleSearch       = (v: string) => { setSearchQuery(v); setPage(0); };
+  const handleStatusFilter = (v: string) => { if (v) { setStatusFilter(v as StatusValue); setPage(0); } };
 
-  // ── Tab count label ────────────────────────────────────────────────────────
-  const countLabel = (s: StatusValue) => {
+  const cnt = (s: StatusValue) => {
     const n = statusCounts?.[s];
-    return n != null ? <span className="ml-1 text-muted-foreground">({n})</span> : null;
+    return n != null ? <span className="ml-1 opacity-60">({n})</span> : null;
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -241,36 +222,29 @@ const AdminProducts = () => {
         {/* Search */}
         <div className="relative mb-4">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search products..."
-            value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
-            className="pl-9"
-          />
+          <Input placeholder="Search products..." value={searchQuery} onChange={(e) => handleSearch(e.target.value)} className="pl-9" />
         </div>
 
-        {/* Tab group — Products tabs */}
-        {!isInventorySection && (
-          <div className="mb-4">
-            <ToggleGroup type="single" value={statusFilter} onValueChange={handleStatusFilter} className="justify-start flex-wrap">
-              <ToggleGroupItem value="available"  className="text-xs tracking-wider uppercase px-3">Available  {countLabel('available')}</ToggleGroupItem>
-              <ToggleGroupItem value="on_hold"    className="text-xs tracking-wider uppercase px-3">On Hold    {countLabel('on_hold')}</ToggleGroupItem>
-              <ToggleGroupItem value="at_auction" className="text-xs tracking-wider uppercase px-3">At Auction {countLabel('at_auction')}</ToggleGroupItem>
-              <ToggleGroupItem value="sold"       className="text-xs tracking-wider uppercase px-3">Sold       {countLabel('sold')}</ToggleGroupItem>
+        {/* Tabs */}
+        <div className="mb-4">
+          {!isInventorySection ? (
+            <ToggleGroup type="single" value={statusFilter} onValueChange={handleStatusFilter} className="justify-start flex-wrap gap-1">
+              {PRODUCTS_TABS.map((t) => (
+                <ToggleGroupItem key={t.value} value={t.value} className="text-xs tracking-wider uppercase px-3">
+                  {t.label}{cnt(t.value)}
+                </ToggleGroupItem>
+              ))}
             </ToggleGroup>
-          </div>
-        )}
-
-        {/* Tab group — Inventory tabs */}
-        {isInventorySection && (
-          <div className="mb-4">
-            <ToggleGroup type="single" value={statusFilter} onValueChange={handleStatusFilter} className="justify-start flex-wrap">
-              <ToggleGroupItem value="inventory"   className="text-xs tracking-wider uppercase px-3">Inventory   {countLabel('inventory')}</ToggleGroupItem>
-              <ToggleGroupItem value="draft"       className="text-xs tracking-wider uppercase px-3">Drafts      {countLabel('draft')}</ToggleGroupItem>
-              <ToggleGroupItem value="deactivated" className="text-xs tracking-wider uppercase px-3">Deactivated {countLabel('deactivated')}</ToggleGroupItem>
+          ) : (
+            <ToggleGroup type="single" value={statusFilter} onValueChange={handleStatusFilter} className="justify-start flex-wrap gap-1">
+              {INVENTORY_TABS.map((t) => (
+                <ToggleGroupItem key={t.value} value={t.value} className="text-xs tracking-wider uppercase px-3">
+                  {t.label}{cnt(t.value)}
+                </ToggleGroupItem>
+              ))}
             </ToggleGroup>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Table */}
         {isLoading ? (
@@ -280,32 +254,32 @@ const AdminProducts = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Image</TableHead>
-                  <TableHead>SKU</TableHead>
+                  <TableHead className="w-16">Image</TableHead>
+                  <TableHead className="w-32">SKU</TableHead>
                   <TableHead>Title</TableHead>
-                  {showExpires    && <TableHead>Hold Expires</TableHead>}
-                  {showAuction    && <TableHead>Auction URL</TableHead>}
-                  {showSoldDetails && <TableHead>Sold Price</TableHead>}
-                  {showSoldDetails && <TableHead>Platform</TableHead>}
-                  {showSoldDetails && <TableHead>Sale Date</TableHead>}
-                  {showPrice      && <TableHead>Price</TableHead>}
-                  <TableHead>Added</TableHead>
-                  <TableHead className="w-28">Actions</TableHead>
+                  {showExpires     && <TableHead className="w-32">Hold Expires</TableHead>}
+                  {showAuction     && <TableHead>Auction URL</TableHead>}
+                  {showSoldDetails && <TableHead className="w-28">Sold Price</TableHead>}
+                  {showSoldDetails && <TableHead className="w-28">Platform</TableHead>}
+                  {showSoldDetails && <TableHead className="w-28">Sale Date</TableHead>}
+                  {showPrice       && <TableHead className="w-28">Price</TableHead>}
+                  <TableHead className="w-28">Added</TableHead>
+                  <TableHead className="w-36">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {products.map((p) => {
-                  const thumb     = p.product_images?.sort((a, b) => a.sort_order - b.sort_order)?.[0];
-                  const hold      = holdsMap[p.id] as HoldDetail | undefined;
-                  const holdOpen  = openHoldId === p.id;
+                  const thumb    = p.product_images?.sort((a, b) => a.sort_order - b.sort_order)?.[0];
+                  const hold     = holdsMap[p.id] as HoldDetail | undefined;
+                  const holdOpen = openHoldId === p.id;
 
                   return (
                     <>
-                      {/* ── Main row ── */}
                       <TableRow
                         key={p.id}
                         className={highlightId === p.id ? 'bg-primary/10 ring-1 ring-primary/30' : ''}
                       >
+                        {/* Image */}
                         <TableCell>
                           {thumb ? (
                             <img src={thumb.image_url} alt="" className="w-12 h-12 rounded-sm object-cover" />
@@ -315,13 +289,17 @@ const AdminProducts = () => {
                             <div className="w-12 h-12 rounded-sm bg-muted" />
                           )}
                         </TableCell>
+
+                        {/* SKU */}
                         <TableCell className="text-muted-foreground text-xs">{p.sku || '—'}</TableCell>
+
+                        {/* Title */}
                         <TableCell className="font-medium">{p.name}</TableCell>
 
-                        {/* On Hold: expiry + toggle accordion */}
+                        {/* On Hold: expiry + accordion toggle */}
                         {showExpires && (
                           <TableCell>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
                               <span className="text-xs text-muted-foreground">
                                 {hold?.expires_at ? new Date(hold.expires_at).toLocaleDateString() : '—'}
                               </span>
@@ -332,13 +310,14 @@ const AdminProducts = () => {
                                   className="text-muted-foreground hover:text-foreground transition-colors"
                                   title="View hold details"
                                 >
-                                  {holdOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                  {holdOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                                 </button>
                               )}
                             </div>
                           </TableCell>
                         )}
 
+                        {/* At Auction */}
                         {showAuction && (
                           <TableCell className="text-xs">
                             {(p as any).chairish_auction_url ? (
@@ -349,6 +328,7 @@ const AdminProducts = () => {
                           </TableCell>
                         )}
 
+                        {/* Sold details */}
                         {showSoldDetails && (
                           <>
                             <TableCell className="text-sm">{(p as any).sold_price ? `$${(p as any).sold_price.toLocaleString()}` : '—'}</TableCell>
@@ -357,89 +337,72 @@ const AdminProducts = () => {
                           </>
                         )}
 
+                        {/* Price */}
                         {showPrice && (
                           <TableCell>
-                            <div>{p.price ? `$${p.price.toLocaleString()}` : '—'}</div>
+                            <div className="text-sm">{p.price ? `$${p.price.toLocaleString()}` : '—'}</div>
                             {p.sale_price && <div className="text-xs text-destructive">${p.sale_price.toLocaleString()}</div>}
                           </TableCell>
                         )}
 
+                        {/* Added date */}
                         <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                           {p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                         </TableCell>
 
-                        {/* ── Actions ── */}
+                        {/* ── Actions — always a single inline row ── */}
                         <TableCell>
-                          <div className="flex gap-1 flex-wrap">
+                          <div className="flex items-center gap-0.5">
+                            {/* View */}
                             <Link to={`/product/${p.slug}`}>
-                              <Button variant="ghost" size="icon" title="View"><Eye size={14} /></Button>
+                              <Button variant="ghost" size="icon" title="View on site"><Eye size={14} /></Button>
                             </Link>
+
+                            {/* Edit */}
                             <Link to={`/admin/products/${p.id}`}>
                               <Button variant="ghost" size="icon" title="Edit"><Pencil size={14} /></Button>
                             </Link>
 
-                            {/* Available: place hold + mark sold */}
+                            {/* Place Hold — available only */}
                             {p.status === 'available' && (
-                              <Button variant="ghost" size="icon" onClick={() => setHoldProduct(p)} title="Place hold">
+                              <Button variant="ghost" size="icon" title="Place hold" onClick={() => setHoldProduct(p)}>
                                 <Clock size={14} />
                               </Button>
                             )}
 
-                            {/* On Hold: extend hold + release hold + mark sold */}
+                            {/* Extend Hold — on_hold only */}
                             {p.status === 'on_hold' && hold && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                title="Extend hold 48h"
-                                onClick={() => extendHoldMutation.mutate({ productId: p.id, holdId: hold.id })}
-                              >
+                              <Button variant="ghost" size="icon" title="Extend hold 48h" onClick={() => extendHoldMutation.mutate({ holdId: hold.id })}>
                                 <RefreshCw size={14} />
                               </Button>
                             )}
+
+                            {/* Release Hold → Available */}
                             {p.status === 'on_hold' && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                title="Release hold → Available"
-                                onClick={() => {
-                                  if (confirm('Release this hold and set product back to Available?')) {
-                                    releaseHoldMutation.mutate(p.id);
-                                  }
-                                }}
-                              >
+                              <Button variant="ghost" size="icon" title="Release hold → Available"
+                                onClick={() => { if (confirm('Release hold and set back to Available?')) releaseHoldMutation.mutate(p.id); }}>
                                 <ArrowLeft size={14} />
                               </Button>
                             )}
 
-                            {/* At Auction: release from auction */}
+                            {/* Release from Auction → Available */}
                             {p.status === 'at_auction' && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                title="Release from auction"
-                                onClick={() => {
-                                  if (confirm('Release this item from auction back to available?')) {
-                                    releaseAuctionMutation.mutate(p.id);
-                                  }
-                                }}
-                              >
+                              <Button variant="ghost" size="icon" title="Release from auction"
+                                onClick={() => { if (confirm('Release from auction back to Available?')) releaseAuctionMutation.mutate(p.id); }}>
                                 <ArrowLeft size={14} />
                               </Button>
                             )}
 
-                            {/* Mark sold — not shown for sold, inventory, draft, deactivated */}
-                            {!(['sold', 'inventory', 'draft', 'deactivated'] as string[]).includes(p.status) && (
-                              <Button variant="ghost" size="icon" onClick={() => setSoldProduct(p)} title="Mark as sold">
+                            {/* Mark Sold — hide for inventory / draft / deactivated / already sold */}
+                            {!NO_SOLD_STATUSES.has(p.status) && (
+                              <Button variant="ghost" size="icon" title="Mark as sold" onClick={() => setSoldProduct(p)}>
                                 <CircleDollarSign size={14} />
                               </Button>
                             )}
 
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              title="Delete"
-                              onClick={() => { if (confirm('Delete this product?')) deleteMutation.mutate(p.id); }}
-                            >
+                            {/* Delete */}
+                            <Button variant="ghost" size="icon" title="Delete"
+                              onClick={() => { if (confirm('Delete this product?')) deleteMutation.mutate(p.id); }}>
                               <Trash2 size={14} />
                             </Button>
                           </div>
@@ -448,9 +411,9 @@ const AdminProducts = () => {
 
                       {/* ── Hold detail accordion row ── */}
                       {showExpires && holdOpen && hold && (
-                        <TableRow key={`${p.id}-hold`} className="bg-muted/40">
-                          <TableCell colSpan={7} className="py-3 px-6">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                        <TableRow key={`${p.id}-hold`} className="bg-muted/40 hover:bg-muted/40">
+                          <TableCell colSpan={8} className="py-3 pl-16 pr-6">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-3 text-sm">
                               <div>
                                 <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-0.5">Customer</p>
                                 <p className="font-medium">{hold.customer_name}</p>
@@ -468,7 +431,7 @@ const AdminProducts = () => {
                                 <p>{new Date(hold.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                               </div>
                               {hold.notes && (
-                                <div className="md:col-span-4">
+                                <div className="col-span-2 md:col-span-4">
                                   <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-0.5">Notes</p>
                                   <p className="text-muted-foreground">{hold.notes}</p>
                                 </div>
@@ -486,9 +449,7 @@ const AdminProducts = () => {
             {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex items-center justify-between mt-4">
-                <p className="text-sm text-muted-foreground">
-                  Page {page + 1} of {totalPages} ({data?.total} products)
-                </p>
+                <p className="text-sm text-muted-foreground">Page {page + 1} of {totalPages} ({data?.total} products)</p>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
                     <ChevronLeft size={14} className="mr-1" /> Previous
