@@ -434,7 +434,7 @@ const ProductDetail = () => {
       {designerProducts && designerProducts.length > 0 && primaryDesignerName && (
         <section className="container mx-auto px-5 py-16 border-t border-border">
           <h2 className="bg-foreground text-background font-display text-sm tracking-[0.2em] px-4 py-2 inline-block mb-8">
-            pieces by {primaryDesignerName}
+            more from {primaryDesignerName}
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {designerProducts.slice(0, 4).map((p: any) => (
@@ -448,7 +448,7 @@ const ProductDetail = () => {
       {makerProducts && makerProducts.length > 0 && primaryMakerName && (
         <section className="container mx-auto px-5 py-16 border-t border-border">
           <h2 className="bg-foreground text-background font-display text-sm tracking-[0.2em] px-4 py-2 inline-block mb-8">
-            pieces by {primaryMakerName}
+            more from {primaryMakerName}
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {makerProducts.slice(0, 4).map((p: any) => (
