@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
-import { ArrowLeft, Save, Check, ChevronsUpDown, Upload, Loader2, Star, Trash2, Plus, X, FileText } from 'lucide-react';
+import { ArrowLeft, Save, Check, ChevronsUpDown, Upload, Loader2, Star, Trash2, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent,
@@ -22,8 +22,6 @@ import {
   SortableContext, rectSortingStrategy, useSortable, arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-
-// ─── Constants ────────────────────────────────────────────────────────────────
 
 const SOLD_ON_OPTIONS = ['1stDibs', 'Chairish', 'eBay', 'Website', 'Direct', 'Other'];
 
@@ -42,8 +40,6 @@ const ATTRIBUTION_OPTIONS = [
   { value: 'in the style of', label: 'in the style of' },
 ];
 
-// ─── Section heading ──────────────────────────────────────────────────────────
-
 const SectionHeading = ({ children }: { children: React.ReactNode }) => (
   <div className="w-full bg-foreground px-4 py-2.5">
     <h2 className="text-sm font-semibold tracking-[0.15em] uppercase text-background">{children}</h2>
@@ -54,22 +50,14 @@ const FieldLabel = ({ children }: { children: React.ReactNode }) => (
   <span className="text-[11px] font-semibold tracking-[0.1em] uppercase text-foreground/70">{children}</span>
 );
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 type DesignerRow = { designer_id: string | null; attribution_type: string };
 type MakerRow    = { maker_id:    string | null; attribution_type: string };
-
-// 3-level category hierarchy:
-//   category_id        = top-level (Furniture)
-//   subcategory_id     = level-1, direct child of category (Tables)   — has category_id, parent_id=null
-//   sub_subcategory_id = level-2, child of subcategory (Console Tables) — has parent_id set, category_id=null
+type PeriodRow   = { period_id:   string | null; attribution_type: string };
 type CategoryRow = {
   category_id:        string | null;
   subcategory_id:     string | null;
   sub_subcategory_id: string | null;
 };
-
-// ─── Zod schema ───────────────────────────────────────────────────────────────
 
 const schema = z.object({
   name:                 z.string().min(1, 'Name is required'),
@@ -79,10 +67,9 @@ const schema = z.object({
   price:                z.coerce.number().nullable().optional(),
   sale_price:           z.coerce.number().nullable().optional(),
   status:               z.enum(['available', 'on_hold', 'sold', 'inventory', 'at_auction', 'draft']).default('available'),
+  consignor_id:         z.coerce.number().int().nullable().optional(),
   style_id:             z.string().nullable().optional(),
-  period_id:            z.string().nullable().optional(),
   country_id:           z.string().nullable().optional(),
-  period_attribution:   z.string().nullable().optional(),
   product_dimensions:   z.string().nullable().optional(),
   box_dimensions:       z.string().nullable().optional(),
   dimension_notes:      z.string().nullable().optional(),
@@ -100,8 +87,6 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>;
 
-// ─── Taxonomy hook ────────────────────────────────────────────────────────────
-
 const useTaxonomyOptions = () => {
   const fetch = (table: string) => async () => {
     const { data, error } = await supabase.from(table).select('id, name').order('name');
@@ -117,8 +102,6 @@ const useTaxonomyOptions = () => {
     countries:  useQuery({ queryKey: ['taxonomy-countries'],  queryFn: fetch('countries')  }).data,
   };
 };
-
-// ─── Sortable image ───────────────────────────────────────────────────────────
 
 const SortableImage = ({ img, isFeatured, onSetFeatured, onDelete }: {
   img: { id: string; image_url: string };
@@ -140,8 +123,6 @@ const SortableImage = ({ img, isFeatured, onSetFeatured, onDelete }: {
     </div>
   );
 };
-
-// ─── Inline combobox ─────────────────────────────────────────────────────────
 
 const InlineCombobox = ({ value, onChange, options, placeholder, className }: {
   value: string | null;
@@ -182,20 +163,13 @@ const InlineCombobox = ({ value, onChange, options, placeholder, className }: {
   );
 };
 
-// ─── Level-1 subcategory combobox (direct children of category, parent_id=null) ──
-
 const SubcategoryCombobox = ({ categoryId, value, onChange }: {
   categoryId: string; value: string | null; onChange: (id: string | null) => void;
 }) => {
   const { data } = useQuery({
     queryKey: ['taxonomy-subcategories', categoryId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('subcategories')
-        .select('id, name')
-        .eq('category_id', categoryId)
-        .is('parent_id', null)
-        .order('name');
+      const { data, error } = await supabase.from('subcategories').select('id, name').eq('category_id', categoryId).is('parent_id', null).order('name');
       if (error) throw error;
       return data as { id: string; name: string }[];
     },
@@ -205,19 +179,13 @@ const SubcategoryCombobox = ({ categoryId, value, onChange }: {
   return <InlineCombobox value={value} onChange={onChange} options={data} placeholder="Subcategory…" className="flex-1 min-w-[130px]" />;
 };
 
-// ─── Level-2 sub-subcategory combobox (children of subcategory, by parent_id) ──
-
 const SubSubcategoryCombobox = ({ subcategoryId, value, onChange }: {
   subcategoryId: string; value: string | null; onChange: (id: string | null) => void;
 }) => {
   const { data } = useQuery({
     queryKey: ['taxonomy-sub-subcategories', subcategoryId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('subcategories')
-        .select('id, name')
-        .eq('parent_id', subcategoryId)
-        .order('name');
+      const { data, error } = await supabase.from('subcategories').select('id, name').eq('parent_id', subcategoryId).order('name');
       if (error) throw error;
       return data as { id: string; name: string }[];
     },
@@ -226,8 +194,6 @@ const SubSubcategoryCombobox = ({ subcategoryId, value, onChange }: {
   if (!data || data.length === 0) return null;
   return <InlineCombobox value={value} onChange={onChange} options={data} placeholder="Specific type…" className="flex-1 min-w-[130px]" />;
 };
-
-// ─── Main component ───────────────────────────────────────────────────────────
 
 const AdminProductForm = () => {
   const { id } = useParams();
@@ -242,17 +208,27 @@ const AdminProductForm = () => {
 
   const [designers,  setDesigners]  = useState<DesignerRow[]>([{ designer_id: null, attribution_type: 'by' }]);
   const [makers,     setMakers]     = useState<MakerRow[]>([{ maker_id: null, attribution_type: 'by' }]);
+  const [periods,    setPeriods]    = useState<PeriodRow[]>([{ period_id: null, attribution_type: 'by' }]);
   const [categories, setCategories] = useState<CategoryRow[]>([{ category_id: null, subcategory_id: null, sub_subcategory_id: null }]);
+
+  const { data: consignors } = useQuery({
+    queryKey: ['consignors'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('consignors').select('id, first_name, last_name, consignor_code').order('consignor_code');
+      if (error) throw error;
+      return data as { id: number; first_name: string | null; last_name: string | null; consignor_code: string | null }[];
+    },
+  });
 
   const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { name: '', status: 'available' } });
   const draftKey = `product-draft-${id ?? 'new'}`;
 
   useEffect(() => {
     const sub = form.watch((values) => {
-      localStorage.setItem(draftKey, JSON.stringify({ form: values, designers, makers, categories }));
+      localStorage.setItem(draftKey, JSON.stringify({ form: values, designers, makers, periods, categories }));
     });
     return () => sub.unsubscribe();
-  }, [form, draftKey, designers, makers, categories]);
+  }, [form, draftKey, designers, makers, periods, categories]);
 
   useEffect(() => {
     if (isEditing) return;
@@ -263,6 +239,7 @@ const AdminProductForm = () => {
         form.reset(p.form ?? p);
         if (p.designers)  setDesigners(p.designers);
         if (p.makers)     setMakers(p.makers);
+        if (p.periods)    setPeriods(p.periods);
         if (p.categories) setCategories(p.categories);
         toast.info('Draft restored', { description: 'Your unsaved changes were recovered.' });
       } catch {}
@@ -275,7 +252,6 @@ const AdminProductForm = () => {
     if (watchStatus === 'at_auction') setTimeout(() => auctionUrlRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
   }, [watchStatus]);
 
-  // Load existing product
   const { data: product, isLoading } = useQuery({
     queryKey: ['admin-product', id],
     queryFn: async () => {
@@ -288,7 +264,6 @@ const AdminProductForm = () => {
     enabled: isEditing,
   });
 
-  // All subcategories — needed to resolve 2-level hierarchy when loading an existing product
   const { data: allSubcategories } = useQuery({
     queryKey: ['taxonomy-all-subcategories'],
     queryFn: async () => {
@@ -305,8 +280,9 @@ const AdminProductForm = () => {
     for (const key of Object.keys(schema.shape)) {
       (values as Record<string, unknown>)[key] = (product as Record<string, unknown>)[key] ?? '';
     }
-    values.price      = product.price ?? undefined;
-    values.sale_price = (product as any).sale_price ?? undefined;
+    values.price        = product.price ?? undefined;
+    values.sale_price   = (product as any).sale_price ?? undefined;
+    values.consignor_id = (product as any).consignor_id ?? undefined;
     const rawTags = (product as any).tags;
     values.tags = Array.isArray(rawTags) ? (rawTags as string[]).join(', ') : '';
     form.reset(values as FormValues);
@@ -317,24 +293,19 @@ const AdminProductForm = () => {
     const dbM: MakerRow[] = (product as any).product_makers?.map((r: any) => ({ maker_id: r.maker_id, attribution_type: r.attribution_type || 'by' })) ?? [];
     setMakers(dbM.length > 0 ? dbM : [{ maker_id: null, attribution_type: 'by' }]);
 
+    const existingPeriodId   = (product as any).period_id ?? null;
+    const existingPeriodAttr = (product as any).period_attribution ?? 'by';
+    setPeriods(existingPeriodId
+      ? [{ period_id: existingPeriodId, attribution_type: existingPeriodAttr }]
+      : [{ period_id: null, attribution_type: 'by' }]);
+
     const dbC: CategoryRow[] = [...((product as any).product_categories ?? [])]
       .sort((a: any, b: any) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0))
       .map((r: any) => {
         const savedSubId = r.subcategory_id ?? null;
-        if (!savedSubId) {
-          return { category_id: r.category_id, subcategory_id: null, sub_subcategory_id: null };
-        }
-        // Check if the stored subcategory_id is a level-2 (has a parent_id)
+        if (!savedSubId) return { category_id: r.category_id, subcategory_id: null, sub_subcategory_id: null };
         const sub = allSubcategories.find((s) => s.id === savedSubId);
-        if (sub?.parent_id) {
-          // It's a level-2 — set subcategory_id to its parent, sub_subcategory_id to itself
-          return {
-            category_id:        r.category_id,
-            subcategory_id:     sub.parent_id,
-            sub_subcategory_id: savedSubId,
-          };
-        }
-        // It's a level-1
+        if (sub?.parent_id) return { category_id: r.category_id, subcategory_id: sub.parent_id, sub_subcategory_id: savedSubId };
         return { category_id: r.category_id, subcategory_id: savedSubId, sub_subcategory_id: null };
       });
     setCategories(dbC.length > 0 ? dbC : [{ category_id: null, subcategory_id: null, sub_subcategory_id: null }]);
@@ -354,18 +325,20 @@ const AdminProductForm = () => {
       payload.tags = (payload.tags as string).split(',').map((t: string) => t.trim()).filter(Boolean);
     }
     for (const [k, v] of Object.entries(payload)) if (v === '' || v === undefined) payload[k] = null;
-    const validAttr = ['by', 'attributed to', 'in the style of'];
-    if (!validAttr.includes(payload.period_attribution as string)) payload.period_attribution = null;
 
     const firstD = designers.find((d) => d.designer_id);
     const firstM = makers.find((m) => m.maker_id);
+    const firstP = periods.find((p) => p.period_id);
     const firstC = categories.find((c) => c.category_id);
+
     payload.designer_id          = firstD?.designer_id ?? null;
     payload.designer_attribution = firstD?.attribution_type ?? null;
     payload.maker_id             = firstM?.maker_id ?? null;
     payload.maker_attribution    = firstM?.attribution_type ?? null;
+    payload.period_id            = firstP?.period_id ?? null;
+    const validAttr = ['by', 'attributed to', 'in the style of'];
+    payload.period_attribution   = firstP?.period_id && validAttr.includes(firstP.attribution_type) ? firstP.attribution_type : null;
     payload.category_id          = firstC?.category_id ?? null;
-    // Always store the deepest selected level
     payload.subcategory_id       = firstC?.sub_subcategory_id ?? firstC?.subcategory_id ?? null;
 
     if (!isEditing && values.name) payload.slug = await ensureUniqueSlug(generateSlug(values.name));
@@ -417,8 +390,7 @@ const AdminProductForm = () => {
     localStorage.removeItem(draftKey);
     toast.success(statusLabel);
     if (isEditing) {
-      const savedStatus = form.getValues('status');
-      navigate(`/admin/products?highlight=${id}&status=${savedStatus}`);
+      navigate(`/admin/products?highlight=${id}&status=${form.getValues('status')}`);
     } else {
       navigate(`/admin/products/${newId}`);
     }
@@ -427,12 +399,6 @@ const AdminProductForm = () => {
   const saveMutation = useMutation({
     mutationFn: (v: FormValues) => performSave(v),
     onSuccess: (id) => onSuccess(id, isEditing ? 'Product updated' : 'Product created'),
-    onError: (err: Error) => toast.error(err.message),
-  });
-
-  const draftMutation = useMutation({
-    mutationFn: (v: FormValues) => performSave(v, 'draft'),
-    onSuccess: (id) => onSuccess(id, 'Saved as draft'),
     onError: (err: Error) => toast.error(err.message),
   });
 
@@ -544,23 +510,12 @@ const AdminProductForm = () => {
     );
   };
 
-  const AttributionSelect = ({ name, label }: { name: keyof FormValues; label: string }) => (
-    <FormField control={form.control} name={name} render={({ field }) => (
-      <FormItem>
-        <FormLabel><FieldLabel>{label}</FieldLabel></FormLabel>
-        <Select onValueChange={(val) => field.onChange(val === '__none' ? null : val)} value={field.value ?? '__none'}>
-          <FormControl><SelectTrigger><SelectValue placeholder="Select attribution" /></SelectTrigger></FormControl>
-          <SelectContent>
-            <SelectItem value="__none">None</SelectItem>
-            {ATTRIBUTION_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <FormMessage />
-      </FormItem>
-    )} />
-  );
+  const consignorLabel = (c: { first_name: string | null; last_name: string | null; consignor_code: string | null }) => {
+    const name = [c.first_name, c.last_name].filter(Boolean).join(' ');
+    return name ? `${c.consignor_code} — ${name}` : (c.consignor_code ?? '—');
+  };
 
-  const isBusy = saveMutation.isPending || draftMutation.isPending;
+  const isBusy = saveMutation.isPending;
 
   return (
     <div className="max-w-4xl">
@@ -649,6 +604,26 @@ const AdminProductForm = () => {
               )} />
             )}
 
+            {/* Consignor */}
+            <FormField control={form.control} name="consignor_id" render={({ field }) => (
+              <FormItem className="max-w-xs">
+                <FormLabel><FieldLabel>Consignor</FieldLabel></FormLabel>
+                <Select
+                  onValueChange={(val) => field.onChange(val === '__none' ? null : Number(val))}
+                  value={field.value != null ? String(field.value) : '__none'}
+                >
+                  <FormControl><SelectTrigger><SelectValue placeholder="Select consignor" /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    <SelectItem value="__none">None</SelectItem>
+                    {consignors?.map((c) => (
+                      <SelectItem key={c.id} value={String(c.id)}>{consignorLabel(c)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )} />
+
             <FormField control={form.control} name="short_description" render={({ field }) => (
               <FormItem>
                 <FormLabel><FieldLabel>Short Description</FieldLabel></FormLabel>
@@ -671,7 +646,7 @@ const AdminProductForm = () => {
             <SectionHeading>Taxonomy &amp; Attribution</SectionHeading>
             <p className="text-xs text-muted-foreground">Attribution precedes the name, e.g. "by", "in the style of", "attributed to"</p>
 
-            {/* ── Categories — 3-level hierarchy ── */}
+            {/* Categories */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <p className="text-[11px] font-semibold tracking-[0.1em] uppercase text-foreground/70">Categories</p>
@@ -683,49 +658,15 @@ const AdminProductForm = () => {
                     ? <span className="text-[10px] font-semibold tracking-wide text-primary bg-primary/10 px-1.5 py-0.5 rounded shrink-0 whitespace-nowrap">PRIMARY</span>
                     : <span className="w-[58px] shrink-0" />
                   }
-
-                  {/* Level 0: Category */}
-                  <InlineCombobox
-                    value={row.category_id}
-                    onChange={(val) => setCategories((prev) => prev.map((r, j) => j === i
-                      ? { ...r, category_id: val, subcategory_id: null, sub_subcategory_id: null }
-                      : r))}
-                    options={taxonomy.categories}
-                    placeholder="Category…"
-                    className="flex-1 min-w-[130px]"
-                  />
-
-                  {/* Level 1: Subcategory (e.g. Tables) */}
-                  {row.category_id && (
-                    <SubcategoryCombobox
-                      categoryId={row.category_id}
-                      value={row.subcategory_id}
-                      onChange={(val) => setCategories((prev) => prev.map((r, j) => j === i
-                        ? { ...r, subcategory_id: val, sub_subcategory_id: null }
-                        : r))}
-                    />
-                  )}
-
-                  {/* Level 2: Sub-subcategory (e.g. Console Tables) */}
-                  {row.subcategory_id && (
-                    <SubSubcategoryCombobox
-                      subcategoryId={row.subcategory_id}
-                      value={row.sub_subcategory_id}
-                      onChange={(val) => setCategories((prev) => prev.map((r, j) => j === i
-                        ? { ...r, sub_subcategory_id: val }
-                        : r))}
-                    />
-                  )}
-
+                  <InlineCombobox value={row.category_id} onChange={(val) => setCategories((prev) => prev.map((r, j) => j === i ? { ...r, category_id: val, subcategory_id: null, sub_subcategory_id: null } : r))} options={taxonomy.categories} placeholder="Category…" className="flex-1 min-w-[130px]" />
+                  {row.category_id && <SubcategoryCombobox categoryId={row.category_id} value={row.subcategory_id} onChange={(val) => setCategories((prev) => prev.map((r, j) => j === i ? { ...r, subcategory_id: val, sub_subcategory_id: null } : r))} />}
+                  {row.subcategory_id && <SubSubcategoryCombobox subcategoryId={row.subcategory_id} value={row.sub_subcategory_id} onChange={(val) => setCategories((prev) => prev.map((r, j) => j === i ? { ...r, sub_subcategory_id: val } : r))} />}
                   {categories.length > 1 && (
-                    <button type="button" onClick={() => setCategories((prev) => prev.filter((_, j) => j !== i))} className="shrink-0 text-muted-foreground hover:text-destructive transition-colors">
-                      <X size={16} />
-                    </button>
+                    <button type="button" onClick={() => setCategories((prev) => prev.filter((_, j) => j !== i))} className="shrink-0 text-muted-foreground hover:text-destructive transition-colors"><X size={16} /></button>
                   )}
                 </div>
               ))}
-              <Button type="button" variant="outline" size="sm" className="gap-1.5"
-                onClick={() => setCategories((prev) => [...prev, { category_id: null, subcategory_id: null, sub_subcategory_id: null }])}>
+              <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setCategories((prev) => [...prev, { category_id: null, subcategory_id: null, sub_subcategory_id: null }])}>
                 <Plus size={14} /> Add another category
               </Button>
             </div>
@@ -739,25 +680,10 @@ const AdminProductForm = () => {
                     <SelectTrigger className="w-[25%] shrink-0"><SelectValue /></SelectTrigger>
                     <SelectContent>{ATTRIBUTION_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                   </Select>
-                  <InlineCombobox
-                    value={row.designer_id}
-                    onChange={(val) => setDesigners((prev) => prev.map((r, j) => j === i ? { ...r, designer_id: val } : r))}
-                    options={taxonomy.designers}
-                    placeholder="Select designer…"
-                    className="flex-1"
-                  />
+                  <InlineCombobox value={row.designer_id} onChange={(val) => setDesigners((prev) => prev.map((r, j) => j === i ? { ...r, designer_id: val } : r))} options={taxonomy.designers} placeholder="Select designer…" className="flex-1" />
                   <div className="w-[25%] flex justify-end items-center gap-1 shrink-0">
-                    {i === designers.length - 1 && (
-                      <Button type="button" variant="outline" size="sm" className="gap-1 text-xs whitespace-nowrap"
-                        onClick={() => setDesigners((prev) => [...prev, { designer_id: null, attribution_type: 'by' }])}>
-                        <Plus size={12} /> Add
-                      </Button>
-                    )}
-                    {designers.length > 1 && (
-                      <button type="button" onClick={() => setDesigners((prev) => prev.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-destructive transition-colors p-1">
-                        <X size={16} />
-                      </button>
-                    )}
+                    {i === designers.length - 1 && <Button type="button" variant="outline" size="sm" className="gap-1 text-xs whitespace-nowrap" onClick={() => setDesigners((prev) => [...prev, { designer_id: null, attribution_type: 'by' }])}><Plus size={12} /> Add</Button>}
+                    {designers.length > 1 && <button type="button" onClick={() => setDesigners((prev) => prev.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-destructive transition-colors p-1"><X size={16} /></button>}
                   </div>
                 </div>
               ))}
@@ -772,48 +698,47 @@ const AdminProductForm = () => {
                     <SelectTrigger className="w-[25%] shrink-0"><SelectValue /></SelectTrigger>
                     <SelectContent>{ATTRIBUTION_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                   </Select>
-                  <InlineCombobox
-                    value={row.maker_id}
-                    onChange={(val) => setMakers((prev) => prev.map((r, j) => j === i ? { ...r, maker_id: val } : r))}
-                    options={taxonomy.makers}
-                    placeholder="Select maker…"
-                    className="flex-1"
-                  />
+                  <InlineCombobox value={row.maker_id} onChange={(val) => setMakers((prev) => prev.map((r, j) => j === i ? { ...r, maker_id: val } : r))} options={taxonomy.makers} placeholder="Select maker…" className="flex-1" />
                   <div className="w-[25%] flex justify-end items-center gap-1 shrink-0">
-                    {i === makers.length - 1 && (
-                      <Button type="button" variant="outline" size="sm" className="gap-1 text-xs whitespace-nowrap"
-                        onClick={() => setMakers((prev) => [...prev, { maker_id: null, attribution_type: 'by' }])}>
-                        <Plus size={12} /> Add
-                      </Button>
-                    )}
-                    {makers.length > 1 && (
-                      <button type="button" onClick={() => setMakers((prev) => prev.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-destructive transition-colors p-1">
-                        <X size={16} />
-                      </button>
-                    )}
+                    {i === makers.length - 1 && <Button type="button" variant="outline" size="sm" className="gap-1 text-xs whitespace-nowrap" onClick={() => setMakers((prev) => [...prev, { maker_id: null, attribution_type: 'by' }])}><Plus size={12} /> Add</Button>}
+                    {makers.length > 1 && <button type="button" onClick={() => setMakers((prev) => prev.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-destructive transition-colors p-1"><X size={16} /></button>}
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <ComboboxField name="period_id" label="Period" options={taxonomy.periods} />
-              <AttributionSelect name="period_attribution" label="Period Attribution" />
+            {/* Period — same layout as Designers/Makers */}
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold tracking-[0.1em] uppercase text-foreground/70">Period</p>
+              {periods.map((row, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Select value={row.attribution_type || 'by'} onValueChange={(val) => setPeriods((prev) => prev.map((r, j) => j === i ? { ...r, attribution_type: val } : r))}>
+                    <SelectTrigger className="w-[25%] shrink-0"><SelectValue /></SelectTrigger>
+                    <SelectContent>{ATTRIBUTION_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <InlineCombobox value={row.period_id} onChange={(val) => setPeriods((prev) => prev.map((r, j) => j === i ? { ...r, period_id: val } : r))} options={taxonomy.periods} placeholder="Select period…" className="flex-1" />
+                  <div className="w-[25%] shrink-0" />
+                </div>
+              ))}
             </div>
 
+            {/* Style + Country */}
             <div className="grid grid-cols-2 gap-4">
               <ComboboxField name="style_id" label="Style" options={taxonomy.styles} />
               <ComboboxField name="country_id" label="Country" options={taxonomy.countries} />
             </div>
 
+            {/* Materials — full width */}
+            <FormField control={form.control} name="materials" render={({ field }) => (
+              <FormItem>
+                <FormLabel><FieldLabel>Materials</FieldLabel></FormLabel>
+                <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            {/* Year Created — half width */}
             <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="materials" render={({ field }) => (
-                <FormItem>
-                  <FormLabel><FieldLabel>Materials</FieldLabel></FormLabel>
-                  <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
               <FormField control={form.control} name="year_created" render={({ field }) => (
                 <FormItem>
                   <FormLabel><FieldLabel>Year Created</FieldLabel></FormLabel>
@@ -865,6 +790,7 @@ const AdminProductForm = () => {
               <FormItem>
                 <FormLabel><FieldLabel>Dimension Notes</FieldLabel></FormLabel>
                 <FormControl><Textarea rows={2} {...field} value={field.value ?? ''} /></FormControl>
+                <p className="text-xs text-muted-foreground">Internal use only — not displayed publicly.</p>
                 <FormMessage />
               </FormItem>
             )} />
@@ -954,18 +880,6 @@ const AdminProductForm = () => {
               <Save size={16} />
               {saveMutation.isPending ? 'Saving…' : isEditing ? 'Update Product' : 'Create Product'}
             </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              disabled={isBusy}
-              className="gap-2"
-              onClick={form.handleSubmit((v) => draftMutation.mutate(v))}
-            >
-              <FileText size={16} />
-              {draftMutation.isPending ? 'Saving…' : 'Save as Draft'}
-            </Button>
-
             <Button type="button" variant="ghost" onClick={() => navigate(backUrl)}>
               Cancel
             </Button>
