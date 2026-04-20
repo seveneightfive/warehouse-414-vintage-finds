@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -42,7 +42,7 @@ const ATTRIBUTION_OPTIONS = [
   { value: 'in the style of', label: 'in the style of' },
 ];
 
-// ─── Section heading — black bar full width ───────────────────────────────────
+// ─── Section heading ──────────────────────────────────────────────────────────
 
 const SectionHeading = ({ children }: { children: React.ReactNode }) => (
   <div className="w-full bg-foreground px-4 py-2.5">
@@ -50,17 +50,24 @@ const SectionHeading = ({ children }: { children: React.ReactNode }) => (
   </div>
 );
 
-// ─── All-caps label ───────────────────────────────────────────────────────────
-
 const FieldLabel = ({ children }: { children: React.ReactNode }) => (
   <span className="text-[11px] font-semibold tracking-[0.1em] uppercase text-foreground/70">{children}</span>
 );
 
-// ─── Junction row types ───────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type DesignerRow = { designer_id: string | null; attribution_type: string };
 type MakerRow    = { maker_id:    string | null; attribution_type: string };
-type CategoryRow = { category_id: string | null; subcategory_id:  string | null };
+
+// 3-level category hierarchy:
+//   category_id        = top-level (Furniture)
+//   subcategory_id     = level-1, direct child of category (Tables)   — has category_id, parent_id=null
+//   sub_subcategory_id = level-2, child of subcategory (Console Tables) — has parent_id set, category_id=null
+type CategoryRow = {
+  category_id:        string | null;
+  subcategory_id:     string | null;
+  sub_subcategory_id: string | null;
+};
 
 // ─── Zod schema ───────────────────────────────────────────────────────────────
 
@@ -175,7 +182,7 @@ const InlineCombobox = ({ value, onChange, options, placeholder, className }: {
   );
 };
 
-// ─── Subcategory combobox ─────────────────────────────────────────────────────
+// ─── Level-1 subcategory combobox (direct children of category, parent_id=null) ──
 
 const SubcategoryCombobox = ({ categoryId, value, onChange }: {
   categoryId: string; value: string | null; onChange: (id: string | null) => void;
@@ -183,14 +190,41 @@ const SubcategoryCombobox = ({ categoryId, value, onChange }: {
   const { data } = useQuery({
     queryKey: ['taxonomy-subcategories', categoryId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('subcategories').select('id, name').eq('category_id', categoryId).order('name');
+      const { data, error } = await supabase
+        .from('subcategories')
+        .select('id, name')
+        .eq('category_id', categoryId)
+        .is('parent_id', null)
+        .order('name');
       if (error) throw error;
       return data as { id: string; name: string }[];
     },
     enabled: !!categoryId,
   });
   if (!data || data.length === 0) return null;
-  return <InlineCombobox value={value} onChange={onChange} options={data} placeholder="Subcategory (optional)" className="flex-1" />;
+  return <InlineCombobox value={value} onChange={onChange} options={data} placeholder="Subcategory…" className="flex-1 min-w-[130px]" />;
+};
+
+// ─── Level-2 sub-subcategory combobox (children of subcategory, by parent_id) ──
+
+const SubSubcategoryCombobox = ({ subcategoryId, value, onChange }: {
+  subcategoryId: string; value: string | null; onChange: (id: string | null) => void;
+}) => {
+  const { data } = useQuery({
+    queryKey: ['taxonomy-sub-subcategories', subcategoryId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('subcategories')
+        .select('id, name')
+        .eq('parent_id', subcategoryId)
+        .order('name');
+      if (error) throw error;
+      return data as { id: string; name: string }[];
+    },
+    enabled: !!subcategoryId,
+  });
+  if (!data || data.length === 0) return null;
+  return <InlineCombobox value={value} onChange={onChange} options={data} placeholder="Specific type…" className="flex-1 min-w-[130px]" />;
 };
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -198,13 +232,17 @@ const SubcategoryCombobox = ({ categoryId, value, onChange }: {
 const AdminProductForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const isEditing = !!id;
   const taxonomy = useTaxonomyOptions();
 
+  const returnStatus = new URLSearchParams(location.search).get('from') ?? null;
+  const backUrl = returnStatus ? `/admin/products?status=${returnStatus}` : '/admin/products';
+
   const [designers,  setDesigners]  = useState<DesignerRow[]>([{ designer_id: null, attribution_type: 'by' }]);
   const [makers,     setMakers]     = useState<MakerRow[]>([{ maker_id: null, attribution_type: 'by' }]);
-  const [categories, setCategories] = useState<CategoryRow[]>([{ category_id: null, subcategory_id: null }]);
+  const [categories, setCategories] = useState<CategoryRow[]>([{ category_id: null, subcategory_id: null, sub_subcategory_id: null }]);
 
   const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { name: '', status: 'available' } });
   const draftKey = `product-draft-${id ?? 'new'}`;
@@ -250,8 +288,19 @@ const AdminProductForm = () => {
     enabled: isEditing,
   });
 
+  // All subcategories — needed to resolve 2-level hierarchy when loading an existing product
+  const { data: allSubcategories } = useQuery({
+    queryKey: ['taxonomy-all-subcategories'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('subcategories').select('id, name, category_id, parent_id');
+      if (error) throw error;
+      return data as { id: string; name: string; category_id: string | null; parent_id: string | null }[];
+    },
+  });
+
   useEffect(() => {
-    if (!product) return;
+    if (!product || !allSubcategories) return;
+
     const values: Partial<FormValues> = {};
     for (const key of Object.keys(schema.shape)) {
       (values as Record<string, unknown>)[key] = (product as Record<string, unknown>)[key] ?? '';
@@ -270,9 +319,26 @@ const AdminProductForm = () => {
 
     const dbC: CategoryRow[] = [...((product as any).product_categories ?? [])]
       .sort((a: any, b: any) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0))
-      .map((r: any) => ({ category_id: r.category_id, subcategory_id: r.subcategory_id ?? null }));
-    setCategories(dbC.length > 0 ? dbC : [{ category_id: null, subcategory_id: null }]);
-  }, [product, form]);
+      .map((r: any) => {
+        const savedSubId = r.subcategory_id ?? null;
+        if (!savedSubId) {
+          return { category_id: r.category_id, subcategory_id: null, sub_subcategory_id: null };
+        }
+        // Check if the stored subcategory_id is a level-2 (has a parent_id)
+        const sub = allSubcategories.find((s) => s.id === savedSubId);
+        if (sub?.parent_id) {
+          // It's a level-2 — set subcategory_id to its parent, sub_subcategory_id to itself
+          return {
+            category_id:        r.category_id,
+            subcategory_id:     sub.parent_id,
+            sub_subcategory_id: savedSubId,
+          };
+        }
+        // It's a level-1
+        return { category_id: r.category_id, subcategory_id: savedSubId, sub_subcategory_id: null };
+      });
+    setCategories(dbC.length > 0 ? dbC : [{ category_id: null, subcategory_id: null, sub_subcategory_id: null }]);
+  }, [product, allSubcategories, form]);
 
   const generateSlug = (name: string) =>
     name.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
@@ -281,7 +347,6 @@ const AdminProductForm = () => {
     return data ? `${slug}-${Math.floor(1000 + Math.random() * 9000)}` : slug;
   };
 
-  // Core save — shared by both buttons
   const performSave = async (values: FormValues, overrideStatus?: string) => {
     const payload: Record<string, unknown> = { ...values };
     if (overrideStatus) payload.status = overrideStatus;
@@ -300,7 +365,8 @@ const AdminProductForm = () => {
     payload.maker_id             = firstM?.maker_id ?? null;
     payload.maker_attribution    = firstM?.attribution_type ?? null;
     payload.category_id          = firstC?.category_id ?? null;
-    payload.subcategory_id       = firstC?.subcategory_id ?? null;
+    // Always store the deepest selected level
+    payload.subcategory_id       = firstC?.sub_subcategory_id ?? firstC?.subcategory_id ?? null;
 
     if (!isEditing && values.name) payload.slug = await ensureUniqueSlug(generateSlug(values.name));
 
@@ -332,7 +398,12 @@ const AdminProductForm = () => {
     await supabase.from('product_categories').delete().eq('product_id', productId);
     const vC = categories.filter((c) => c.category_id);
     if (vC.length > 0) {
-      const { error } = await supabase.from('product_categories').insert(vC.map((c, i) => ({ product_id: productId, category_id: c.category_id, subcategory_id: c.subcategory_id ?? null, is_primary: i === 0 })));
+      const { error } = await supabase.from('product_categories').insert(vC.map((c, i) => ({
+        product_id:     productId,
+        category_id:    c.category_id,
+        subcategory_id: c.sub_subcategory_id ?? c.subcategory_id ?? null,
+        is_primary:     i === 0,
+      })));
       if (error) throw error;
     }
 
@@ -341,11 +412,16 @@ const AdminProductForm = () => {
 
   const onSuccess = (newId: string, statusLabel: string) => {
     queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-product-counts'] });
     queryClient.invalidateQueries({ queryKey: ['admin-product', newId] });
     localStorage.removeItem(draftKey);
     toast.success(statusLabel);
-    if (isEditing) navigate(`/admin/products?highlight=${id}&status=${form.getValues('status')}`);
-    else navigate(`/admin/products/${newId}`);
+    if (isEditing) {
+      const savedStatus = form.getValues('status');
+      navigate(`/admin/products?highlight=${id}&status=${savedStatus}`);
+    } else {
+      navigate(`/admin/products/${newId}`);
+    }
   };
 
   const saveMutation = useMutation({
@@ -360,7 +436,6 @@ const AdminProductForm = () => {
     onError: (err: Error) => toast.error(err.message),
   });
 
-  // Images
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -426,7 +501,6 @@ const AdminProductForm = () => {
 
   if (isEditing && isLoading) return <p className="text-muted-foreground">Loading…</p>;
 
-  // Shared FormField combobox
   const ComboboxField = ({ name, label, options }: { name: keyof FormValues; label: string; options?: { id: string; name: string }[] }) => {
     const [open, setOpen] = useState(false);
     return (
@@ -491,7 +565,7 @@ const AdminProductForm = () => {
   return (
     <div className="max-w-4xl">
       <div className="flex items-center gap-3 mb-8">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/admin/products')}>
+        <Button variant="ghost" size="icon" onClick={() => navigate(backUrl)}>
           <ArrowLeft size={18} />
         </Button>
         <h1 className="font-display text-2xl tracking-wide text-foreground">
@@ -514,7 +588,6 @@ const AdminProductForm = () => {
               </FormItem>
             )} />
 
-            {/* SKU | Status */}
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="sku" render={({ field }) => (
                 <FormItem>
@@ -544,7 +617,6 @@ const AdminProductForm = () => {
               </p>
             )}
 
-            {/* Price | Sale Price */}
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="price" render={({ field }) => (
                 <FormItem>
@@ -599,32 +671,52 @@ const AdminProductForm = () => {
             <SectionHeading>Taxonomy &amp; Attribution</SectionHeading>
             <p className="text-xs text-muted-foreground">Attribution precedes the name, e.g. "by", "in the style of", "attributed to"</p>
 
-            {/* Categories — first in section */}
+            {/* ── Categories — 3-level hierarchy ── */}
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <p className="text-[11px] font-semibold tracking-[0.1em] uppercase text-foreground/70">Categories</p>
                 <span className="text-xs text-muted-foreground">(first row is the primary)</span>
               </div>
               {categories.map((row, i) => (
-                <div key={i} className="flex items-center gap-2">
+                <div key={i} className="flex flex-wrap items-center gap-2">
                   {i === 0
                     ? <span className="text-[10px] font-semibold tracking-wide text-primary bg-primary/10 px-1.5 py-0.5 rounded shrink-0 whitespace-nowrap">PRIMARY</span>
                     : <span className="w-[58px] shrink-0" />
                   }
+
+                  {/* Level 0: Category */}
                   <InlineCombobox
                     value={row.category_id}
-                    onChange={(val) => setCategories((prev) => prev.map((r, j) => j === i ? { ...r, category_id: val, subcategory_id: null } : r))}
+                    onChange={(val) => setCategories((prev) => prev.map((r, j) => j === i
+                      ? { ...r, category_id: val, subcategory_id: null, sub_subcategory_id: null }
+                      : r))}
                     options={taxonomy.categories}
-                    placeholder="Select category…"
-                    className="flex-1"
+                    placeholder="Category…"
+                    className="flex-1 min-w-[130px]"
                   />
+
+                  {/* Level 1: Subcategory (e.g. Tables) */}
                   {row.category_id && (
                     <SubcategoryCombobox
                       categoryId={row.category_id}
                       value={row.subcategory_id}
-                      onChange={(val) => setCategories((prev) => prev.map((r, j) => j === i ? { ...r, subcategory_id: val } : r))}
+                      onChange={(val) => setCategories((prev) => prev.map((r, j) => j === i
+                        ? { ...r, subcategory_id: val, sub_subcategory_id: null }
+                        : r))}
                     />
                   )}
+
+                  {/* Level 2: Sub-subcategory (e.g. Console Tables) */}
+                  {row.subcategory_id && (
+                    <SubSubcategoryCombobox
+                      subcategoryId={row.subcategory_id}
+                      value={row.sub_subcategory_id}
+                      onChange={(val) => setCategories((prev) => prev.map((r, j) => j === i
+                        ? { ...r, sub_subcategory_id: val }
+                        : r))}
+                    />
+                  )}
+
                   {categories.length > 1 && (
                     <button type="button" onClick={() => setCategories((prev) => prev.filter((_, j) => j !== i))} className="shrink-0 text-muted-foreground hover:text-destructive transition-colors">
                       <X size={16} />
@@ -633,12 +725,12 @@ const AdminProductForm = () => {
                 </div>
               ))}
               <Button type="button" variant="outline" size="sm" className="gap-1.5"
-                onClick={() => setCategories((prev) => [...prev, { category_id: null, subcategory_id: null }])}>
+                onClick={() => setCategories((prev) => [...prev, { category_id: null, subcategory_id: null, sub_subcategory_id: null }])}>
                 <Plus size={14} /> Add another category
               </Button>
             </div>
 
-            {/* Designers — 25% | 50% | 25% */}
+            {/* Designers */}
             <div className="space-y-2">
               <p className="text-[11px] font-semibold tracking-[0.1em] uppercase text-foreground/70">Designers</p>
               {designers.map((row, i) => (
@@ -671,7 +763,7 @@ const AdminProductForm = () => {
               ))}
             </div>
 
-            {/* Makers — 25% | 50% | 25% */}
+            {/* Makers */}
             <div className="space-y-2">
               <p className="text-[11px] font-semibold tracking-[0.1em] uppercase text-foreground/70">Makers</p>
               {makers.map((row, i) => (
@@ -704,19 +796,16 @@ const AdminProductForm = () => {
               ))}
             </div>
 
-            {/* Period */}
             <div className="grid grid-cols-2 gap-4">
               <ComboboxField name="period_id" label="Period" options={taxonomy.periods} />
               <AttributionSelect name="period_attribution" label="Period Attribution" />
             </div>
 
-            {/* Style + Country */}
             <div className="grid grid-cols-2 gap-4">
               <ComboboxField name="style_id" label="Style" options={taxonomy.styles} />
               <ComboboxField name="country_id" label="Country" options={taxonomy.countries} />
             </div>
 
-            {/* Materials + Year Created */}
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="materials" render={({ field }) => (
                 <FormItem>
@@ -735,7 +824,6 @@ const AdminProductForm = () => {
               )} />
             </div>
 
-            {/* Tags — after Materials/Year */}
             <FormField control={form.control} name="tags" render={({ field }) => (
               <FormItem>
                 <FormLabel><FieldLabel>Tags</FieldLabel></FormLabel>
@@ -745,7 +833,6 @@ const AdminProductForm = () => {
               </FormItem>
             )} />
 
-            {/* Condition Notes — full width, 4 rows */}
             <FormField control={form.control} name="condition" render={({ field }) => (
               <FormItem>
                 <FormLabel><FieldLabel>Condition Notes</FieldLabel></FormLabel>
@@ -868,7 +955,6 @@ const AdminProductForm = () => {
               {saveMutation.isPending ? 'Saving…' : isEditing ? 'Update Product' : 'Create Product'}
             </Button>
 
-            {/* Save as Draft — always overrides status to 'draft' */}
             <Button
               type="button"
               variant="outline"
@@ -880,7 +966,7 @@ const AdminProductForm = () => {
               {draftMutation.isPending ? 'Saving…' : 'Save as Draft'}
             </Button>
 
-            <Button type="button" variant="ghost" onClick={() => navigate('/admin/products')}>
+            <Button type="button" variant="ghost" onClick={() => navigate(backUrl)}>
               Cancel
             </Button>
           </div>
