@@ -5,10 +5,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
-  Pencil, Eye, Trash2, Search, ChevronLeft, ChevronRight,
-  CircleDollarSign, Clock, ArrowLeft, ChevronDown, ChevronUp, RefreshCw,
+  Search, ChevronLeft, ChevronRight, ArrowLeft,
+  ChevronDown, ChevronUp, MoreVertical,
+  Eye, Pencil, Clock, RefreshCw, CircleDollarSign, Trash2,
+  Link as LinkIcon, Tag,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Product } from '@/types/database';
@@ -32,8 +41,36 @@ const INVENTORY_TABS: { value: StatusValue; label: string }[] = [
   { value: 'deactivated', label: 'Deactivated' },
 ];
 
+const ALL_STATUSES: { value: StatusValue; label: string }[] = [
+  { value: 'available',   label: 'Available'   },
+  { value: 'on_hold',     label: 'On Hold'     },
+  { value: 'at_auction',  label: 'At Auction'  },
+  { value: 'sold',        label: 'Sold'        },
+  { value: 'inventory',   label: 'Inventory'   },
+  { value: 'draft',       label: 'Draft'       },
+  { value: 'deactivated', label: 'Deactivated' },
+];
+
+const STATUS_BADGE: Record<StatusValue, { label: string; className: string }> = {
+  available:   { label: 'Available',   className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' },
+  on_hold:     { label: 'On Hold',     className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300' },
+  at_auction:  { label: 'At Auction',  className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300' },
+  sold:        { label: 'Sold',        className: 'bg-muted text-muted-foreground' },
+  inventory:   { label: 'Inventory',   className: 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300' },
+  draft:       { label: 'Draft',       className: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300' },
+  deactivated: { label: 'Deactivated', className: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' },
+};
+
+const StatusBadge = ({ status }: { status: StatusValue }) => {
+  const cfg = STATUS_BADGE[status] ?? { label: status, className: 'bg-muted text-muted-foreground' };
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase whitespace-nowrap ${cfg.className}`}>
+      {cfg.label}
+    </span>
+  );
+};
+
 const INVENTORY_STATUSES = new Set<StatusValue>(['inventory', 'draft', 'deactivated']);
-// statuses where Mark Sold should not appear
 const NO_SOLD_STATUSES   = new Set<string>(['sold', 'inventory', 'draft', 'deactivated']);
 
 type HoldDetail = {
@@ -48,6 +85,12 @@ type HoldDetail = {
   notes: string | null;
 };
 
+type ExternalLinksState = {
+  firstdibs_url: string;
+  chairish_url: string;
+  ebay_url: string;
+};
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const AdminProducts = () => {
@@ -58,20 +101,30 @@ const AdminProducts = () => {
 
   const [searchQuery,  setSearchQuery]  = useState('');
   const statusFilter: StatusValue = (searchParams.get('status') as StatusValue) ?? 'available';
-const setStatusFilter = (value: StatusValue) => {
-  setSearchParams(prev => { prev.set('status', value); return prev; });
-  setPage(0);
-};
-  const [page,        setPage]        = useState(0);
-  const [soldProduct, setSoldProduct] = useState<Product | null>(null);
-  const [holdProduct, setHoldProduct] = useState<Product | null>(null);
-  const [openHoldId,  setOpenHoldId]  = useState<string | null>(null);
+  const setStatusFilter = (value: StatusValue) => {
+    setSearchParams(prev => { prev.set('status', value); return prev; });
+    setPage(0);
+  };
+  const [page,          setPage]          = useState(0);
+  const [soldProduct,   setSoldProduct]   = useState<Product | null>(null);
+  const [holdProduct,   setHoldProduct]   = useState<Product | null>(null);
+  const [openHoldId,    setOpenHoldId]    = useState<string | null>(null);
+
+  // Change Status dialog
+  const [changeStatusProduct, setChangeStatusProduct] = useState<Product | null>(null);
+  const [pendingStatus,        setPendingStatus]       = useState<StatusValue | ''>('');
+
+  // External Links dialog
+  const [linksProduct, setLinksProduct] = useState<Product | null>(null);
+  const [linksState,   setLinksState]   = useState<ExternalLinksState>({ firstdibs_url: '', chairish_url: '', ebay_url: '' });
 
   const isInventorySection = INVENTORY_STATUSES.has(statusFilter);
 
   // ── Data ───────────────────────────────────────────────────────────────────
   const { data, isLoading } = useQuery({
     queryKey: ['admin-products', page, searchQuery, statusFilter, consignorFilter],
+    staleTime: 0,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       let countQ = supabase.from('products').select('*', { count: 'exact', head: true }).eq('status', statusFilter);
       if (consignorFilter) countQ = countQ.ilike('sku', `${consignorFilter}%`);
@@ -90,7 +143,6 @@ const setStatusFilter = (value: StatusValue) => {
       const [{ count }, { data: products, error }] = await Promise.all([countQ, q]);
       if (error) throw error;
 
-      // Full hold details for on_hold tab
       let holdsMap: Record<string, HoldDetail> = {};
       if (statusFilter === 'on_hold' && products?.length) {
         const { data: holds } = await supabase
@@ -107,6 +159,8 @@ const setStatusFilter = (value: StatusValue) => {
 
   const { data: statusCounts } = useQuery({
     queryKey: ['admin-product-counts'],
+    staleTime: 0,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const statuses: StatusValue[] = ['available', 'on_hold', 'at_auction', 'sold', 'inventory', 'draft', 'deactivated'];
       const results = await Promise.all(
@@ -120,10 +174,10 @@ const setStatusFilter = (value: StatusValue) => {
   const holdsMap   = data?.holdsMap ?? {};
   const totalPages = Math.ceil((data?.total ?? 0) / PAGE_SIZE);
 
-  const showExpires    = statusFilter === 'on_hold';
+  const showExpires     = statusFilter === 'on_hold';
   const showSoldDetails = statusFilter === 'sold';
-  const showAuction    = statusFilter === 'at_auction';
-  const showPrice      = !showSoldDetails && !showAuction;
+  const showAuction     = statusFilter === 'at_auction';
+  const showPrice       = !showSoldDetails && !showAuction;
 
   // ── Mutations ──────────────────────────────────────────────────────────────
   const invalidate = () => {
@@ -192,6 +246,37 @@ const setStatusFilter = (value: StatusValue) => {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const changeStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: StatusValue }) => {
+      const { error } = await supabase.from('products').update({ status } as any).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => { invalidate(); toast.success('Status updated'); setChangeStatusProduct(null); setPendingStatus(''); },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const updateLinksMutation = useMutation({
+    mutationFn: async ({ id, links }: { id: string; links: ExternalLinksState }) => {
+      const { error } = await supabase.from('products').update({
+        firstdibs_url: links.firstdibs_url || null,
+        chairish_url:  links.chairish_url  || null,
+        ebay_url:      links.ebay_url      || null,
+      } as any).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => { invalidate(); toast.success('External links updated'); setLinksProduct(null); },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const openLinksDialog = (p: Product) => {
+    setLinksState({
+      firstdibs_url: (p as any).firstdibs_url ?? '',
+      chairish_url:  (p as any).chairish_url  ?? '',
+      ebay_url:      (p as any).ebay_url       ?? '',
+    });
+    setLinksProduct(p);
+  };
+
   const handleSearch       = (v: string) => { setSearchQuery(v); setPage(0); };
   const handleStatusFilter = (v: string) => { if (v) { setStatusFilter(v as StatusValue); setPage(0); } };
 
@@ -259,6 +344,7 @@ const setStatusFilter = (value: StatusValue) => {
                   <TableHead className="w-16">Image</TableHead>
                   <TableHead className="w-32">SKU</TableHead>
                   <TableHead>Title</TableHead>
+                  <TableHead className="w-28">Status</TableHead>
                   {showExpires     && <TableHead className="w-32">Hold Expires</TableHead>}
                   {showAuction     && <TableHead>Auction URL</TableHead>}
                   {showSoldDetails && <TableHead className="w-28">Sold Price</TableHead>}
@@ -266,7 +352,7 @@ const setStatusFilter = (value: StatusValue) => {
                   {showSoldDetails && <TableHead className="w-28">Sale Date</TableHead>}
                   {showPrice       && <TableHead className="w-28">Price</TableHead>}
                   <TableHead className="w-28">Added</TableHead>
-                  <TableHead className="w-36">Actions</TableHead>
+                  <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -297,6 +383,11 @@ const setStatusFilter = (value: StatusValue) => {
 
                         {/* Title */}
                         <TableCell className="font-medium">{p.name}</TableCell>
+
+                        {/* Status badge */}
+                        <TableCell>
+                          <StatusBadge status={p.status as StatusValue} />
+                        </TableCell>
 
                         {/* On Hold: expiry + accordion toggle */}
                         {showExpires && (
@@ -352,69 +443,91 @@ const setStatusFilter = (value: StatusValue) => {
                           {p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                         </TableCell>
 
-                        {/* ── Actions — always a single inline row ── */}
+                        {/* ── Kebab Actions Menu ── */}
                         <TableCell>
-                          <div className="flex items-center gap-0.5">
-                            {/* View */}
-                            <Link to={`/product/${p.slug}`}>
-                              <Button variant="ghost" size="icon" title="View on site"><Eye size={14} /></Button>
-                            </Link>
-
-                            {/* Edit */}
-                            <Link to={`/admin/products/${p.id}`}>
-                              <Button variant="ghost" size="icon" title="Edit"><Pencil size={14} /></Button>
-                            </Link>
-
-                            {/* Place Hold — available only */}
-                            {p.status === 'available' && (
-                              <Button variant="ghost" size="icon" title="Place hold" onClick={() => setHoldProduct(p)}>
-                                <Clock size={14} />
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical size={15} />
                               </Button>
-                            )}
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-52">
 
-                            {/* Extend Hold — on_hold only */}
-                            {p.status === 'on_hold' && hold && (
-                              <Button variant="ghost" size="icon" title="Extend hold 48h" onClick={() => extendHoldMutation.mutate({ holdId: hold.id })}>
-                                <RefreshCw size={14} />
-                              </Button>
-                            )}
+                              {/* View / Edit */}
+                              <DropdownMenuItem asChild>
+                                <Link to={`/product/${p.slug}`} className="flex items-center gap-2 cursor-pointer">
+                                  <Eye size={13} /> View on Site
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to={`/admin/products/${p.id}?from=${p.status}`} className="flex items-center gap-2 cursor-pointer">
+                                  <Pencil size={13} /> Edit Product
+                                </Link>
+                              </DropdownMenuItem>
 
-                            {/* Release Hold → Available */}
-                            {p.status === 'on_hold' && (
-                              <Button variant="ghost" size="icon" title="Release hold → Available"
-                                onClick={() => { if (confirm('Release hold and set back to Available?')) releaseHoldMutation.mutate(p.id); }}>
-                                <ArrowLeft size={14} />
-                              </Button>
-                            )}
+                              <DropdownMenuSeparator />
 
-                            {/* Release from Auction → Available */}
-                            {p.status === 'at_auction' && (
-                              <Button variant="ghost" size="icon" title="Release from auction"
-                                onClick={() => { if (confirm('Release from auction back to Available?')) releaseAuctionMutation.mutate(p.id); }}>
-                                <ArrowLeft size={14} />
-                              </Button>
-                            )}
+                              {/* Status-specific actions */}
+                              {p.status === 'available' && (
+                                <DropdownMenuItem onClick={() => setHoldProduct(p)} className="flex items-center gap-2 cursor-pointer">
+                                  <Clock size={13} /> Place Hold
+                                </DropdownMenuItem>
+                              )}
+                              {p.status === 'on_hold' && hold && (
+                                <DropdownMenuItem onClick={() => extendHoldMutation.mutate({ holdId: hold.id })} className="flex items-center gap-2 cursor-pointer">
+                                  <RefreshCw size={13} /> Extend Hold 48h
+                                </DropdownMenuItem>
+                              )}
+                              {p.status === 'on_hold' && (
+                                <DropdownMenuItem onClick={() => { if (confirm('Release hold and set back to Available?')) releaseHoldMutation.mutate(p.id); }} className="flex items-center gap-2 cursor-pointer">
+                                  <ArrowLeft size={13} /> Release Hold → Available
+                                </DropdownMenuItem>
+                              )}
+                              {p.status === 'at_auction' && (
+                                <DropdownMenuItem onClick={() => { if (confirm('Release from auction back to Available?')) releaseAuctionMutation.mutate(p.id); }} className="flex items-center gap-2 cursor-pointer">
+                                  <ArrowLeft size={13} /> Release from Auction
+                                </DropdownMenuItem>
+                              )}
+                              {!NO_SOLD_STATUSES.has(p.status) && (
+                                <DropdownMenuItem onClick={() => setSoldProduct(p)} className="flex items-center gap-2 cursor-pointer">
+                                  <CircleDollarSign size={13} /> Mark as Sold
+                                </DropdownMenuItem>
+                              )}
 
-                            {/* Mark Sold — hide for inventory / draft / deactivated / already sold */}
-                            {!NO_SOLD_STATUSES.has(p.status) && (
-                              <Button variant="ghost" size="icon" title="Mark as sold" onClick={() => setSoldProduct(p)}>
-                                <CircleDollarSign size={14} />
-                              </Button>
-                            )}
+                              <DropdownMenuSeparator />
 
-                            {/* Delete */}
-                            <Button variant="ghost" size="icon" title="Delete"
-                              onClick={() => { if (confirm('Delete this product?')) deleteMutation.mutate(p.id); }}>
-                              <Trash2 size={14} />
-                            </Button>
-                          </div>
+                              {/* Change Status */}
+                              <DropdownMenuItem
+                                onClick={() => { setChangeStatusProduct(p); setPendingStatus(p.status as StatusValue); }}
+                                className="flex items-center gap-2 cursor-pointer"
+                              >
+                                <Tag size={13} /> Change Status
+                              </DropdownMenuItem>
+
+                              {/* External Links */}
+                              <DropdownMenuItem onClick={() => openLinksDialog(p)} className="flex items-center gap-2 cursor-pointer">
+                                <LinkIcon size={13} /> Update External Links
+                              </DropdownMenuItem>
+
+                              <DropdownMenuSeparator />
+
+                              {/* Delete */}
+                              <DropdownMenuItem
+                                onClick={() => { if (confirm('Delete this product?')) deleteMutation.mutate(p.id); }}
+                                className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
+                              >
+                                <Trash2 size={13} /> Delete
+                              </DropdownMenuItem>
+
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
 
                       {/* ── Hold detail accordion row ── */}
                       {showExpires && holdOpen && hold && (
                         <TableRow key={`${p.id}-hold`} className="bg-muted/40 hover:bg-muted/40">
-                          <TableCell colSpan={8} className="py-3 pl-16 pr-6">
+                          <TableCell colSpan={9} className="py-3 pl-16 pr-6">
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-3 text-sm">
                               <div>
                                 <p className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground mb-0.5">Customer</p>
@@ -466,6 +579,7 @@ const setStatusFilter = (value: StatusValue) => {
         )}
       </div>
 
+      {/* ── Mark Sold Dialog ── */}
       <MarkSoldDialog
         open={!!soldProduct}
         onOpenChange={(open) => !open && setSoldProduct(null)}
@@ -475,6 +589,7 @@ const setStatusFilter = (value: StatusValue) => {
         isLoading={markSoldMutation.isPending}
       />
 
+      {/* ── Place Hold Dialog ── */}
       <PlaceHoldDialog
         open={!!holdProduct}
         onOpenChange={(open) => !open && setHoldProduct(null)}
@@ -482,6 +597,98 @@ const setStatusFilter = (value: StatusValue) => {
         onConfirm={(holdData) => { if (holdProduct) placeHoldMutation.mutate({ product_id: holdProduct.id, ...holdData }); }}
         isLoading={placeHoldMutation.isPending}
       />
+
+      {/* ── Change Status Dialog ── */}
+      <Dialog open={!!changeStatusProduct} onOpenChange={(open) => { if (!open) { setChangeStatusProduct(null); setPendingStatus(''); } }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Change Status</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground truncate">{changeStatusProduct?.name}</p>
+          <div className="grid grid-cols-1 gap-1.5 mt-2">
+            {ALL_STATUSES.map((s) => {
+              const cfg = STATUS_BADGE[s.value];
+              const isSelected = pendingStatus === s.value;
+              return (
+                <button
+                  key={s.value}
+                  type="button"
+                  onClick={() => setPendingStatus(s.value)}
+                  className={`flex items-center gap-3 rounded-md border px-3 py-2 text-left transition-colors ${
+                    isSelected ? 'border-primary bg-primary/5' : 'border-transparent hover:bg-muted'
+                  }`}
+                >
+                  <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase ${cfg.className}`}>
+                    {cfg.label}
+                  </span>
+                  {isSelected && <span className="ml-auto text-primary text-xs">✓</span>}
+                </button>
+              );
+            })}
+          </div>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => { setChangeStatusProduct(null); setPendingStatus(''); }}>Cancel</Button>
+            <Button
+              disabled={!pendingStatus || pendingStatus === changeStatusProduct?.status || changeStatusMutation.isPending}
+              onClick={() => {
+                if (changeStatusProduct && pendingStatus) {
+                  changeStatusMutation.mutate({ id: changeStatusProduct.id, status: pendingStatus });
+                }
+              }}
+            >
+              {changeStatusMutation.isPending ? 'Saving…' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── External Links Dialog ── */}
+      <Dialog open={!!linksProduct} onOpenChange={(open) => { if (!open) setLinksProduct(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Update External Links</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground truncate mb-2">{linksProduct?.name}</p>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="firstdibs_url">1stDibs URL</Label>
+              <Input
+                id="firstdibs_url"
+                placeholder="https://www.1stdibs.com/..."
+                value={linksState.firstdibs_url}
+                onChange={(e) => setLinksState((s) => ({ ...s, firstdibs_url: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="chairish_url">Chairish URL</Label>
+              <Input
+                id="chairish_url"
+                placeholder="https://www.chairish.com/..."
+                value={linksState.chairish_url}
+                onChange={(e) => setLinksState((s) => ({ ...s, chairish_url: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ebay_url">eBay URL</Label>
+              <Input
+                id="ebay_url"
+                placeholder="https://www.ebay.com/itm/..."
+                value={linksState.ebay_url}
+                onChange={(e) => setLinksState((s) => ({ ...s, ebay_url: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setLinksProduct(null)}>Cancel</Button>
+            <Button
+              disabled={updateLinksMutation.isPending}
+              onClick={() => { if (linksProduct) updateLinksMutation.mutate({ id: linksProduct.id, links: linksState }); }}
+            >
+              {updateLinksMutation.isPending ? 'Saving…' : 'Save Links'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
