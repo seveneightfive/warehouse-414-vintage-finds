@@ -25,7 +25,6 @@ import AdminCollections from "./pages/admin/AdminCollections";
 import AdminCollectionDetail from "./pages/admin/AdminCollectionDetail";
 import AdminConsignors from "./pages/admin/AdminConsignors";
 import AdminConsignorDetail from "./pages/admin/AdminConsignorDetail";
-import AdminInventory from "./pages/admin/AdminInventory";  // ← NEW
 import CollectionDetail from "./pages/CollectionDetail";
 import AdminSidebar from "./components/AdminSidebar";
 import NotFound from "./pages/NotFound";
