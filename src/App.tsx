@@ -16,10 +16,17 @@ import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminProductsAvailable from "./pages/admin/products/AdminProductsAvailable";
 import { createProductStatusPage } from "./pages/admin/products/createProductStatusPage";
+<<<<<<< HEAD
 import AdminProductForm from "./pages/admin/products/AdminProductForm";
 import AdminHolds from "./pages/admin/AdminHolds";
 import AdminInbox from "./pages/admin/AdminInbox";
 import AdminCrudList from "./components/AdminCrudList";
+=======
+import AdminProductForm from "./pages/admin/AdminProductForm";
+import AdminHolds from "./pages/admin/AdminHolds";
+import AdminInbox from "./pages/admin/AdminInbox";
+import AdminCrudList from "./pages/admin/AdminCrudList";
+>>>>>>> a57c750371323f70fdb36dd5b70bda185e4b9fe2
 import AdminCategoryManager from "./pages/admin/AdminCategoryManager";
 import AdminCollections from "./pages/admin/AdminCollections";
 import AdminCollectionDetail from "./pages/admin/AdminCollectionDetail";
@@ -107,6 +114,12 @@ const App = () => (
             <Route path="/admin/periods" element={<AdminLayout><AdminCrudList title="Periods" tableName="periods" /></AdminLayout>} />
             <Route path="/admin/countries" element={<AdminLayout><AdminCrudList title="Countries" tableName="countries" /></AdminLayout>} />
 
+<<<<<<< HEAD
+=======
+            {/* Inventory - NEW */}
+            <Route path="/admin/inventory" element={<AdminLayout><AdminCrudList title="Inventory" tableName="inventory" columns={[{ key: 'name', label: 'Name' }]} /></AdminLayout>} />
+
+>>>>>>> a57c750371323f70fdb36dd5b70bda185e4b9fe2
             {/* Legacy route — redirect to available (in case old bookmarks) */}
             <Route path="/admin/products" element={<AdminLayout><AdminProductsAvailable /></AdminLayout>} />
 
