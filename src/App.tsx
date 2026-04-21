@@ -19,7 +19,7 @@ import { createProductStatusPage } from "./pages/admin/products/createProductSta
 import AdminProductForm from "./pages/admin/AdminProductForm";
 import AdminHolds from "./pages/admin/AdminHolds";
 import AdminInbox from "./pages/admin/AdminInbox";
-import AdminCrudList from "./components/AdminCrudList";
+import AdminCrudList from "./pages/admin/AdminCrudList";
 import AdminCategoryManager from "./pages/admin/AdminCategoryManager";
 import AdminCollections from "./pages/admin/AdminCollections";
 import AdminCollectionDetail from "./pages/admin/AdminCollectionDetail";
