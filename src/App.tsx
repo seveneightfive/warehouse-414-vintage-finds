@@ -25,6 +25,7 @@ import AdminCollections from "./pages/admin/AdminCollections";
 import AdminCollectionDetail from "./pages/admin/AdminCollectionDetail";
 import AdminConsignors from "./pages/admin/AdminConsignors";
 import AdminConsignorDetail from "./pages/admin/AdminConsignorDetail";
+import AdminInventory from "./pages/admin/AdminInventory";  // ← NEW
 import CollectionDetail from "./pages/CollectionDetail";
 import AdminSidebar from "./components/AdminSidebar";
 import NotFound from "./pages/NotFound";
@@ -107,8 +108,8 @@ const App = () => (
             <Route path="/admin/periods" element={<AdminLayout><AdminCrudList title="Periods" tableName="periods" /></AdminLayout>} />
             <Route path="/admin/countries" element={<AdminLayout><AdminCrudList title="Countries" tableName="countries" /></AdminLayout>} />
 
-            {/* Inventory - NEW */}
-            <Route path="/admin/inventory" element={<AdminLayout><AdminCrudList title="Inventory" tableName="inventory" columns={[{ key: 'name', label: 'Name' }]} /></AdminLayout>} />
+            {/* Inventory */}
+            <Route path="/admin/inventory" element={<AdminLayout><AdminInventory /></AdminLayout>} />
 
             {/* Legacy route — redirect to available (in case old bookmarks) */}
             <Route path="/admin/products" element={<AdminLayout><AdminProductsAvailable /></AdminLayout>} />
