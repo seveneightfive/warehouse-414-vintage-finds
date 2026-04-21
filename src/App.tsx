@@ -23,6 +23,7 @@ import AdminCrudList from "./pages/admin/AdminCrudList";
 import AdminCategoryManager from "./pages/admin/AdminCategoryManager";
 import AdminCollections from "./pages/admin/AdminCollections";
 import AdminCollectionDetail from "./pages/admin/AdminCollectionDetail";
+import AdminInventory from "./pages/admin/AdminInventory";
 import AdminConsignors from "./pages/admin/AdminConsignors";
 import AdminConsignorDetail from "./pages/admin/AdminConsignorDetail";
 import CollectionDetail from "./pages/CollectionDetail";
