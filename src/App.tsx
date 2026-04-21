@@ -16,7 +16,7 @@ import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminProductsAvailable from "./pages/admin/products/AdminProductsAvailable";
 import { createProductStatusPage } from "./pages/admin/products/createProductStatusPage";
-import AdminProductForm from "./pages/admin/products/AdminProductForm";
+import AdminProductForm from "./pages/admin/AdminProductForm";
 import AdminHolds from "./pages/admin/AdminHolds";
 import AdminInbox from "./pages/admin/AdminInbox";
 import AdminCrudList from "./components/AdminCrudList";
