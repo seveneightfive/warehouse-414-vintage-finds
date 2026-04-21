@@ -2,12 +2,85 @@
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300;400;500;600;700&display=swap');
 
+/* Kabel Font */
+@font-face {
+  font-family: 'Kabel';
+  src: url('/fonts/kabelm.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Tailwind directives */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* CSS custom properties and utilities */
+/* Base styles */
+@layer base {
+  :root {
+    /* Set Kabel as the default sans font for body text */
+    --font-sans: 'Kabel', system-ui, sans-serif;
+    --font-serif: 'Cormorant Garamond', serif;
+    --font-display: 'Josefin Sans', sans-serif;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Kabel', system-ui, sans-serif;
+  }
+
+  /* Headings use display font */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Josefin Sans', sans-serif;
+  }
+}
+
+/* Dialog and dropdown contrast fix */
+@layer components {
+  /* Make dialog content readable */
+  [role="dialog"] {
+    @apply bg-background text-foreground;
+  }
+
+  /* Dropdown menu styling - readable text */
+  [role="menu"] {
+    @apply bg-card text-foreground border border-border;
+  }
+
+  /* Dialog header */
+  [role="dialog"] h2 {
+    @apply text-foreground;
+  }
+
+  /* Dialog input fields */
+  [role="dialog"] input,
+  [role="dialog"] textarea,
+  [role="dialog"] select {
+    @apply bg-background text-foreground border border-border;
+  }
+
+  [role="dialog"] input::placeholder,
+  [role="dialog"] textarea::placeholder {
+    @apply text-muted-foreground;
+  }
+
+  /* Dialog labels */
+  [role="dialog"] label {
+    @apply text-foreground font-medium;
+  }
+
+  /* Dialog buttons */
+  [role="dialog"] button {
+    @apply text-foreground;
+  }
+}
+
+/* Custom CSS variables */
 :root {
   --p: var(--color-text-primary);
   --s: var(--color-text-secondary);
@@ -16,47 +89,12 @@
   --b: var(--color-border-tertiary);
 }
 
-/* Typography */
-html {
-  @apply scroll-smooth;
-}
-
-body {
-  @apply bg-background text-foreground font-sans antialiased;
-}
-
-/* Headings */
-h1, h2, h3, h4, h5, h6 {
-  @apply font-display tracking-wide;
-}
-
-h1 {
-  @apply text-3xl font-bold;
-}
-
-h2 {
-  @apply text-2xl font-semibold;
-}
-
-h3 {
-  @apply text-xl font-semibold;
-}
-
 /* Links */
 a {
   @apply text-primary hover:text-primary/80 transition-colors;
 }
 
-/* Form elements */
-input, textarea, select {
-  @apply rounded-sm border border-border bg-background px-3 py-2 text-sm;
-}
-
-input:focus, textarea:focus, select:focus {
-  @apply outline-none ring-1 ring-primary border-primary;
-}
-
-/* Scrollbar styling (optional) */
+/* Scrollbar styling */
 ::-webkit-scrollbar {
   @apply w-2 h-2;
 }
