@@ -22,7 +22,7 @@ import {
 import { toast } from 'sonner';
 import type { Product } from '@/types/database';
 import MarkSoldDialog from '@/components/MarkSoldDialog';
-import PlaceHoldDialog from '@/components/PlaceHoldDialog';
+import AdminPlaceHoldDialog from '@/components/AdminPlaceHoldDialog';
 
 const PAGE_SIZE = 25;
 
@@ -233,11 +233,11 @@ const AdminProducts = () => {
   });
 
   const placeHoldMutation = useMutation({
-    mutationFn: async ({ product_id, customer_name, customer_email, customer_phone, hold_duration_hours, expires_at, notes }: {
+    mutationFn: async ({ product_id, customer_name, customer_email, customer_phone, hold_duration_hours, expires_at, notes, platform }: {
       product_id: string; customer_name: string; customer_email: string; customer_phone: string;
-      hold_duration_hours: number; expires_at: string; notes: string;
+      hold_duration_hours: number; expires_at: string; notes: string; platform: string;
     }) => {
-      const { error: hErr } = await supabase.from('product_holds').insert({ product_id, customer_name, customer_email, customer_phone: customer_phone || null, hold_duration_hours, expires_at, notes: notes || null });
+      const { error: hErr } = await supabase.from('product_holds').insert({ product_id, customer_name, customer_email, customer_phone: customer_phone || null, hold_duration_hours, expires_at, notes: notes || null, platform });
       if (hErr) throw hErr;
       const { error: pErr } = await supabase.from('products').update({ status: 'on_hold' } as any).eq('id', product_id);
       if (pErr) throw pErr;
@@ -589,8 +589,8 @@ const AdminProducts = () => {
         isLoading={markSoldMutation.isPending}
       />
 
-      {/* ── Place Hold Dialog ── */}
-      <PlaceHoldDialog
+      {/* ── Place Hold Dialog (with Platform) ── */}
+      <AdminPlaceHoldDialog
         open={!!holdProduct}
         onOpenChange={(open) => !open && setHoldProduct(null)}
         productName={holdProduct?.name ?? ''}
