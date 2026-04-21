@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Package, Clock, Archive, BookOpen, BarChart3,
-  ChevronDown, ChevronRight, Menu, X,
+  ChevronDown, ChevronRight, Menu, X, MessageSquare, DollarSign,
+  Grid, Users, Hammer, Palette, Globe,
 } from 'lucide-react';
 
 const AdminSidebar = () => {
@@ -191,31 +192,180 @@ const AdminSidebar = () => {
             Inventory
           </Link>
 
-          {/* Curated Sets (renamed from Collections) */}
+          {/* Consignors */}
           <Link
-            to="/admin/curated-sets"
+            to="/admin/consignors"
             onClick={() => setIsOpen(false)}
             className={`
               flex items-center gap-3 px-4 py-2.5 rounded-md
               font-display text-sm tracking-wide transition-colors
               ${
-                isActive('/admin/curated-sets')
+                isActive('/admin/consignors')
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted'
               }
             `}
           >
-            <BookOpen size={18} />
-            Curated Sets
+            <Package size={18} />
+            Consignors
           </Link>
 
-          {/* Reports (disabled for now) */}
-          <div
-            title="Coming soon"
-            className="flex items-center gap-3 px-4 py-2.5 rounded-md text-muted-foreground opacity-50 cursor-not-allowed"
+          {/* Inquiries & Offers */}
+          <Link
+            to="/admin/inquiries"
+            onClick={() => setIsOpen(false)}
+            className={`
+              flex items-center gap-3 px-4 py-2.5 rounded-md
+              font-display text-sm tracking-wide transition-colors
+              ${
+                isActive('/admin/inquiries')
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+              }
+            `}
           >
-            <BarChart3 size={18} />
-            <span className="font-display text-sm tracking-wide">Reports</span>
+            <MessageSquare size={18} />
+            Inquiries
+          </Link>
+
+          <Link
+            to="/admin/offers"
+            onClick={() => setIsOpen(false)}
+            className={`
+              flex items-center gap-3 px-4 py-2.5 rounded-md
+              font-display text-sm tracking-wide transition-colors
+              ${
+                isActive('/admin/offers')
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+              }
+            `}
+          >
+            <DollarSign size={18} />
+            Offers
+          </Link>
+
+          {/* Taxonomy */}
+          <div className="pt-4 mt-4 border-t border-border">
+            <p className="text-xs text-muted-foreground tracking-widest uppercase px-4 mb-2">Taxonomy</p>
+            <Link
+              to="/admin/categories"
+              onClick={() => setIsOpen(false)}
+              className={`
+                flex items-center gap-3 px-4 py-2.5 rounded-md
+                font-display text-sm tracking-wide transition-colors
+                ${
+                  isActive('/admin/categories')
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }
+              `}
+            >
+              <Grid size={18} />
+              Categories
+            </Link>
+
+            <Link
+              to="/admin/designers"
+              onClick={() => setIsOpen(false)}
+              className={`
+                flex items-center gap-3 px-4 py-2.5 rounded-md
+                font-display text-sm tracking-wide transition-colors
+                ${
+                  isActive('/admin/designers')
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }
+              `}
+            >
+              <Users size={18} />
+              Designers
+            </Link>
+
+            <Link
+              to="/admin/makers"
+              onClick={() => setIsOpen(false)}
+              className={`
+                flex items-center gap-3 px-4 py-2.5 rounded-md
+                font-display text-sm tracking-wide transition-colors
+                ${
+                  isActive('/admin/makers')
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }
+              `}
+            >
+              <Hammer size={18} />
+              Makers
+            </Link>
+
+            <Link
+              to="/admin/curated-sets"
+              onClick={() => setIsOpen(false)}
+              className={`
+                flex items-center gap-3 px-4 py-2.5 rounded-md
+                font-display text-sm tracking-wide transition-colors
+                ${
+                  isActive('/admin/curated-sets')
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }
+              `}
+            >
+              <BookOpen size={18} />
+              Curated Sets
+            </Link>
+
+            <Link
+              to="/admin/styles"
+              onClick={() => setIsOpen(false)}
+              className={`
+                flex items-center gap-3 px-4 py-2.5 rounded-md
+                font-display text-sm tracking-wide transition-colors
+                ${
+                  isActive('/admin/styles')
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }
+              `}
+            >
+              <Palette size={18} />
+              Styles
+            </Link>
+
+            <Link
+              to="/admin/periods"
+              onClick={() => setIsOpen(false)}
+              className={`
+                flex items-center gap-3 px-4 py-2.5 rounded-md
+                font-display text-sm tracking-wide transition-colors
+                ${
+                  isActive('/admin/periods')
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }
+              `}
+            >
+              <Clock size={18} />
+              Periods
+            </Link>
+
+            <Link
+              to="/admin/countries"
+              onClick={() => setIsOpen(false)}
+              className={`
+                flex items-center gap-3 px-4 py-2.5 rounded-md
+                font-display text-sm tracking-wide transition-colors
+                ${
+                  isActive('/admin/countries')
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }
+              `}
+            >
+              <Globe size={18} />
+              Countries
+            </Link>
           </div>
         </nav>
 
