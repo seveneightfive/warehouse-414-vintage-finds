@@ -107,6 +107,9 @@ const App = () => (
             <Route path="/admin/periods" element={<AdminLayout><AdminCrudList title="Periods" tableName="periods" /></AdminLayout>} />
             <Route path="/admin/countries" element={<AdminLayout><AdminCrudList title="Countries" tableName="countries" /></AdminLayout>} />
 
+            {/* Inventory - NEW */}
+            <Route path="/admin/inventory" element={<AdminLayout><AdminCrudList title="Inventory" tableName="inventory" columns={[{ key: 'name', label: 'Name' }]} /></AdminLayout>} />
+
             {/* Legacy route — redirect to available (in case old bookmarks) */}
             <Route path="/admin/products" element={<AdminLayout><AdminProductsAvailable /></AdminLayout>} />
 
