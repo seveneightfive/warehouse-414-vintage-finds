@@ -76,7 +76,7 @@ const AdminPlaceHoldDialog = ({ open, onOpenChange, productName, onConfirm, isLo
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md bg-white">
         <DialogHeader>
           <DialogTitle className="font-display text-lg tracking-wide">Place Hold</DialogTitle>
           <p className="text-sm text-muted-foreground">{productName}</p>
