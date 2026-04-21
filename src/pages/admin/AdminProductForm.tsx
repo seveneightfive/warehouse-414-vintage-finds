@@ -64,6 +64,8 @@ const schema = z.object({
   materials: z.string().nullable().optional(),
   condition: z.string().nullable().optional(),
   year_created: z.string().nullable().optional(),
+  period_designed: z.string().nullable().optional(),
+period_created: z.string().nullable().optional(),
   tags: z.string().nullable().optional(),
   firstdibs_url: z.string().url().nullable().optional().or(z.literal('')),
   chairish_url: z.string().url().nullable().optional().or(z.literal('')),
@@ -693,6 +695,24 @@ const AdminProductForm = () => {
                 <FormItem><FormLabel>Condition Notes</FormLabel><FormControl><Textarea rows={2} {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
               )} />
             </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <FormField control={form.control} name="period_designed" render={({ field }) => (
+    <FormItem>
+      <FormLabel>Period Designed</FormLabel>
+      <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
+      <p className="text-xs text-muted-foreground">e.g. 1950s, Mid-Century</p>
+      <FormMessage />
+    </FormItem>
+  )} />
+  <FormField control={form.control} name="period_created" render={({ field }) => (
+    <FormItem>
+      <FormLabel>Period Created</FormLabel>
+      <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
+      <p className="text-xs text-muted-foreground">e.g. 1960s, Art Deco</p>
+      <FormMessage />
+    </FormItem>
+  )} />
+</div>
           </section>
 
           {/* Dimensions */}

@@ -18,6 +18,8 @@ export type Product = {
   period_id: string | null;
   country_id: string | null;
   year_created: string | null;
+  period_designed: string | null;
+  period_created: string | null; 
   product_dimensions: string | null;
   box_dimensions: string | null;
   dimension_notes: string | null;
