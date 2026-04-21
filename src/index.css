@@ -92,10 +92,10 @@
 
 /* Dialog and Dropdown Styling */
 @layer components {
-  /* Dialog/Modal Container */
+  /* Dialog/Modal Container - CHANGED: bg-background → bg-white */
   [role="dialog"],
   .dialog-content {
-    @apply bg-background text-foreground border border-border;
+    @apply bg-white text-foreground border border-border;
   }
 
   /* Dialog Header */
@@ -104,14 +104,14 @@
     @apply text-foreground font-bold;
   }
 
-  /* Dialog Inputs */
+  /* Dialog Inputs - CHANGED: bg-background → bg-white */
   [role="dialog"] input,
   [role="dialog"] textarea,
   [role="dialog"] select,
   .dialog-content input,
   .dialog-content textarea,
   .dialog-content select {
-    @apply bg-background text-foreground border border-border placeholder:text-muted-foreground;
+    @apply bg-white text-foreground border border-border placeholder:text-muted-foreground;
     font-family: 'Kabel', system-ui, sans-serif;
   }
 
@@ -136,10 +136,10 @@
     @apply text-foreground font-medium;
   }
 
-  /* Dropdown/Menu Container */
+  /* Dropdown/Menu Container - CHANGED: bg-card → bg-white */
   [role="menu"],
   .dropdown-menu {
-    @apply bg-card border border-border text-foreground;
+    @apply bg-white border border-border text-foreground;
   }
 
   /* Menu Items */
@@ -167,18 +167,18 @@
     @apply bg-border;
   }
 
-  /* Table Styling */
+  /* Table Styling - CHANGED: border-border → border-border/20 (lighter lines) */
   table {
     @apply w-full border-collapse;
   }
 
   th {
-    @apply bg-muted/50 text-foreground font-bold text-left px-4 py-2 border-b border-border;
+    @apply bg-muted/50 text-foreground font-bold text-left px-4 py-2 border-b border-border/20;
     font-family: 'Josefin Sans', sans-serif;
   }
 
   td {
-    @apply px-4 py-3 border-b border-border text-foreground;
+    @apply px-4 py-3 border-b border-border/20 text-foreground;
   }
 
   tr:hover {
