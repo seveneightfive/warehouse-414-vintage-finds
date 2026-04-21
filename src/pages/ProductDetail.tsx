@@ -122,6 +122,7 @@ const ProductDetail = () => {
     product.year_created && { label: 'YEAR', value: `c. ${product.year_created}` },
     product.period && { label: 'PERIOD', value: product.period.name },
     product.country && { label: 'COUNTRY', value: product.country.name },
+    product.line && { label: 'LINE', value: product.line },
     categoryLabel && { label: 'CATEGORY', value: categoryLabel },
     product.style && { label: 'STYLE', value: product.style.name },
   ].filter(Boolean) as { label: string; value: string }[];
