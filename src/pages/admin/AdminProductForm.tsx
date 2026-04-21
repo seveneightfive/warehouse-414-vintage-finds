@@ -68,6 +68,7 @@ const schema = z.object({
   sale_price:           z.coerce.number().nullable().optional(),
   status:               z.enum(['available', 'on_hold', 'sold', 'inventory', 'at_auction', 'draft']).default('available'),
   consignor_id:         z.coerce.number().int().nullable().optional(),
+  line:                 z.string().nullable().optional(),
   style_id:             z.string().nullable().optional(),
   country_id:           z.string().nullable().optional(),
   product_dimensions:   z.string().nullable().optional(),
@@ -283,6 +284,7 @@ const AdminProductForm = () => {
     values.price        = product.price ?? undefined;
     values.sale_price   = (product as any).sale_price ?? undefined;
     values.consignor_id = (product as any).consignor_id ?? undefined;
+    values.line         = (product as any).line ?? undefined;
     const rawTags = (product as any).tags;
     values.tags = Array.isArray(rawTags) ? (rawTags as string[]).join(', ') : '';
     form.reset(values as FormValues);
@@ -722,7 +724,15 @@ const AdminProductForm = () => {
               ))}
             </div>
 
-            {/* Style + Country */}
+            {/* Line + Style + Country */}
+            <FormField control={form.control} name="line" render={({ field }) => (
+              <FormItem>
+                <FormLabel><FieldLabel>Line / Collection</FieldLabel></FormLabel>
+                <FormControl><Input {...field} value={field.value ?? ''} placeholder="e.g. Modern Collection, Vintage Revival" /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
             <div className="grid grid-cols-2 gap-4">
               <ComboboxField name="style_id" label="Style" options={taxonomy.styles} />
               <ComboboxField name="country_id" label="Country" options={taxonomy.countries} />
