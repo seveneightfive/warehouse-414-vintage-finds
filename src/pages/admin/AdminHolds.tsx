@@ -18,10 +18,19 @@ const EXTEND_OPTIONS = [
   { value: '30', label: '30 days' },
 ];
 
+const PLATFORM_OPTIONS = [
+  { value: '1stDibs', label: '1stDibs' },
+  { value: 'Chairish', label: 'Chairish' },
+  { value: 'eBay', label: 'eBay' },
+  { value: '414', label: '414' },
+];
+
 const AdminHolds = () => {
   const queryClient = useQueryClient();
   const [extendHold, setExtendHold] = useState<{ id: string; expires_at: string; hold_duration_hours: number } | null>(null);
   const [extendDays, setExtendDays] = useState('3');
+  const [editingHoldId, setEditingHoldId] = useState<string | null>(null);
+  const [editingPlatform, setEditingPlatform] = useState('');
 
   const { data: heldProducts, isLoading } = useQuery({
     queryKey: ['admin-holds'],
@@ -32,7 +41,7 @@ const AdminHolds = () => {
           id, name, sku, status, featured_image_url, price,
           product_holds(
             id, customer_name, customer_email, customer_phone,
-            hold_duration_hours, created_at, expires_at, notes
+            hold_duration_hours, created_at, expires_at, notes, platform
           )
         `)
         .eq('status', 'on_hold')
@@ -78,6 +87,22 @@ const AdminHolds = () => {
     onError: () => toast.error('Failed to extend hold'),
   });
 
+  const updatePlatformMutation = useMutation({
+    mutationFn: async ({ holdId, platform }: { holdId: string; platform: string }) => {
+      const { error } = await supabase
+        .from('product_holds')
+        .update({ platform })
+        .eq('id', holdId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-holds'] });
+      toast.success('Platform updated');
+      setEditingHoldId(null);
+    },
+    onError: () => toast.error('Failed to update platform'),
+  });
+
   const handleExtend = () => {
     if (!extendHold) return;
     const days = parseInt(extendDays);
@@ -85,6 +110,10 @@ const AdminHolds = () => {
     const newExpiresAt = new Date(currentExpiry + days * 24 * 60 * 60 * 1000).toISOString();
     const newDurationHours = (extendHold.hold_duration_hours || 0) + days * 24;
     extendMutation.mutate({ holdId: extendHold.id, newExpiresAt, newDurationHours });
+  };
+
+  const handlePlatformChange = (holdId: string) => {
+    updatePlatformMutation.mutate({ holdId, platform: editingPlatform });
   };
 
   const isExpiringSoon = (expiresAt: string | null) => {
@@ -114,6 +143,7 @@ const AdminHolds = () => {
               <TableHead>Customer</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Phone</TableHead>
+              <TableHead>Platform</TableHead>
               <TableHead>Placed</TableHead>
               <TableHead>Expires</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -138,6 +168,30 @@ const AdminHolds = () => {
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{h?.customer_email || '—'}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">{h?.customer_phone || '—'}</TableCell>
+                  <TableCell className="text-sm">
+                    {editingHoldId === h?.id ? (
+                      <Select value={editingPlatform} onValueChange={setEditingPlatform}>
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PLATFORM_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setEditingHoldId(h?.id || null);
+                          setEditingPlatform(h?.platform || '414');
+                        }}
+                        className="text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                      >
+                        {h?.platform || '—'}
+                      </button>
+                    )}
+                  </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {h?.created_at ? new Date(h.created_at).toLocaleDateString() : '—'}
                   </TableCell>
@@ -145,25 +199,47 @@ const AdminHolds = () => {
                     {h?.expires_at ? new Date(h.expires_at).toLocaleDateString() : '—'}
                   </TableCell>
                   <TableCell className="text-right space-x-1">
-                    {h && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => { setExtendDays('3'); setExtendHold({ id: h.id, expires_at: h.expires_at, hold_duration_hours: h.hold_duration_hours || 0 }); }}
-                        title="Extend Hold"
-                      >
-                        <CalendarPlus size={14} className="mr-1" /> Extend
-                      </Button>
+                    {editingHoldId === h?.id ? (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handlePlatformChange(h.id)}
+                          disabled={updatePlatformMutation.isPending}
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setEditingHoldId(null)}
+                        >
+                          Cancel
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        {h && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => { setExtendDays('3'); setExtendHold({ id: h.id, expires_at: h.expires_at, hold_duration_hours: h.hold_duration_hours || 0 }); }}
+                            title="Extend Hold"
+                          >
+                            <CalendarPlus size={14} className="mr-1" /> Extend
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => releaseMutation.mutate(p.id)}
+                          disabled={releaseMutation.isPending}
+                          title="Release Hold"
+                        >
+                          <Unlock size={14} className="mr-1" /> Release
+                        </Button>
+                      </>
                     )}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => releaseMutation.mutate(p.id)}
-                      disabled={releaseMutation.isPending}
-                      title="Release Hold"
-                    >
-                      <Unlock size={14} className="mr-1" /> Release
-                    </Button>
                   </TableCell>
                 </TableRow>
               );
