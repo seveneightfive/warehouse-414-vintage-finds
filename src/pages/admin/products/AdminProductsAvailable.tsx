@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -10,14 +11,15 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
-  Search, ChevronLeft, ChevronRight, MoreVertical,
-  Eye, Pencil, Clock, CircleDollarSign, Trash2, LinkIcon, Tag,
+  Search, ChevronLeft, ChevronRight, ArrowLeft,
+  ChevronDown, ChevronUp, MoreVertical,
+  Eye, Pencil, Clock, RefreshCw, CircleDollarSign, Trash2,
+  Link as LinkIcon, Tag,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Product } from '@/types/database';
-import { useState } from 'react';
 import MarkSoldDialog from '@/components/MarkSoldDialog';
 import AdminPlaceHoldDialog from '@/components/AdminPlaceHoldDialog';
 
@@ -29,12 +31,46 @@ type ExternalLinksState = {
   ebay_url: string;
 };
 
+type HoldDetail = {
+  id: string;
+  product_id: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string | null;
+  hold_duration_hours: number;
+  created_at: string;
+  expires_at: string;
+  notes: string | null;
+};
+
+const STATUS_BADGE: Record<string, { label: string; className: string }> = {
+  available:   { label: 'Available',   className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' },
+  on_hold:     { label: 'On Hold',     className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300' },
+  at_auction:  { label: 'At Auction',  className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300' },
+  sold:        { label: 'Sold',        className: 'bg-muted text-muted-foreground' },
+  inventory:   { label: 'Inventory',   className: 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300' },
+  draft:       { label: 'Draft',       className: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300' },
+  deactivated: { label: 'Deactivated', className: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' },
+};
+
+const StatusBadge = ({ status }: { status: string }) => {
+  const cfg = STATUS_BADGE[status] ?? { label: status, className: 'bg-muted text-muted-foreground' };
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase whitespace-nowrap ${cfg.className}`}>
+      {cfg.label}
+    </span>
+  );
+};
+
 const AdminProductsAvailable = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(0);
   const [soldProduct, setSoldProduct] = useState<Product | null>(null);
   const [holdProduct, setHoldProduct] = useState<Product | null>(null);
+  const [openHoldId, setOpenHoldId] = useState<string | null>(null);
   const [changeStatusProduct, setChangeStatusProduct] = useState<Product | null>(null);
   const [pendingStatus, setPendingStatus] = useState('');
   const [linksProduct, setLinksProduct] = useState<Product | null>(null);
@@ -59,11 +95,23 @@ const AdminProductsAvailable = () => {
 
       const [{ count }, { data: products, error }] = await Promise.all([countQ, q]);
       if (error) throw error;
-      return { products: products as Product[], total: count ?? 0 };
+
+      let holdsMap: Record<string, HoldDetail> = {};
+      if (products?.length) {
+        const { data: holds } = await supabase
+          .from('product_holds')
+          .select('*')
+          .in('product_id', products.map((p: any) => p.id))
+          .order('created_at', { ascending: false });
+        holds?.forEach((h: any) => { if (!holdsMap[h.product_id]) holdsMap[h.product_id] = h; });
+      }
+
+      return { products: products as Product[], total: count ?? 0, holdsMap };
     },
   });
 
   const products = data?.products ?? [];
+  const holdsMap = data?.holdsMap ?? {};
   const totalPages = Math.ceil((data?.total ?? 0) / PAGE_SIZE);
 
   const invalidate = () => {
@@ -76,6 +124,26 @@ const AdminProductsAvailable = () => {
       if (error) throw error;
     },
     onSuccess: () => { invalidate(); toast.success('Product deleted'); },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const releaseHoldMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('products').update({ status: 'available' } as any).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => { invalidate(); toast.success('Released from hold → Available'); },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const extendHoldMutation = useMutation({
+    mutationFn: async ({ holdId }: { holdId: string }) => {
+      const newExpiry = new Date();
+      newExpiry.setHours(newExpiry.getHours() + 48);
+      const { error } = await supabase.from('product_holds').update({ expires_at: newExpiry.toISOString(), hold_duration_hours: 48 }).eq('id', holdId);
+      if (error) throw error;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-products-available'] }); toast.success('Hold extended 48 hours'); },
     onError: (err: Error) => toast.error(err.message),
   });
 
@@ -134,10 +202,11 @@ const AdminProductsAvailable = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="font-display text-2xl tracking-wide text-foreground">Available Products</h1>
+          <h1 className="font-display text-2xl tracking-wide text-foreground">available products</h1>
           <p className="text-sm text-muted-foreground mt-1">{data?.total ?? 0} items ready to sell</p>
         </div>
         <Link to="/admin/products/new">
@@ -145,16 +214,18 @@ const AdminProductsAvailable = () => {
         </Link>
       </div>
 
-      <div className="relative">
+      {/* Search */}
+      <div className="relative mb-4">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search by name or SKU..."
+          placeholder="Search products..."
           value={searchQuery}
           onChange={(e) => { setSearchQuery(e.target.value); setPage(0); }}
           className="pl-9"
         />
       </div>
 
+      {/* Table */}
       {isLoading ? (
         <p className="text-muted-foreground">Loading...</p>
       ) : (
@@ -173,6 +244,7 @@ const AdminProductsAvailable = () => {
             <TableBody>
               {products.map((p) => {
                 const thumb = p.product_images?.sort((a, b) => a.sort_order - b.sort_order)?.[0];
+
                 return (
                   <TableRow key={p.id}>
                     <TableCell>
@@ -190,6 +262,8 @@ const AdminProductsAvailable = () => {
                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                       {p.created_at ? new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                     </TableCell>
+
+                    {/* Kebab menu */}
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -197,7 +271,7 @@ const AdminProductsAvailable = () => {
                             <MoreVertical size={15} />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-52">
+                        <DropdownMenuContent align="end" className="w-52 bg-card border border-border">
                           <DropdownMenuItem asChild>
                             <Link to={`/product/${p.slug}`} className="flex items-center gap-2 cursor-pointer">
                               <Eye size={13} /> View on Site
@@ -235,6 +309,7 @@ const AdminProductsAvailable = () => {
             </TableBody>
           </Table>
 
+          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-4">
               <p className="text-sm text-muted-foreground">Page {page + 1} of {totalPages} ({data?.total} products)</p>
@@ -251,6 +326,7 @@ const AdminProductsAvailable = () => {
         </>
       )}
 
+      {/* Dialogs */}
       <MarkSoldDialog
         open={!!soldProduct}
         onOpenChange={(open) => !open && setSoldProduct(null)}
