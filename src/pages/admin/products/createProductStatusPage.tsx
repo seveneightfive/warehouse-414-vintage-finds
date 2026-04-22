@@ -20,7 +20,7 @@ import type { Product } from '@/types/database';
 import { useState } from 'react';
 import AdminPlaceHoldDialog from '@/components/AdminPlaceHoldDialog';
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 50; // Increased from 25 since query is faster now
 
 type StatusValue = 'draft' | 'at_auction' | 'sold' | 'inventory' | 'deactivated';
 
@@ -59,19 +59,38 @@ export function createProductStatusPage({ status }: CreateProductStatusPageProps
 
     const { data, isLoading } = useQuery({
       queryKey: [`admin-products-${status}`, page, searchQuery],
-      staleTime: 0,
-      refetchOnWindowFocus: true,
+      staleTime: 30000, // Cache for 30 seconds
+      refetchOnWindowFocus: false, // Don't refetch on window focus (was causing unnecessary queries)
       queryFn: async () => {
-        let countQ = supabase.from('products').select('*', { count: 'exact', head: true }).eq('status', status);
+        // Count query
+        let countQ = supabase.from('products').select('id', { count: 'exact', head: true }).eq('status', status);
         if (searchQuery) countQ = countQ.or(`name.ilike.%${searchQuery}%,sku.ilike.%${searchQuery}%`);
 
+        // Data query - only select fields we actually use
         let q = supabase
           .from('products')
-          .select('*, product_images(image_url, sort_order)')
+          .select(`
+            id,
+            name,
+            slug,
+            sku,
+            price,
+            status,
+            created_at,
+            sale_platform,
+            sale_date,
+            sold_price,
+            chairish_auction_url,
+            firstdibs_url,
+            chairish_url,
+            ebay_url,
+            featured_image_url,
+            product_images!inner(image_url, sort_order)
+          `)
           .eq('status', status)
           .order('created_at', { ascending: false })
-          .order('id', { ascending: false })
           .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+        
         if (searchQuery) q = q.or(`name.ilike.%${searchQuery}%,sku.ilike.%${searchQuery}%`);
 
         const [{ count }, { data: products, error }] = await Promise.all([countQ, q]);
