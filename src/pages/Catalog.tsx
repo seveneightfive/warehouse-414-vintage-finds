@@ -4,6 +4,7 @@ import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
 import ProductCard from '@/components/ProductCard';
 import { Input } from '@/components/ui/input';
 import SearchableSelect from '@/components/SearchableSelect';
+import CascadingCategoryFilter from '@/components/CascadingCategoryFilter';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Search, X, SlidersHorizontal, EyeOff, Eye } from 'lucide-react';
@@ -78,73 +79,6 @@ const Catalog = () => {
   const clearFilters = () => {
     setSearchParams({}, { replace: true });
   };
-
-  // Build hierarchical category options
-  const hierarchicalCategories = useMemo(() => {
-    if (!filterOptions?.categories) return [];
-    
-    // Group by category
-    const grouped: Record<string, any[]> = {};
-    filterOptions.categories.forEach((cat: any) => {
-      if (!grouped[cat.id]) {
-        grouped[cat.id] = [];
-      }
-      grouped[cat.id].push(cat);
-    });
-
-    const result: { id: string; name: string; level: number }[] = [];
-    
-    Object.keys(grouped).forEach(categoryId => {
-      const items = grouped[categoryId];
-      const firstItem = items[0];
-      
-      // Add main category
-      result.push({
-        id: categoryId,
-        name: firstItem.name,
-        level: 0
-      });
-
-      // Group subcategories
-      const subcats: Record<string, any[]> = {};
-      items.forEach((item: any) => {
-        if (item.subcategory_id) {
-          if (!subcats[item.subcategory_id]) {
-            subcats[item.subcategory_id] = [];
-          }
-          subcats[item.subcategory_id].push(item);
-        }
-      });
-
-      // Add subcategories and sub-subcategories
-      Object.keys(subcats).forEach(subcatId => {
-        const subcatItems = subcats[subcatId];
-        const firstSubcat = subcatItems[0];
-        
-        // Only add if it's not a sub-subcategory (no parent_id)
-        if (!firstSubcat.parent_id) {
-          result.push({
-            id: subcatId,
-            name: `  ${firstSubcat.subcategory_name}`,
-            level: 1
-          });
-
-          // Add sub-subcategories
-          subcatItems.forEach((item: any) => {
-            if (item.parent_id) {
-              result.push({
-                id: item.subcategory_id,
-                name: `    ${item.subcategory_name}`,
-                level: 2
-              });
-            }
-          });
-        }
-      });
-    });
-
-    return result;
-  }, [filterOptions?.categories]);
 
   const filterSelect = (
     label: string,
@@ -304,13 +238,14 @@ const Catalog = () => {
             <SheetTitle className="font-display lowercase font-bold">filters</SheetTitle>
           </SheetHeader>
           <div className="mt-6 space-y-4">
-            {/* Hierarchical category dropdown */}
-            <SearchableSelect
-              label="Category"
-              value={categoryId}
-              options={hierarchicalCategories}
-              onChange={(v) => setParam('category', v)}
-            />
+            {/* Cascading category filter */}
+            {filterOptions?.categories && (
+              <CascadingCategoryFilter
+                categories={filterOptions.categories}
+                value={categoryId}
+                onChange={(v) => setParam('category', v)}
+              />
+            )}
             {filterSelect('Style', 'style', styleId, filterOptions?.styles)}
             {filterSelect('Designer', 'designer', designerSlug, filterOptions?.designers?.map(d => ({ id: d.slug || d.id, name: d.name })))}
             {filterSelect('Maker', 'maker', makerSlug, filterOptions?.makers?.map(m => ({ id: m.slug || m.id, name: m.name })))}
