@@ -13,12 +13,12 @@ import {
 const INVENTORY_STATUSES = new Set(['inventory', 'draft', 'deactivated']);
 
 const AdminLayout = () => {
-  const { user, isAdmin, loading, signOut } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const location = useLocation();
   const [sheetOpen, setSheetOpen] = useState(false);
 
   if (loading) return <div className="flex items-center justify-center min-h-screen text-muted-foreground">Loading...</div>;
-  if (!user || !isAdmin) return <Navigate to="/admin/login" replace />;
+  if (!user) return <Navigate to="/admin/login" replace />;
 
   // Parse the current status param so we can correctly highlight Products vs Inventory
   const searchParams = new URLSearchParams(location.search);
