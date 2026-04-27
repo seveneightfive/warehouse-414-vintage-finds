@@ -31,7 +31,7 @@ const ProductCard = ({ product }: { product: Product }) => {
           </span>
         )}
         {product.status === "on_hold" && (
-          <span className="absolute top-2 left-2 bg-white text-black font-display text-[10px] tracking-[0.15em] px-2.5 py-1">
+          <span className="absolute top-2 left-2 bg-yellow-500 text-white font-display text-[10px] tracking-[0.15em] px-2.5 py-1">
             on hold
           </span>
         )}
