@@ -393,31 +393,33 @@ const ProductDetail = () => {
       )}
 
       {/* Also Listed On */}
-      {(product.firstdibs_url || product.ebay_url || product.chairish_url) && (
-        <section className="container mx-auto px-5 py-10 border-t border-border">
-          <div className="flex items-center gap-6 flex-wrap">
-            <p className="text-muted-foreground text-sm italic">Also listed on:</p>
-            {product.firstdibs_url && (
-              <a href={product.firstdibs_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
-                <img src={firstdibsLogo} alt="1stDibs" className="h-5 object-contain" />
-                <ExternalLink size={14} className="text-muted-foreground" />
-              </a>
-            )}
-            {product.ebay_url && (
-              <a href={product.ebay_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
-                <img src={ebayLogo} alt="eBay" className="h-5 object-contain" />
-                <ExternalLink size={14} className="text-muted-foreground" />
-              </a>
-            )}
-            {product.chairish_url && (
-              <a href={product.chairish_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
-                <img src={chairishLogo} alt="Chairish" className="h-5 object-contain" />
-                <ExternalLink size={14} className="text-muted-foreground" />
-              </a>
-            )}
-          </div>
-        </section>
-      )}
+{(product.firstdibs_url || product.ebay_url || product.chairish_url) && (
+  <section className="bg-foreground py-10 border-t border-border">
+    <div className="container mx-auto px-5">
+      <div className="flex items-center gap-6 flex-wrap">
+        <p className="text-background text-sm italic">Also listed on:</p>
+        {product.firstdibs_url && (
+          <a href={product.firstdibs_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
+            <img src={firstdibsLogo} alt="1stDibs" className="h-5 object-contain" />
+            <ExternalLink size={14} className="text-background" />
+          </a>
+        )}
+        {product.ebay_url && (
+          <a href={product.ebay_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
+            <img src={ebayLogo} alt="eBay" className="h-5 object-contain" />
+            <ExternalLink size={14} className="text-background" />
+          </a>
+        )}
+        {product.chairish_url && (
+          <a href={product.chairish_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
+            <img src={chairishLogo} alt="Chairish" className="h-5 object-contain" />
+            <ExternalLink size={14} className="text-background" />
+          </a>
+        )}
+      </div>
+    </div>
+  </section>
+)}
 
       {/* Similar Products */}
       {similar && similar.length > 0 && (
