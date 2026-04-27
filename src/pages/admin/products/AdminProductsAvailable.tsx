@@ -180,26 +180,37 @@ const AdminProductsAvailable = () => {
   });
 
   const updateLinksMutation = useMutation({
-    mutationFn: async ({ id, links }: { id: string; links: ExternalLinksState }) => {
-      const { error } = await supabase.from('products').update({
-        firstdibs_url: links.firstdibs_url || null,
-        chairish_url: links.chairish_url || null,
-        ebay_url: links.ebay_url || null,
-      } as any).eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => { invalidate(); toast.success('External links updated'); setLinksProduct(null); },
-    onError: (err: Error) => toast.error(err.message),
-  });
+  mutationFn: async ({ id, links }: { id: string; links: ExternalLinksState }) => {
+    const { data: updated, error } = await supabase
+      .from('products')
+      .update({
+        firstdibs_url: links.firstdibs_url.trim() || null,
+        chairish_url: links.chairish_url.trim() || null,
+        ebay_url: links.ebay_url.trim() || null,
+      } as any)
+      .eq('id', id)
+      .select('id, firstdibs_url, chairish_url, ebay_url');
+    if (error) {
+      console.error('[updateLinks] Supabase error:', error);
+      throw error;
+    }
+    if (!updated || updated.length === 0) {
+      console.error('[updateLinks] No rows updated — RLS may be blocking, product id:', id);
+      throw new Error('Save failed: no rows were updated.');
+    }
+  },
+  onSuccess: () => { invalidate(); toast.success('External links saved'); setLinksProduct(null); },
+  onError: (err: Error) => { console.error('[updateLinks] error:', err); toast.error(err.message); },
+});
 
   const openLinksDialog = (p: Product) => {
-    setLinksState({
-      firstdibs_url: (p as any).firstdibs_url ?? '',
-      chairish_url: (p as any).chairish_url ?? '',
-      ebay_url: (p as any).ebay_url ?? '',
-    });
-    setLinksProduct(p);
-  };
+  setLinksState({
+    firstdibs_url: p.firstdibs_url ?? '',
+    chairish_url: p.chairish_url ?? '',
+    ebay_url: p.ebay_url ?? '',
+  });
+  setLinksProduct(p);
+};
 
   return (
     <div>
