@@ -5,9 +5,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Pencil, Trash2, Plus, Search } from 'lucide-react';
+import { Pencil, Trash2, Plus, Search, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 
 type AdminCrudListProps = {
@@ -16,9 +16,17 @@ type AdminCrudListProps = {
   columns?: { key: string; label: string; type?: 'text' | 'textarea' }[];
   /** Foreign key column name on products table, e.g. "designer_id". When set, a Products count column is shown. */
   productFk?: string;
+  /** Base URL for public view link, e.g. "/designer". Requires item to have a slug field. */
+  viewUrlBase?: string;
 };
 
-const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Name' }], productFk }: AdminCrudListProps) => {
+const AdminCrudList = ({
+  title,
+  tableName,
+  columns = [{ key: 'name', label: 'Name' }],
+  productFk,
+  viewUrlBase,
+}: AdminCrudListProps) => {
   const queryClient = useQueryClient();
   const [editItem, setEditItem] = useState<Record<string, string> | null>(null);
   const [newItem, setNewItem] = useState<Record<string, string>>({});
@@ -34,9 +42,10 @@ const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Nam
     },
   });
 
-  // Fetch product counts per item when productFk is set
+  // Fetch product counts per item when productFk is set.
+  // Include item ids in the queryKey so this re-runs once items load.
   const { data: productCounts } = useQuery({
-    queryKey: [tableName, 'product-counts'],
+    queryKey: [tableName, 'product-counts', items?.map((i: any) => i.id)],
     queryFn: async () => {
       if (!productFk || !items?.length) return {};
       const ids = items.map((i: any) => i.id);
@@ -52,7 +61,7 @@ const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Nam
       });
       return counts;
     },
-    enabled: !!productFk && !!items?.length,
+    enabled: !!productFk && (items?.length ?? 0) > 0,
   });
 
   const upsertMutation = useMutation({
@@ -175,36 +184,49 @@ const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Nam
                 <TableHead key={col.key}>{col.label}</TableHead>
               ))}
               {productFk && <TableHead>Products</TableHead>}
-              <TableHead className="w-20">Actions</TableHead>
+              <TableHead className="w-28">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items?.filter((item: Record<string, string>) => {
-              if (!searchQuery) return true;
-              const q = searchQuery.toLowerCase();
-              return columns.some(col => String(item[col.key] || '').toLowerCase().includes(q));
-            }).map((item: Record<string, string>) => (
-              <TableRow key={item.id}>
-                {columns.map((col) => (
-                  <TableCell key={col.key}>{item[col.key] || '—'}</TableCell>
-                ))}
-                {productFk && (
-                  <TableCell className="text-muted-foreground">{productCounts?.[item.id] ?? 0}</TableCell>
-                )}
-                <TableCell>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(item)}>
-                      <Pencil size={14} />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => {
-                      if (confirm('Delete?')) deleteMutation.mutate(item.id);
-                    }}>
-                      <Trash2 size={14} />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+            {items
+              ?.filter((item: Record<string, string>) => {
+                if (!searchQuery) return true;
+                const q = searchQuery.toLowerCase();
+                return columns.some((col) => String(item[col.key] || '').toLowerCase().includes(q));
+              })
+              .map((item: Record<string, string>) => (
+                <TableRow key={item.id}>
+                  {columns.map((col) => (
+                    <TableCell key={col.key}>{item[col.key] || '—'}</TableCell>
+                  ))}
+                  {productFk && (
+                    <TableCell className="text-muted-foreground">{productCounts?.[item.id] ?? 0}</TableCell>
+                  )}
+                  <TableCell>
+                    <div className="flex gap-1">
+                      {viewUrlBase && item.slug && (
+                        <a href={`${viewUrlBase}/${item.slug}`} target="_blank" rel="noopener noreferrer">
+                          <Button variant="ghost" size="icon" title="View public page">
+                            <ExternalLink size={14} />
+                          </Button>
+                        </a>
+                      )}
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(item)}>
+                        <Pencil size={14} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          if (confirm('Delete?')) deleteMutation.mutate(item.id);
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
           </TableBody>
         </Table>
       )}

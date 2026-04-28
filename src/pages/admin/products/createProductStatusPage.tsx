@@ -45,6 +45,7 @@ interface CreateProductStatusPageProps {
 export function createProductStatusPage({ status }: CreateProductStatusPageProps) {
   return function ProductStatusPage() {
     const queryClient = useQueryClient();
+    const STATUS_PAGE_KEYS = ['admin-products-available','admin-products-draft','admin-products-at_auction','admin-products-sold','admin-products-inventory','admin-products-deactivated'];
     const [searchQuery, setSearchQuery] = useState('');
     const [page, setPage] = useState(0);
     const [changeStatusProduct, setChangeStatusProduct] = useState<Product | null>(null);
@@ -103,7 +104,7 @@ export function createProductStatusPage({ status }: CreateProductStatusPageProps
     const totalPages = Math.ceil((data?.total ?? 0) / PAGE_SIZE);
 
     const invalidate = () => {
-      queryClient.invalidateQueries({ queryKey: [`admin-products-${status}`] });
+      STATUS_PAGE_KEYS.forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
     };
 
     const deleteMutation = useMutation({

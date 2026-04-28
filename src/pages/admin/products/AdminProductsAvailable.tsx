@@ -65,6 +65,10 @@ const StatusBadge = ({ status }: { status: string }) => {
 const AdminProductsAvailable = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const STATUS_PAGE_KEYS = ['admin-products-available','admin-products-draft','admin-products-at_auction','admin-products-sold','admin-products-inventory','admin-products-deactivated'];
+  const invalidate = () => {
+    STATUS_PAGE_KEYS.forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
+  };
 
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(0);
@@ -113,10 +117,6 @@ const AdminProductsAvailable = () => {
   const products = data?.products ?? [];
   const holdsMap = data?.holdsMap ?? {};
   const totalPages = Math.ceil((data?.total ?? 0) / PAGE_SIZE);
-
-  const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: ['admin-products-available'] });
-  };
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {

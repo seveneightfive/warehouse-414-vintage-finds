@@ -62,12 +62,12 @@ type CategoryRow = {
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
   sku: z.string().nullable().optional(),
-  consignor_id: z.string().nullable().optional(),
+  consignor_id: z.coerce.number().nullable().optional(),
   short_description: z.string().nullable().optional(),
   long_description: z.string().nullable().optional(),
   price: z.coerce.number().nullable().optional(),
   sale_price: z.coerce.number().nullable().optional(),
-  status: z.enum(['available', 'on_hold', 'sold', 'inventory', 'at_auction']).default('available'),
+  status: z.enum(['available', 'on_hold', 'sold', 'inventory', 'at_auction', 'draft']).default('available'),
   designer_id: z.string().nullable().optional(),
   maker_id: z.string().nullable().optional(),
   category_id: z.string().nullable().optional(),
@@ -219,10 +219,12 @@ const AdminProductForm = () => {
   const [periods,    setPeriods]    = useState<PeriodRow[]>([{ period_id: null, attribution_type: 'by' }]);
   const [categories, setCategories] = useState<CategoryRow[]>([{ category_id: null, subcategory_id: null, sub_subcategory_id: null }]);
 
-  const { data: consignors } = useQuery({
+  const { data: consignors } = useQuery<{ id: number; first_name: string | null; last_name: string | null; consignor_code: string | null }[], Error>({
     queryKey: ['consignors'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('consignors').select('id, first_name, last_name, consignor_code').order('consignor_code');
+      const { data, error } = await supabase.from('consignors_with_stats' as any)
+        .select('id, first_name, last_name, consignor_code')
+        .order('consignor_code');
       if (error) throw error;
       return data as { id: number; first_name: string | null; last_name: string | null; consignor_code: string | null }[];
     },

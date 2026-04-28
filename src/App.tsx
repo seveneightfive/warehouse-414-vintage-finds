@@ -97,8 +97,14 @@ const App = () => (
             <Route path="/admin/inquiries" element={<AdminLayout><AdminInbox title="Inquiries" tableName="purchase_inquiries" filterType="non-offer" /></AdminLayout>} />
 
             {/* Designers & Makers */}
-            <Route path="/admin/designers" element={<AdminLayout><AdminCrudList title="Designers" tableName="designers" columns={[{ key: 'name', label: 'Name' }, { key: 'about', label: 'Bio', type: 'textarea' }]} productFk="designer_id" /></AdminLayout>} />
-            <Route path="/admin/makers" element={<AdminLayout><AdminCrudList title="Makers" tableName="makers" columns={[{ key: 'name', label: 'Name' }, { key: 'about', label: 'Bio', type: 'textarea' }]} productFk="maker_id" /></AdminLayout>} />
+            <Route path="/admin/designers" element={<AdminLayout><AdminCrudList 
+  title="Designers" 
+  tableName="designers" 
+  columns={[{ key: 'name', label: 'Name' }, { key: 'about', label: 'Bio', type: 'textarea' }]} 
+  productFk="designer_id"
+  viewUrlBase="/designer"
+/></AdminLayout>} />
+            <Route path="/admin/makers" element={<AdminLayout><AdminCrudList title="Makers" tableName="makers" columns={[{ key: 'name', label: 'Name' }, { key: 'about', label: 'Bio', type: 'textarea' }]} productFk="maker_id" viewUrlBase="/maker" /></AdminLayout>} />
 
             {/* Taxonomy */}
             <Route path="/admin/categories" element={<AdminLayout><AdminCategoryManager /></AdminLayout>} />

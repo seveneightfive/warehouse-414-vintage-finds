@@ -124,7 +124,7 @@ const AdminConsignorDetail = () => {
         .from('consignors' as any)
         .select('*')
         .eq('id', parseInt(id!))
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data as any;
     },

@@ -53,6 +53,7 @@ const AdminHolds = () => {
         const latestHold = holds.sort((a: any, b: any) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         )[0] ?? null;
+        console.log(p.name, 'hold:', p.hold);
         return { ...p, hold: latestHold };
       });
     },
