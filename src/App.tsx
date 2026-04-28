@@ -14,19 +14,11 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminProductsAvailable from "./pages/admin/products/AdminProductsAvailable";
-import { createProductStatusPage } from "./pages/admin/products/createProductStatusPage";
-<<<<<<< HEAD
-import AdminProductForm from "./pages/admin/products/AdminProductForm";
-import AdminHolds from "./pages/admin/AdminHolds";
-import AdminInbox from "./pages/admin/AdminInbox";
-import AdminCrudList from "./components/AdminCrudList";
-=======
+import AdminProducts from "./pages/admin/AdminProducts";
 import AdminProductForm from "./pages/admin/AdminProductForm";
 import AdminHolds from "./pages/admin/AdminHolds";
 import AdminInbox from "./pages/admin/AdminInbox";
 import AdminCrudList from "./pages/admin/AdminCrudList";
->>>>>>> a57c750371323f70fdb36dd5b70bda185e4b9fe2
 import AdminCategoryManager from "./pages/admin/AdminCategoryManager";
 import AdminCollections from "./pages/admin/AdminCollections";
 import AdminCollectionDetail from "./pages/admin/AdminCollectionDetail";
@@ -37,11 +29,6 @@ import AdminSidebar from "./components/AdminSidebar";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
-
-// Create product status pages from factory
-const AdminProductsDraft = createProductStatusPage({ status: 'draft' });
-const AdminProductsAtAuction = createProductStatusPage({ status: 'at_auction' });
-const AdminProductsSold = createProductStatusPage({ status: 'sold' });
 
 // Admin layout wrapper
 function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -83,11 +70,8 @@ const App = () => (
             {/* Admin Dashboard */}
             <Route path="/admin" element={<AdminLayout><AdminDashboard /></AdminLayout>} />
 
-            {/* Products — New page-based structure */}
-            <Route path="/admin/products/available" element={<AdminLayout><AdminProductsAvailable /></AdminLayout>} />
-            <Route path="/admin/products/draft" element={<AdminLayout><AdminProductsDraft /></AdminLayout>} />
-            <Route path="/admin/products/at-auction" element={<AdminLayout><AdminProductsAtAuction /></AdminLayout>} />
-            <Route path="/admin/products/sold" element={<AdminLayout><AdminProductsSold /></AdminLayout>} />
+            {/* Products */}
+            <Route path="/admin/products" element={<AdminLayout><AdminProducts /></AdminLayout>} />
             <Route path="/admin/products/new" element={<AdminLayout><AdminProductForm /></AdminLayout>} />
             <Route path="/admin/products/:id" element={<AdminLayout><AdminProductForm /></AdminLayout>} />
 
@@ -114,15 +98,8 @@ const App = () => (
             <Route path="/admin/periods" element={<AdminLayout><AdminCrudList title="Periods" tableName="periods" /></AdminLayout>} />
             <Route path="/admin/countries" element={<AdminLayout><AdminCrudList title="Countries" tableName="countries" /></AdminLayout>} />
 
-<<<<<<< HEAD
-=======
             {/* Inventory - NEW */}
             <Route path="/admin/inventory" element={<AdminLayout><AdminCrudList title="Inventory" tableName="inventory" columns={[{ key: 'name', label: 'Name' }]} /></AdminLayout>} />
-
->>>>>>> a57c750371323f70fdb36dd5b70bda185e4b9fe2
-            {/* Legacy route — redirect to available (in case old bookmarks) */}
-            <Route path="/admin/products" element={<AdminLayout><AdminProductsAvailable /></AdminLayout>} />
-
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

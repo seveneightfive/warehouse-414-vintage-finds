@@ -93,64 +93,64 @@ const AdminSidebar = () => {
             {expandProducts && (
               <div className="ml-2 space-y-1 border-l border-border/50 pl-3">
                 <Link
-                  to="/admin/products/available"
+                  to="/admin/products"
                   onClick={() => setIsOpen(false)}
                   className={`
                     flex items-center gap-2 px-3 py-2 rounded text-xs tracking-wide
                     transition-colors font-display
                     ${
-                      isActive('/admin/products/available')
+                      isActive('/admin/products')
                         ? 'bg-primary/10 text-primary'
                         : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                     }
                   `}
                 >
-                  Available
+                  All Products
                 </Link>
                 <Link
-                  to="/admin/products/draft"
+                  to="/admin/products/new"
                   onClick={() => setIsOpen(false)}
                   className={`
                     flex items-center gap-2 px-3 py-2 rounded text-xs tracking-wide
                     transition-colors font-display
                     ${
-                      isActive('/admin/products/draft')
+                      isActive('/admin/products/new')
                         ? 'bg-primary/10 text-primary'
                         : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                     }
                   `}
                 >
-                  Draft
+                  Add Product
                 </Link>
                 <Link
-                  to="/admin/products/at-auction"
+                  to="/admin/products"
                   onClick={() => setIsOpen(false)}
                   className={`
                     flex items-center gap-2 px-3 py-2 rounded text-xs tracking-wide
                     transition-colors font-display
                     ${
-                      isActive('/admin/products/at-auction')
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                      false
+                        ? 'hidden'
+                        : 'hidden'
                     }
                   `}
                 >
-                  At Auction
+                  
                 </Link>
                 <Link
-                  to="/admin/products/sold"
+                  to="/admin/products"
                   onClick={() => setIsOpen(false)}
                   className={`
                     flex items-center gap-2 px-3 py-2 rounded text-xs tracking-wide
                     transition-colors font-display
                     ${
-                      isActive('/admin/products/sold')
-                        ? 'bg-primary/10 text-primary'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                      false
+                        ? 'hidden'
+                        : 'hidden'
                     }
                   `}
                 >
-                  Sold
+                  
                 </Link>
               </div>
             )}
