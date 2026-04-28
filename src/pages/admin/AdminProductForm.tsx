@@ -62,6 +62,7 @@ type CategoryRow = {
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
   sku: z.string().nullable().optional(),
+  consignor_id: z.string().nullable().optional(),
   short_description: z.string().nullable().optional(),
   long_description: z.string().nullable().optional(),
   price: z.coerce.number().nullable().optional(),
@@ -225,6 +226,7 @@ const AdminProductForm = () => {
       if (error) throw error;
       return data as { id: number; first_name: string | null; last_name: string | null; consignor_code: string | null }[];
     },
+    onError: (err: Error) => toast.error(`Unable to load consignors: ${err.message}`),
   });
 
   const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { name: '', status: 'available' } });
@@ -334,6 +336,7 @@ const AdminProductForm = () => {
     }
     for (const [k, v] of Object.entries(payload)) if (v === '' || v === undefined) payload[k] = null;
 
+    payload.consignor_id        = values.consignor_id ?? null;
     const firstD = designers.find((d) => d.designer_id);
     const firstM = makers.find((m) => m.maker_id);
     const firstP = periods.find((p) => p.period_id);

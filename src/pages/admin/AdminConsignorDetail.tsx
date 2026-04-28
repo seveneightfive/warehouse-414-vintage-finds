@@ -18,6 +18,8 @@ type ConsignorForm = {
   consignor_code: string;
   email: string;
   phone: string;
+  payment_type: string;
+  payment_address: string;
   notes: string;
 };
 
@@ -112,7 +114,7 @@ const AdminConsignorDetail = () => {
   const navigate = useNavigate();
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<ConsignorForm>({
-    first_name: '', last_name: '', consignor_code: '', email: '', phone: '', notes: '',
+    first_name: '', last_name: '', consignor_code: '', email: '', phone: '', payment_type: '', payment_address: '', notes: '',
   });
 
   const { data: consignor, isLoading, refetch } = useQuery({
@@ -121,7 +123,7 @@ const AdminConsignorDetail = () => {
       const { data, error } = await supabase
         .from('consignors' as any)
         .select('*')
-        .eq('id', id!)
+        .eq('id', parseInt(id!))
         .single();
       if (error) throw error;
       return data as any;
@@ -152,9 +154,11 @@ const AdminConsignorDetail = () => {
           consignor_code: values.consignor_code.toUpperCase(),
           email: values.email || null,
           phone: values.phone || null,
+          payment_type: values.payment_type || null,
+          payment_address: values.payment_address || null,
           notes: values.notes || null,
         })
-        .eq('id', id!);
+        .eq('id', parseInt(id!));
       if (error) throw error;
     },
     onSuccess: () => {
@@ -172,6 +176,8 @@ const AdminConsignorDetail = () => {
       consignor_code: consignor.consignor_code,
       email: consignor.email || '',
       phone: consignor.phone || '',
+      payment_type: consignor.payment_type || '',
+      payment_address: consignor.payment_address || '',
       notes: consignor.notes || '',
     });
     setModalOpen(true);
@@ -220,6 +226,14 @@ const AdminConsignorDetail = () => {
         <div>
           <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Phone</p>
           <p>{consignor.phone || '—'}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Payment</p>
+          <p>{consignor.payment_type || '—'}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Payment Address</p>
+          <p>{consignor.payment_address || '—'}</p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Notes</p>
@@ -307,6 +321,14 @@ const AdminConsignorDetail = () => {
             <div className="space-y-1">
               <Label>Phone</Label>
               <Input value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))} />
+            </div>
+            <div className="space-y-1">
+              <Label>Payment Type</Label>
+              <Input value={form.payment_type} onChange={(e) => setForm(f => ({ ...f, payment_type: e.target.value }))} />
+            </div>
+            <div className="space-y-1">
+              <Label>Payment Address</Label>
+              <Textarea value={form.payment_address} onChange={(e) => setForm(f => ({ ...f, payment_address: e.target.value }))} rows={3} />
             </div>
             <div className="space-y-1">
               <Label>Notes</Label>

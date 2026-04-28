@@ -19,6 +19,8 @@ type ConsignorStats = {
   consignor_code: string;
   email: string | null;
   phone: string | null;
+  payment_type: string | null;
+  payment_address: string | null;
   notes: string | null;
   created_at: string;
   total_products: number;
@@ -32,6 +34,8 @@ type ConsignorForm = {
   consignor_code: string;
   email: string;
   phone: string;
+  payment_type: string;
+  payment_address: string;
   notes: string;
 };
 
@@ -41,6 +45,8 @@ const emptyForm: ConsignorForm = {
   consignor_code: '',
   email: '',
   phone: '',
+  payment_type: '',
+  payment_address: '',
   notes: '',
 };
 
@@ -71,10 +77,12 @@ const AdminConsignors = () => {
         consignor_code: values.consignor_code.toUpperCase(),
         email: values.email || null,
         phone: values.phone || null,
+        payment_type: values.payment_type || null,
+        payment_address: values.payment_address || null,
         notes: values.notes || null,
       };
       if (values.id) {
-        const { error } = await supabase.from('consignors' as any).update(payload).eq('id', values.id);
+        const { error } = await supabase.from('consignors' as any).update(payload).eq('id', parseInt(values.id));
         if (error) throw error;
       } else {
         const { error } = await supabase.from('consignors' as any).insert(payload);
@@ -103,6 +111,8 @@ const AdminConsignors = () => {
       consignor_code: c.consignor_code,
       email: c.email || '',
       phone: c.phone || '',
+      payment_type: c.payment_type || '',
+      payment_address: c.payment_address || '',
       notes: c.notes || '',
     });
     setModalOpen(true);
@@ -130,7 +140,9 @@ const AdminConsignors = () => {
     return (
       name.includes(q) ||
       c.consignor_code.toLowerCase().includes(q) ||
-      (c.email || '').toLowerCase().includes(q)
+      (c.email || '').toLowerCase().includes(q) ||
+      (c.payment_type || '').toLowerCase().includes(q) ||
+      (c.payment_address || '').toLowerCase().includes(q)
     );
   });
 
@@ -164,6 +176,7 @@ const AdminConsignors = () => {
                 <TableHead>Code</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
+                <TableHead>Payment</TableHead>
                 <TableHead>Notes</TableHead>
                 <TableHead>Products</TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
@@ -179,6 +192,7 @@ const AdminConsignors = () => {
                     <TableCell className="font-mono text-xs">{c.consignor_code}</TableCell>
                     <TableCell className="text-sm">{c.email || '—'}</TableCell>
                     <TableCell className="text-sm">{c.phone || '—'}</TableCell>
+                    <TableCell className="text-sm">{c.payment_type || '—'}</TableCell>
                     <TableCell className="text-sm max-w-[200px] truncate">{c.notes || '—'}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5 flex-wrap">
@@ -212,7 +226,7 @@ onClick={() => navigate(`/admin/consignors/${c.id}`)}
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                     No consignors found
                   </TableCell>
                 </TableRow>
@@ -255,6 +269,14 @@ onClick={() => navigate(`/admin/consignors/${c.id}`)}
             <div className="space-y-1">
               <Label>Phone</Label>
               <Input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+            </div>
+            <div className="space-y-1">
+              <Label>Payment Type</Label>
+              <Input value={form.payment_type} onChange={(e) => setForm((f) => ({ ...f, payment_type: e.target.value }))} />
+            </div>
+            <div className="space-y-1">
+              <Label>Payment Address</Label>
+              <Textarea value={form.payment_address} onChange={(e) => setForm((f) => ({ ...f, payment_address: e.target.value }))} rows={3} />
             </div>
             <div className="space-y-1">
               <Label>Notes</Label>
