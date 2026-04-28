@@ -1,0 +1,87 @@
+import { Link } from "react-router-dom";
+import type { Product } from "@/types/database";
+
+const ProductCard = ({ product }: { product: Product }) => {
+  const imageUrl =
+    product.featured_image_url || product.product_images?.sort((a, b) => a.sort_order - b.sort_order)?.[0]?.image_url;
+  const designerName = product.designer?.name;
+
+  return (
+    <Link to={`/product/${product.slug}`} className="group block">
+      <div className="aspect-square overflow-hidden rounded-sm bg-muted mb-3 relative">
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={product.name}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
+            decoding="async"
+            width={400}
+            height={400}
+            sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs tracking-widest uppercase">
+            No Image
+          </div>
+        )}
+        {product.status === "sold" && (
+          <span className="absolute top-2 left-2 bg-black text-white font-display text-[10px] tracking-[0.15em] px-2.5 py-1">
+            sold
+          </span>
+        )}
+        {product.status === "on_hold" && (
+          <span className="absolute top-2 left-2 bg-yellow-500 text-white font-display text-[10px] tracking-[0.15em] px-2.5 py-1">
+            on hold
+          </span>
+        )}
+{product.sale_price && product.status !== "at_auction" && (
+          <span className="absolute top-2 left-2 bg-destructive text-white font-display text-[10px] tracking-[0.15em] px-2.5 py-1">
+            sale
+          </span>
+        )}
+        {product.status === "at_auction" && (
+          <span className="absolute top-2 left-2 bg-white/90 text-black font-display text-[10px] tracking-[0.15em] px-2.5 py-1">
+            at auction
+          </span>
+        )}
+      </div>
+      <h3 className="text-sm font-display tracking-wide text-foreground group-hover:text-primary transition-colors line-clamp-2">
+  {product.name}
+</h3>
+{(designerName || product.maker?.name) && (
+  <p className="text-xs text-muted-foreground mt-0.5">
+    {designerName ? (
+      <>
+        {product.designer_attribution && (
+          <span className="italic mr-1">{product.designer_attribution}</span>
+        )}
+        {designerName}
+      </>
+    ) : (
+      <>
+        {product.maker_attribution && (
+          <span className="italic mr-1">{product.maker_attribution}</span>
+        )}
+        {product.maker?.name}
+      </>
+    )}
+  </p>
+)}
+{product.price && product.status !== "at_auction" && (
+        <p className="text-sm text-muted-foreground mt-1 font-display">
+          {product.sale_price ? (
+            <>
+              <span className="line-through opacity-60 mr-2">${product.price.toLocaleString()}</span>
+              <span className="text-destructive">${product.sale_price.toLocaleString()}</span>
+            </>
+          ) : (
+            `$${product.price.toLocaleString()}`
+          )}
+        </p>
+      )}
+    </Link>
+  );
+};
+
+export default ProductCard;

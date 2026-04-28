@@ -1,0 +1,84 @@
+import { Facebook, Instagram } from "lucide-react";
+import { Link } from "react-router-dom";
+import firstdibsLogo from "@/assets/1stdibs-logo.png";
+import chairishLogo from "@/assets/chairish-logo.png";
+import ebayLogo from "@/assets/ebay-logo.png";
+import logoHorizontal from "@/assets/warehouse414-logo-horizontal.png";
+
+const Footer = () => {
+  return (
+    <footer className="border-t border-white/10 bg-[hsl(220,15%,8%)] mt-auto">
+      <div className="container mx-auto px-4 py-12">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-8">
+          {/* Brand */}
+          <div>
+            <img src={logoHorizontal} alt="Warehouse 414" className="h-10 w-auto" />
+            <p className="text-sm text-white/50 leading-relaxed mt-2">
+              Curated vintage & mid-century modern furniture for the discerning collector.
+            </p>
+          </div>
+
+          {/* Social Icons */}
+          <div className="flex items-center gap-4">
+            <a
+              href="https://www.facebook.com/people/Warehouse-414-new/61574405447016"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/50 hover:text-primary transition-colors"
+              aria-label="Facebook"
+            >
+              <Facebook size={20} />
+            </a>
+            <a
+              href="https://www.instagram.com/warehouse4one4"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/50 hover:text-primary transition-colors"
+              aria-label="Instagram"
+            >
+              <Instagram size={20} />
+            </a>
+            <a
+              href="https://www.1stdibs.com/dealers/warehouse-414"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="opacity-50 hover:opacity-100 transition-opacity"
+              aria-label="1stDibs"
+            >
+              <img src={firstdibsLogo} alt="1stDibs" className="h-5 w-auto brightness-0 invert" />
+            </a>
+            <a
+              href="https://www.chairish.com/shop/warehouse414"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="opacity-50 hover:opacity-100 transition-opacity"
+              aria-label="Chairish"
+            >
+              <img src={chairishLogo} alt="Chairish" className="h-5 w-auto brightness-0 invert" />
+            </a>
+            <a
+              href="https://www.ebay.com/str/warehouse414"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="opacity-50 hover:opacity-100 transition-opacity"
+              aria-label="eBay"
+            >
+              <img src={ebayLogo} alt="eBay" className="h-4 w-auto max-w-[40px] brightness-0 invert" />
+            </a>
+          </div>
+        </div>
+
+        <div className="border-t border-white/10 mt-8 pt-6 flex items-center justify-between">
+          <p className="text-xs text-white/40 tracking-wider">
+            © {new Date().getFullYear()} warehouse 414. all rights reserved.
+          </p>
+          <Link to="/admin" className="text-xs text-white/30 hover:text-white/60 transition-colors tracking-wider">
+            Admin
+          </Link>
+        </div>
+      </div>
+    </footer>
+  );
+};
+
+export default Footer;

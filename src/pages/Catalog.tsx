@@ -1,0 +1,322 @@
+import { useSearchParams } from 'react-router-dom';
+import { useInfiniteProducts, useFilterOptions } from '@/hooks/use-products';
+import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
+import ProductCard from '@/components/ProductCard';
+import { Input } from '@/components/ui/input';
+import SearchableSelect from '@/components/SearchableSelect';
+import CascadingCategoryFilter from '@/components/CascadingCategoryFilter';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Search, X, SlidersHorizontal, EyeOff, Eye } from 'lucide-react';
+import { useState, useMemo, useRef, useEffect } from 'react';
+
+const Catalog = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const hideSold = searchParams.get('sold') === 'hidden';
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (searchOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [searchOpen]);
+
+  const search = searchParams.get('q') || '';
+  const designerSlug = searchParams.get('designer') || '';
+  const makerSlug = searchParams.get('maker') || '';
+  const categoryId = searchParams.get('category') || '';
+  const styleId = searchParams.get('style') || '';
+  const periodId = searchParams.get('period') || '';
+  const countryId = searchParams.get('country') || '';
+
+  const setParam = (key: string, value: string) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (value) {
+        next.set(key, value);
+      } else {
+        next.delete(key);
+      }
+      return next;
+    }, { replace: true });
+  };
+
+  const { data: filterOptions } = useFilterOptions();
+  const {
+    data,
+    isLoading,
+    isError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+  } = useInfiniteProducts({
+    search: search || undefined,
+    designer_slug: designerSlug || undefined,
+    maker_slug: makerSlug || undefined,
+    category_id: categoryId || undefined,
+    style_id: styleId || undefined,
+    period_id: periodId || undefined,
+    country_id: countryId || undefined,
+    status: hideSold ? 'available' : undefined,
+  });
+
+  const products = useMemo(
+    () => data?.pages.flatMap((page) => page) ?? [],
+    [data]
+  );
+
+  const sentinelRef = useInfiniteScroll({
+    fetchNextPage,
+    hasNextPage: !!hasNextPage,
+    isFetchingNextPage,
+  });
+
+  const activeFilterCount = [designerSlug, makerSlug, categoryId, styleId, periodId, countryId].filter(Boolean).length;
+
+  const clearFilters = () => {
+    setSearchParams({}, { replace: true });
+  };
+
+  const filterSelect = (
+    label: string,
+    paramKey: string,
+    value: string,
+    options: { id: string; name: string }[] | undefined
+  ) => (
+    <SearchableSelect
+      label={label}
+      value={value}
+      options={options}
+      onChange={(v) => setParam(paramKey, v)}
+    />
+  );
+
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  // Calculate total product count (including pages not yet loaded)
+  const totalCount = useMemo(() => {
+    return products.length;
+  }, [products]);
+
+  return (
+    <div>
+      {/* Sticky toolbar */}
+        <div className="fixed top-14 md:top-[6.5rem] left-0 right-0 z-40 bg-background border-b border-border">
+        <div className="container mx-auto px-5 md:px-4 py-3 md:py-4">
+          {/* Desktop layout */}
+          <div className="hidden md:flex items-center gap-4">
+            <button
+              onClick={scrollToTop}
+              className="font-display text-lg tracking-[0.3em] uppercase text-foreground shrink-0 hover:text-primary transition-colors"
+            >
+              Catalog
+            </button>
+
+            <div className="relative flex-1 max-w-md min-w-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+              <Input
+                placeholder="Search products..."
+                value={search}
+                onChange={(e) => setParam('q', e.target.value)}
+                className="pl-10 bg-card border-border"
+              />
+            </div>
+
+            <Button
+              variant={hideSold ? "default" : "outline"}
+              size="sm"
+              onClick={() => setParam('sold', hideSold ? '' : 'hidden')}
+              className="shrink-0 gap-2"
+            >
+              {hideSold ? <EyeOff size={16} /> : <Eye size={16} />}
+              {hideSold ? 'Sold Hidden' : 'Hide Sold'}
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDrawerOpen(true)}
+              className="shrink-0 gap-2"
+            >
+              <SlidersHorizontal size={16} />
+              Filter
+              {activeFilterCount > 0 && (
+                <span className="ml-1 bg-primary text-primary-foreground text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+            </Button>
+
+            {/* Show product count */}
+            {totalCount > 0 && (
+              <span className="text-sm text-muted-foreground whitespace-nowrap">
+                {totalCount}{hasNextPage ? '+' : ''} shown
+              </span>
+            )}
+          </div>
+
+          {/* Mobile layout */}
+          <div className="flex md:hidden items-center gap-2">
+            <button
+              onClick={scrollToTop}
+              className="font-display text-sm tracking-[0.2em] uppercase text-foreground shrink-0 hover:text-primary transition-colors"
+            >
+              Catalog
+            </button>
+
+            <div className="flex-1" />
+
+            <Button
+              variant={search ? "default" : "ghost"}
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => {
+                setSearchOpen(!searchOpen);
+                if (searchOpen && search) setParam('q', '');
+              }}
+            >
+              {searchOpen ? <X size={16} /> : <Search size={16} />}
+            </Button>
+
+            <Button
+              variant={hideSold ? "default" : "ghost"}
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setParam('sold', hideSold ? '' : 'hidden')}
+            >
+              {hideSold ? <EyeOff size={16} /> : <Eye size={16} />}
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 relative"
+              onClick={() => setDrawerOpen(true)}
+            >
+              <SlidersHorizontal size={16} />
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
+            </Button>
+          </div>
+
+          {/* Mobile collapsible search */}
+          {searchOpen && (
+            <div className="md:hidden mt-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+                <Input
+                  ref={searchInputRef}
+                  placeholder="Search products..."
+                  value={search}
+                  onChange={(e) => setParam('q', e.target.value)}
+                  className="pl-9 h-9 bg-card border-border text-sm"
+                />
+                {search && (
+                  <button
+                    onClick={() => setParam('q', '')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Filter Drawer */}
+      <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <SheetContent side="right" className="w-80 font-display">
+          <SheetHeader>
+            <SheetTitle className="font-display lowercase font-bold">filters</SheetTitle>
+          </SheetHeader>
+          <div className="mt-6 space-y-4">
+            {/* Cascading category filter */}
+            {filterOptions?.categories && (
+              <CascadingCategoryFilter
+                categories={filterOptions.categories}
+                value={categoryId}
+                onChange={(v) => setParam('category', v)}
+              />
+            )}
+            {filterSelect('Style', 'style', styleId, filterOptions?.styles)}
+            {filterSelect('Designer', 'designer', designerSlug, filterOptions?.designers?.map(d => ({ id: d.slug || d.id, name: d.name })))}
+            {filterSelect('Maker', 'maker', makerSlug, filterOptions?.makers?.map(m => ({ id: m.slug || m.id, name: m.name })))}
+            {filterSelect('Period', 'period', periodId, filterOptions?.periods)}
+            {filterSelect('Country', 'country', countryId, filterOptions?.countries)}
+          </div>
+          <div className="mt-6 flex items-center gap-3">
+            {activeFilterCount > 0 && (
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-muted-foreground font-display">
+                <X size={14} /> Clear all filters
+              </Button>
+            )}
+            <Button
+              size="sm"
+              onClick={() => setDrawerOpen(false)}
+              className="ml-auto font-display"
+            >
+              View Products{products.length > 0 ? ` (${products.length}${hasNextPage ? '+' : ''})` : ''}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Product Grid */}
+      <div className="container mx-auto px-4 py-8 mt-14 md:mt-16">
+        {isLoading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="aspect-square bg-muted animate-pulse rounded-sm" />
+            ))}
+          </div>
+        ) : isError ? (
+          <div className="text-center py-20 space-y-4">
+            <p className="text-sm text-muted-foreground">Something went wrong loading products.</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              Try again
+            </Button>
+          </div>
+        ) : products.length > 0 ? (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {products.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+
+            {/* Loading more skeletons */}
+            {isFetchingNextPage && (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-6">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="aspect-square bg-muted animate-pulse rounded-sm" />
+                ))}
+              </div>
+            )}
+
+            {/* Sentinel for infinite scroll */}
+            <div ref={sentinelRef} className="h-1" />
+
+            {/* End of results */}
+            {!hasNextPage && products.length > 0 && (
+              <p className="text-center text-muted-foreground text-xs py-8 tracking-widest uppercase">
+                You've seen all products
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="text-center text-muted-foreground py-20 text-sm">No products found.</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default Catalog;

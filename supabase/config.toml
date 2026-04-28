@@ -1,0 +1,8 @@
+[functions.upload-product-images]
+verify_jwt = false
+
+[functions.delete-product-image]
+verify_jwt = false
+
+[functions.upload-collection-image]
+verify_jwt = false
