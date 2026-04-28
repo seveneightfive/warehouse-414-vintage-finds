@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -24,6 +24,11 @@ const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Nam
   const [newItem, setNewItem] = useState<Record<string, string>>({});
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Reset search query when navigating to a different taxonomy page
+  useEffect(() => {
+    setSearchQuery('');
+  }, [tableName]);
 
   const { data: items, isLoading } = useQuery({
     queryKey: [tableName],
