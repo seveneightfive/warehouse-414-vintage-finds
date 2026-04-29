@@ -24,6 +24,7 @@ import AdminCollections from "./pages/admin/AdminCollections";
 import AdminCollectionDetail from "./pages/admin/AdminCollectionDetail";
 import AdminConsignors from "./pages/admin/AdminConsignors";
 import AdminConsignorDetail from "./pages/admin/AdminConsignorDetail";
+import AdminInventory from "./pages/admin/AdminInventory";
 import CollectionDetail from "./pages/CollectionDetail";
 import AdminSidebar from "./components/AdminSidebar";
 import NotFound from "./pages/NotFound";
@@ -38,9 +39,8 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 overflow-y-auto bg-background">
         <div className="container mx-auto px-6 py-8">
           {children}
-        </div>
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }
 
@@ -100,11 +100,6 @@ const App = () => (
             {/* Inventory */}
             <Route path="/admin/inventory" element={<AdminLayout><AdminInventory /></AdminLayout>} />
 
-            {/* Legacy route — redirect to available (in case old bookmarks) */}
-            <Route path="/admin/products" element={<AdminLayout><AdminProductsAvailable /></AdminLayout>} />
-
-            {/* Inventory - NEW */}
-            <Route path="/admin/inventory" element={<AdminLayout><AdminCrudList title="Inventory" tableName="inventory" columns={[{ key: 'name', label: 'Name' }]} /></AdminLayout>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
