@@ -67,6 +67,8 @@ type CategoryRow = {
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
   sku: z.string().nullable().optional(),
+  consignor_id: z.coerce.number().nullable().optional(),
+  line: z.string().nullable().optional(),
   short_description: z.string().nullable().optional(),
   long_description: z.string().nullable().optional(),
   price: z.coerce.number().nullable().optional(),
