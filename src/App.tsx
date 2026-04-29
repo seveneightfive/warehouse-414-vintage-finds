@@ -31,7 +31,7 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-/ Admin layout wrapper
+// Admin layout wrapper
 function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen overflow-hidden">
