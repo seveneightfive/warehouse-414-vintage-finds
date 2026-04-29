@@ -49,6 +49,25 @@ export default function InquiryDialog({ type, productId, productTitle, triggerCl
 
       const { error } = await supabase.from(cfg.table).insert(record);
       if (error) throw error;
+
+      const emailPayload = {
+        product_id: productId,
+        product_title: productTitle,
+        type,
+        inquiry_type: record.inquiry_type ?? (type === 'hold' ? 'hold' : type === 'offer' ? 'offer' : 'purchase'),
+        customer_name: form.name,
+        customer_email: form.email,
+        customer_phone: form.phone || null,
+        message: record.message || null,
+        offer_amount: record.offer_amount || null,
+      };
+
+      const { error: emailError } = await supabase.functions.invoke('send-inquiry-email', {
+        body: JSON.stringify(emailPayload),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (emailError) throw emailError;
+
       toast.success(`${cfg.title} submitted successfully!`);
       setForm({ name: '', email: '', phone: '', message: '', amount: '' });
       setOpen(false);
