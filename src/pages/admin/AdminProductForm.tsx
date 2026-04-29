@@ -87,6 +87,8 @@ const schema = z.object({
   materials: z.string().nullable().optional(),
   condition: z.string().nullable().optional(),
   year_created: z.string().nullable().optional(),
+  period_designed: z.string().nullable().optional(),
+  period_created: z.string().nullable().optional(),
   tags: z.string().nullable().optional(),
   firstdibs_url: z.string().url().nullable().optional().or(z.literal('')),
   chairish_url: z.string().url().nullable().optional().or(z.literal('')),
@@ -770,6 +772,23 @@ const AdminProductForm = () => {
               )} />
               <FormField control={form.control} name="condition" render={({ field }) => (
                 <FormItem><FormLabel>Condition Notes</FormLabel><FormControl><Textarea rows={2} {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+              )} />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField control={form.control} name="period_designed" render={({ field }) => (
+                <FormItem>
+                  <FormLabel><FieldLabel>Period Designed</FieldLabel></FormLabel>
+                  <FormControl><Input {...field} value={field.value ?? ''} placeholder="e.g. Mid-Century Modern" /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="period_created" render={({ field }) => (
+                <FormItem>
+                  <FormLabel><FieldLabel>Period Created</FieldLabel></FormLabel>
+                  <FormControl><Input {...field} value={field.value ?? ''} placeholder="e.g. Late 20th Century" /></FormControl>
+                  <FormMessage />
+                </FormItem>
               )} />
             </div>
           </section>
