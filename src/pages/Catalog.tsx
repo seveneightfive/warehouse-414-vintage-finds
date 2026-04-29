@@ -223,14 +223,7 @@ const Catalog = () => {
             <SheetTitle className="font-display lowercase font-bold">filters</SheetTitle>
           </SheetHeader>
                     <div className="mt-6 space-y-4">
-            {/* Cascading category filter */}
-            {filterOptions?.categories && (
-              <CascadingCategoryFilter
-                categories={filterOptions.categories}
-                value={categoryId}
-                onChange={(v) => setParam('category', v)}
-              />
-            )}
+                        {filterSelect('Category', 'category', categoryId, filterOptions?.categories)}
             {filterSelect('Designer', 'designer', designerSlug, filterOptions?.designers?.map(d => ({ id: d.slug || d.id, name: d.name })))}
             {filterSelect('Maker', 'maker', makerSlug, filterOptions?.makers?.map(m => ({ id: m.slug || m.id, name: m.name })))}
             {filterSelect('Style / Period', 'style_period', stylePeriodId, filterOptions?.stylesPeriods)}
