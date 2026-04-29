@@ -6,7 +6,6 @@ const PAGE_SIZE = 50;
 
 // ─── Shared select fragments ──────────────────────────────────────────────────
 
-/** Full junction selects — used on single-product detail pages */
 const PRODUCT_DETAIL_SELECT = `
   *,
   product_designers ( attribution_type, designer:designers(id, name, slug) ),
@@ -22,7 +21,6 @@ const PRODUCT_DETAIL_SELECT = `
   product_colors(*, color:colors(*))
 `;
 
-/** Lightweight select for list/card views */
 const PRODUCT_CARD_SELECT = `
   id, name, slug, price, status, featured_image_url, created_at, sale_price,
   product_designers ( attribution_type, designer:designers(id, name, slug) ),
@@ -40,6 +38,8 @@ type ProductFilters = {
   designer_slug?: string;
   maker_slug?: string;
   category_id?: string;
+  subcategory_id?: string;
+  sub_subcategory_id?: string;
   style_period_id?: string;
   country_id?: string;
   color_id?: string;
@@ -52,13 +52,91 @@ type ProductFilters = {
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 
 /**
- * Infinite-scroll product list. Filters via junction tables for
- * designer_slug and maker_slug (supports multi-designer/maker products).
+ * Resolves a category/subcategory selection into the set of subcategory ids
+ * (and optionally the L1 category id) that should be matched against
+ * product_categories. This is what makes "select a parent → show all
+ * descendants" work.
  */
+async function resolveCategoryDescendants(filters: ProductFilters): Promise<{
+  subcategoryIds: string[] | null;
+  categoryId: string | null;
+}> {
+  // Deepest selection wins
+  if (filters.sub_subcategory_id) {
+    return { subcategoryIds: [filters.sub_subcategory_id], categoryId: null };
+  }
+
+  if (filters.subcategory_id) {
+    // Include the L2 itself + all its L3 children
+    const { data: children } = await supabase
+      .from("subcategories")
+      .select("id")
+      .eq("parent_id", filters.subcategory_id);
+    const ids = [filters.subcategory_id, ...(children ?? []).map((c) => c.id)];
+    return { subcategoryIds: ids, categoryId: null };
+  }
+
+  if (filters.category_id) {
+    // L1 selected — match either the L1 directly OR any descendant subcategory.
+    const { data: subs } = await supabase
+      .from("subcategories")
+      .select("id")
+      .eq("category_id", filters.category_id);
+    const subIds = (subs ?? []).map((s) => s.id);
+
+    if (subIds.length === 0) {
+      return { subcategoryIds: null, categoryId: filters.category_id };
+    }
+
+    // Also pull L3s under those L2s
+    const { data: grandkids } = await supabase
+      .from("subcategories")
+      .select("id")
+      .in("parent_id", subIds);
+    const allSubIds = [...subIds, ...(grandkids ?? []).map((g) => g.id)];
+    return { subcategoryIds: allSubIds, categoryId: filters.category_id };
+  }
+
+  return { subcategoryIds: null, categoryId: null };
+}
+
 export function useInfiniteProducts(filters?: ProductFilters) {
   return useInfiniteQuery({
     queryKey: ["products-infinite", filters],
     queryFn: async ({ pageParam }: { pageParam: Cursor | undefined }) => {
+      // Pre-resolve category hierarchy into a product id list.
+      // Doing this as a pre-query is more reliable across three levels
+      // than trying to compose nested OR filters in PostgREST.
+      let categoryProductIds: string[] | null = null;
+
+      if (filters?.category_id || filters?.subcategory_id || filters?.sub_subcategory_id) {
+        const { subcategoryIds, categoryId } = await resolveCategoryDescendants(filters);
+
+        const idSets: string[][] = [];
+
+        if (subcategoryIds && subcategoryIds.length > 0) {
+          const { data } = await supabase
+            .from("product_categories")
+            .select("product_id")
+            .in("subcategory_id", subcategoryIds);
+          idSets.push((data ?? []).map((r) => r.product_id));
+        }
+
+        if (categoryId) {
+          const { data } = await supabase
+            .from("product_categories")
+            .select("product_id")
+            .eq("category_id", categoryId);
+          idSets.push((data ?? []).map((r) => r.product_id));
+        }
+
+        const merged = new Set<string>();
+        idSets.forEach((set) => set.forEach((id) => merged.add(id)));
+        categoryProductIds = [...merged];
+
+        if (categoryProductIds.length === 0) return [] as Product[];
+      }
+
       let query = supabase
         .from("products")
         .select(PRODUCT_CARD_SELECT)
@@ -66,36 +144,32 @@ export function useInfiniteProducts(filters?: ProductFilters) {
         .order("id", { ascending: false })
         .limit(PAGE_SIZE);
 
-      // Status filter
       if (filters?.status) {
         query = query.eq("status", filters.status);
       } else {
         query = query.in("status", ["available", "on_hold", "sold", "at_auction"]);
       }
 
-      // Cursor pagination
       if (pageParam) {
         query = query.or(
           `created_at.lt.${pageParam.created_at},and(created_at.eq.${pageParam.created_at},id.lt.${pageParam.id})`,
         );
       }
 
-      // Junction-table filters: filter via the nested relationship
-      // Supabase supports filtering on joined tables with !inner
+      if (categoryProductIds) {
+        query = query.in("id", categoryProductIds);
+      }
+
       if (filters?.designer_slug) {
         query = (query as any).eq("product_designers.designer.slug", filters.designer_slug);
       }
       if (filters?.maker_slug) {
         query = (query as any).eq("product_makers.maker.slug", filters.maker_slug);
       }
-      if (filters?.category_id) {
-        query = (query as any).eq("product_categories.category_id", filters.category_id);
-      }
       if (filters?.style_period_id) {
         query = (query as any).eq("product_styles_periods.styles_periods.id", filters.style_period_id);
       }
 
-      // Direct-column filters
       if (filters?.country_id) query = query.eq("country_id", filters.country_id);
       if (filters?.search) query = query.ilike("name", `%${filters.search}%`);
       if (filters?.year_min) query = query.gte("year_created", filters.year_min);
@@ -114,10 +188,6 @@ export function useInfiniteProducts(filters?: ProductFilters) {
   });
 }
 
-/**
- * Simple product list — used for "other pieces by this designer/maker" sections.
- * Accepts legacy ID-based filters for backwards compat, plus new junction filters.
- */
 export function useProducts(filters?: {
   designer_id?: string;
   maker_id?: string;
@@ -142,11 +212,7 @@ export function useProducts(filters?: {
         query = query.in("status", ["available", "on_hold", "sold", "at_auction"]);
       }
 
-      // For "pieces by designer/maker", filter via junction tables
-      // We use the legacy _id columns here since we have the UUID directly
-      // (the junction row will always exist from migration)
       if (filters?.designer_id) {
-        // Filter products that have this designer in product_designers
         const { data: pds } = await supabase
           .from("product_designers")
           .select("product_id")
@@ -195,9 +261,6 @@ export function useProducts(filters?: {
   });
 }
 
-/**
- * Single product detail — full data including all designers, makers, categories.
- */
 export function useProduct(slug: string | undefined) {
   return useQuery({
     queryKey: ["product", slug],
@@ -235,10 +298,6 @@ export function useFeaturedProducts() {
   });
 }
 
-/**
- * Similar products — uses product_categories junction to find products
- * sharing any category with the current product.
- */
 export function useSimilarProducts(
   productId: string | undefined,
   categoryIds: string[] | undefined,
@@ -260,7 +319,6 @@ export function useSimilarProducts(
       }
 
       if (ids.length === 0) {
-        // Fallback: just return recent available products
         const { data, error } = await supabase
           .from("products")
           .select(`id, name, slug, price, status, featured_image_url, created_at, sale_price,
@@ -287,23 +345,78 @@ export function useSimilarProducts(
   });
 }
 
+/**
+ * Categories returned as a 3-level tree:
+ *   category (L1) → subcategory (L2, parent_id IS NULL) → sub-subcategory (L3)
+ *
+ * `subcategories` serves dual duty: rows with parent_id NULL are L2 children
+ * of a category; rows with parent_id set are L3 children of an L2 row.
+ */
+export type CategoryNode = {
+  id: string;
+  name: string;
+  slug: string;
+  children: CategoryNode[];
+};
+
 export function useFilterOptions() {
   return useQuery({
     queryKey: ["filter-options"],
     queryFn: async () => {
-      const [designers, makers, categories, stylesPeriods, countries, colors] =
+      const [designers, makers, categoriesRaw, subcategoriesRaw, stylesPeriods, countries, colors] =
         await Promise.all([
           supabase.from("designers").select("*").order("name"),
           supabase.from("makers").select("*").order("name"),
-          supabase.from("categories").select("*, subcategories(*)").order("name"),
+          supabase.from("categories").select("id, name, slug").order("name"),
+          supabase
+            .from("subcategories")
+            .select("id, name, slug, category_id, parent_id")
+            .order("name"),
           supabase.from("styles_periods").select("*").order("name"),
           supabase.from("countries").select("*").order("name"),
           supabase.from("colors").select("*").order("name"),
         ]);
+
+      const subs = subcategoriesRaw.data ?? [];
+      const cats = categoriesRaw.data ?? [];
+
+      // L3 grouped by their L2 parent
+      const l3ByParent = new Map<string, CategoryNode[]>();
+      for (const s of subs) {
+        if (s.parent_id) {
+          const arr = l3ByParent.get(s.parent_id) ?? [];
+          arr.push({ id: s.id, name: s.name, slug: s.slug, children: [] });
+          l3ByParent.set(s.parent_id, arr);
+        }
+      }
+
+      // L2 grouped by their L1 category, with L3s attached
+      const l2ByCategory = new Map<string, CategoryNode[]>();
+      for (const s of subs) {
+        if (!s.parent_id && s.category_id) {
+          const arr = l2ByCategory.get(s.category_id) ?? [];
+          arr.push({
+            id: s.id,
+            name: s.name,
+            slug: s.slug,
+            children: l3ByParent.get(s.id) ?? [],
+          });
+          l2ByCategory.set(s.category_id, arr);
+        }
+      }
+
+      const categoryTree: CategoryNode[] = cats.map((c) => ({
+        id: c.id,
+        name: c.name,
+        slug: c.slug,
+        children: l2ByCategory.get(c.id) ?? [],
+      }));
+
       return {
         designers: designers.data || [],
         makers: makers.data || [],
-        categories: categories.data || [],
+        categories: cats,         // legacy flat list (kept for back-compat)
+        categoryTree,             // new hierarchical tree
         stylesPeriods: stylesPeriods.data || [],
         countries: countries.data || [],
         colors: colors.data || [],

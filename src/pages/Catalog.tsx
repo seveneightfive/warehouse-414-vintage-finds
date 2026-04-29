@@ -4,6 +4,7 @@ import { useInfiniteScroll } from '@/hooks/use-infinite-scroll';
 import ProductCard from '@/components/ProductCard';
 import { Input } from '@/components/ui/input';
 import SearchableSelect from '@/components/SearchableSelect';
+import CategoryFilter from '@/components/CategoryFilter';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Search, X, SlidersHorizontal, EyeOff, Eye } from 'lucide-react';
@@ -26,6 +27,8 @@ const Catalog = () => {
   const designerSlug = searchParams.get('designer') || '';
   const makerSlug = searchParams.get('maker') || '';
   const categoryId = searchParams.get('category') || '';
+  const subcategoryId = searchParams.get('subcategory') || '';
+  const subSubcategoryId = searchParams.get('sub_subcategory') || '';
   const stylePeriodId = searchParams.get('style_period') || '';
   const countryId = searchParams.get('country') || '';
 
@@ -38,6 +41,26 @@ const Catalog = () => {
         next.delete(key);
       }
       return next;
+    }, { replace: true });
+  };
+
+  // Atomic update for category levels — keeps URL consistent when a parent
+  // change cascades a clear into the children.
+  const setCategoryParams = (next: {
+    categoryId: string;
+    subcategoryId: string;
+    subSubcategoryId: string;
+  }) => {
+    setSearchParams(prev => {
+      const params = new URLSearchParams(prev);
+      const apply = (key: string, value: string) => {
+        if (value) params.set(key, value);
+        else params.delete(key);
+      };
+      apply('category', next.categoryId);
+      apply('subcategory', next.subcategoryId);
+      apply('sub_subcategory', next.subSubcategoryId);
+      return params;
     }, { replace: true });
   };
 
@@ -55,6 +78,8 @@ const Catalog = () => {
     designer_slug: designerSlug || undefined,
     maker_slug: makerSlug || undefined,
     category_id: categoryId || undefined,
+    subcategory_id: subcategoryId || undefined,
+    sub_subcategory_id: subSubcategoryId || undefined,
     style_period_id: stylePeriodId || undefined,
     country_id: countryId || undefined,
     status: hideSold ? 'available' : undefined,
@@ -71,7 +96,11 @@ const Catalog = () => {
     isFetchingNextPage,
   });
 
-  const activeFilterCount = [designerSlug, makerSlug, categoryId, stylePeriodId, countryId].filter(Boolean).length;
+  // Count category as a single active filter regardless of how deep the user drilled
+  const categoryActive = !!(categoryId || subcategoryId || subSubcategoryId);
+  const activeFilterCount =
+    (categoryActive ? 1 : 0) +
+    [designerSlug, makerSlug, stylePeriodId, countryId].filter(Boolean).length;
 
   const clearFilters = () => {
     setSearchParams({}, { replace: true });
@@ -223,7 +252,13 @@ const Catalog = () => {
             <SheetTitle className="font-display lowercase font-bold">filters</SheetTitle>
           </SheetHeader>
                     <div className="mt-6 space-y-4">
-                        {filterSelect('Category', 'category', categoryId, filterOptions?.categories)}
+                        <CategoryFilter
+                          tree={filterOptions?.categoryTree}
+                          categoryId={categoryId}
+                          subcategoryId={subcategoryId}
+                          subSubcategoryId={subSubcategoryId}
+                          onChange={setCategoryParams}
+                        />
             {filterSelect('Designer', 'designer', designerSlug, filterOptions?.designers?.map(d => ({ id: d.slug || d.id, name: d.name })))}
             {filterSelect('Maker', 'maker', makerSlug, filterOptions?.makers?.map(m => ({ id: m.slug || m.id, name: m.name })))}
             {filterSelect('Style / Period', 'style_period', stylePeriodId, filterOptions?.stylesPeriods)}
