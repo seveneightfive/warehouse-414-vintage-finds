@@ -10,11 +10,27 @@ interface SearchableSelectProps {
   placeholder?: string;
 }
 
+// Handles common English plural cases for filter labels.
+// "country" -> "countries", "category" -> "categories",
+// "designer" -> "designers", "style / period" -> "styles / periods"
+const pluralize = (word: string): string => {
+  // If the label contains " / " (e.g. "style / period"), pluralize each side
+  if (word.includes(' / ')) {
+    return word.split(' / ').map(pluralize).join(' / ');
+  }
+  if (word.endsWith('s')) return word;
+  // consonant + y -> ies
+  if (/[^aeiou]y$/i.test(word)) return word.slice(0, -1) + 'ies';
+  return word + 's';
+};
+
 const SearchableSelect = ({ label, value, options, onChange, placeholder }: SearchableSelectProps) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const pluralLabel = useMemo(() => pluralize(label.toLowerCase()), [label]);
 
   const selectedLabel = useMemo(() => {
     if (!value) return '';
@@ -58,7 +74,7 @@ const SearchableSelect = ({ label, value, options, onChange, placeholder }: Sear
           className="flex items-center justify-between w-full h-10 px-3 py-2 text-sm rounded-md border border-border bg-card text-left font-display hover:bg-accent/50 transition-colors"
         >
           <span className={value ? 'text-foreground' : 'text-muted-foreground'}>
-            {selectedLabel || placeholder || `All ${label}s`}
+            {selectedLabel || placeholder || `all ${pluralLabel}`}
           </span>
           <div className="flex items-center gap-1">
             {value && (
@@ -87,7 +103,7 @@ const SearchableSelect = ({ label, value, options, onChange, placeholder }: Sear
                   ref={inputRef}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder={`Search ${label.toLowerCase()}s...`}
+                  placeholder={`Search ${pluralLabel}...`}
                   className="h-8 pl-8 text-sm bg-background border-border font-display"
                 />
               </div>
@@ -100,7 +116,7 @@ const SearchableSelect = ({ label, value, options, onChange, placeholder }: Sear
                   !value ? 'bg-black text-white' : 'hover:bg-accent'
                 }`}
               >
-                All {label}s
+                All {pluralLabel}
               </button>
               {filtered.length === 0 ? (
                 <p className="px-3 py-2 text-sm text-muted-foreground">No results found</p>
