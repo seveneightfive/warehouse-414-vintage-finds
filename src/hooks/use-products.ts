@@ -30,6 +30,19 @@ const PRODUCT_CARD_SELECT = `
   product_images(image_url, sort_order)
 `;
 
+// Card select with an inner join on product_categories. Used only when a
+// category filter is active. `!inner` forces only products that have a
+// matching product_categories row, and lets us filter by category_id /
+// subcategory_id at the database level instead of pre-querying ids.
+const PRODUCT_CARD_SELECT_WITH_CATEGORY_FILTER = `
+  id, name, slug, price, status, featured_image_url, created_at, sale_price,
+  product_designers ( attribution_type, designer:designers(id, name, slug) ),
+  product_makers    ( attribution_type, maker:makers(id, name, slug) ),
+  product_categories!inner ( is_primary, category_id, subcategory_id, category:categories(id, name, slug) ),
+  product_styles_periods ( attribution_type, styles_periods:styles_periods(id, name, slug) ),
+  product_images(image_url, sort_order)
+`;
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Cursor = { created_at: string; id: string };
@@ -53,21 +66,22 @@ type ProductFilters = {
 
 /**
  * Resolves a category/subcategory selection into the set of subcategory ids
- * (and optionally the L1 category id) that should be matched against
- * product_categories. This is what makes "select a parent → show all
- * descendants" work.
+ * (or L1 category id) that products may be tagged with.
+ *
+ * Tagging convention in this database:
+ *   - L1 only:     product_categories.category_id = X, subcategory_id = NULL
+ *   - L2 chosen:   product_categories.subcategory_id IN (L2 + its L3 children)
+ *   - L3 chosen:   product_categories.subcategory_id = L3
  */
 async function resolveCategoryDescendants(filters: ProductFilters): Promise<{
   subcategoryIds: string[] | null;
   categoryId: string | null;
 }> {
-  // Deepest selection wins
   if (filters.sub_subcategory_id) {
     return { subcategoryIds: [filters.sub_subcategory_id], categoryId: null };
   }
 
   if (filters.subcategory_id) {
-    // Include the L2 itself + all its L3 children
     const { data: children } = await supabase
       .from("subcategories")
       .select("id")
@@ -77,24 +91,9 @@ async function resolveCategoryDescendants(filters: ProductFilters): Promise<{
   }
 
   if (filters.category_id) {
-    // L1 selected — match either the L1 directly OR any descendant subcategory.
-    const { data: subs } = await supabase
-      .from("subcategories")
-      .select("id")
-      .eq("category_id", filters.category_id);
-    const subIds = (subs ?? []).map((s) => s.id);
-
-    if (subIds.length === 0) {
-      return { subcategoryIds: null, categoryId: filters.category_id };
-    }
-
-    // Also pull L3s under those L2s
-    const { data: grandkids } = await supabase
-      .from("subcategories")
-      .select("id")
-      .in("parent_id", subIds);
-    const allSubIds = [...subIds, ...(grandkids ?? []).map((g) => g.id)];
-    return { subcategoryIds: allSubIds, categoryId: filters.category_id };
+    // L1 selected: any product_categories row with this category_id matches,
+    // regardless of which subcategory_id (if any) it has.
+    return { subcategoryIds: null, categoryId: filters.category_id };
   }
 
   return { subcategoryIds: null, categoryId: null };
@@ -104,42 +103,31 @@ export function useInfiniteProducts(filters?: ProductFilters) {
   return useInfiniteQuery({
     queryKey: ["products-infinite", filters],
     queryFn: async ({ pageParam }: { pageParam: Cursor | undefined }) => {
-      // Pre-resolve category hierarchy into a product id list.
-      // Doing this as a pre-query is more reliable across three levels
-      // than trying to compose nested OR filters in PostgREST.
-      let categoryProductIds: string[] | null = null;
+      const hasCategoryFilter = !!(
+        filters?.category_id ||
+        filters?.subcategory_id ||
+        filters?.sub_subcategory_id
+      );
 
-      if (filters?.category_id || filters?.subcategory_id || filters?.sub_subcategory_id) {
-        const { subcategoryIds, categoryId } = await resolveCategoryDescendants(filters);
+      let categoryFilterIds: string[] | null = null;
+      let categoryFilterL1: string | null = null;
 
-        const idSets: string[][] = [];
-
-        if (subcategoryIds && subcategoryIds.length > 0) {
-          const { data } = await supabase
-            .from("product_categories")
-            .select("product_id")
-            .in("subcategory_id", subcategoryIds);
-          idSets.push((data ?? []).map((r) => r.product_id));
-        }
-
-        if (categoryId) {
-          const { data } = await supabase
-            .from("product_categories")
-            .select("product_id")
-            .eq("category_id", categoryId);
-          idSets.push((data ?? []).map((r) => r.product_id));
-        }
-
-        const merged = new Set<string>();
-        idSets.forEach((set) => set.forEach((id) => merged.add(id)));
-        categoryProductIds = [...merged];
-
-        if (categoryProductIds.length === 0) return [] as Product[];
+      if (hasCategoryFilter) {
+        const resolved = await resolveCategoryDescendants(filters!);
+        categoryFilterIds = resolved.subcategoryIds;
+        categoryFilterL1 = resolved.categoryId;
       }
+
+      // Only switch to the inner-join select when a category filter is on,
+      // so products without any product_categories row aren't accidentally
+      // hidden in the unfiltered case.
+      const selectClause = hasCategoryFilter
+        ? PRODUCT_CARD_SELECT_WITH_CATEGORY_FILTER
+        : PRODUCT_CARD_SELECT;
 
       let query = supabase
         .from("products")
-        .select(PRODUCT_CARD_SELECT)
+        .select(selectClause)
         .order("created_at", { ascending: false })
         .order("id", { ascending: false })
         .limit(PAGE_SIZE);
@@ -156,8 +144,12 @@ export function useInfiniteProducts(filters?: ProductFilters) {
         );
       }
 
-      if (categoryProductIds) {
-        query = query.in("id", categoryProductIds);
+      // Filter at the DB level via the joined product_categories table.
+      // PostgREST allows this on inner-joined relations directly.
+      if (categoryFilterL1) {
+        query = (query as any).eq("product_categories.category_id", categoryFilterL1);
+      } else if (categoryFilterIds && categoryFilterIds.length > 0) {
+        query = (query as any).in("product_categories.subcategory_id", categoryFilterIds);
       }
 
       if (filters?.designer_slug) {
@@ -177,7 +169,18 @@ export function useInfiniteProducts(filters?: ProductFilters) {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as unknown as Product[];
+
+      // Inner joins can produce duplicate product rows when multiple
+      // product_categories rows match. De-dupe by id, preserving order.
+      const seen = new Set<string>();
+      const unique: Product[] = [];
+      for (const p of (data as unknown as Product[]) ?? []) {
+        if (!seen.has(p.id)) {
+          seen.add(p.id);
+          unique.push(p);
+        }
+      }
+      return unique;
     },
     initialPageParam: undefined as Cursor | undefined,
     getNextPageParam: (lastPage) => {
@@ -345,13 +348,6 @@ export function useSimilarProducts(
   });
 }
 
-/**
- * Categories returned as a 3-level tree:
- *   category (L1) → subcategory (L2, parent_id IS NULL) → sub-subcategory (L3)
- *
- * `subcategories` serves dual duty: rows with parent_id NULL are L2 children
- * of a category; rows with parent_id set are L3 children of an L2 row.
- */
 export type CategoryNode = {
   id: string;
   name: string;
@@ -380,7 +376,6 @@ export function useFilterOptions() {
       const subs = subcategoriesRaw.data ?? [];
       const cats = categoriesRaw.data ?? [];
 
-      // L3 grouped by their L2 parent
       const l3ByParent = new Map<string, CategoryNode[]>();
       for (const s of subs) {
         if (s.parent_id) {
@@ -390,7 +385,6 @@ export function useFilterOptions() {
         }
       }
 
-      // L2 grouped by their L1 category, with L3s attached
       const l2ByCategory = new Map<string, CategoryNode[]>();
       for (const s of subs) {
         if (!s.parent_id && s.category_id) {
@@ -415,8 +409,8 @@ export function useFilterOptions() {
       return {
         designers: designers.data || [],
         makers: makers.data || [],
-        categories: cats,         // legacy flat list (kept for back-compat)
-        categoryTree,             // new hierarchical tree
+        categories: cats,
+        categoryTree,
         stylesPeriods: stylesPeriods.data || [],
         countries: countries.data || [],
         colors: colors.data || [],
