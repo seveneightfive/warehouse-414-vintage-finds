@@ -97,17 +97,14 @@ const App = () => (
             <Route path="/admin/styles-periods" element={<AdminLayout><AdminCrudList title="Styles / Periods" tableName="styles_periods" /></AdminLayout>} />
             <Route path="/admin/countries" element={<AdminLayout><AdminCrudList title="Countries" tableName="countries" /></AdminLayout>} />
 
-<<<<<<< HEAD
             {/* Inventory */}
             <Route path="/admin/inventory" element={<AdminLayout><AdminInventory /></AdminLayout>} />
 
             {/* Legacy route — redirect to available (in case old bookmarks) */}
             <Route path="/admin/products" element={<AdminLayout><AdminProductsAvailable /></AdminLayout>} />
 
-=======
             {/* Inventory - NEW */}
             <Route path="/admin/inventory" element={<AdminLayout><AdminCrudList title="Inventory" tableName="inventory" columns={[{ key: 'name', label: 'Name' }]} /></AdminLayout>} />
->>>>>>> cbac2fb (Unify admin products into one page and remove old status pages)
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
