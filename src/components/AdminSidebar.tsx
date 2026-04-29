@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard, Package, Clock, Archive, BookOpen, BarChart3,
+  LayoutDashboard, Package, Archive, BookOpen, BarChart3,
   ChevronDown, ChevronRight, Menu, X, MessageSquare, DollarSign,
   Grid, Users, Hammer, Palette, Globe,
 } from 'lucide-react';
@@ -317,37 +317,20 @@ const AdminSidebar = () => {
             </Link>
 
             <Link
-              to="/admin/styles"
+              to="/admin/styles-periods"
               onClick={() => setIsOpen(false)}
               className={`
                 flex items-center gap-3 px-4 py-2.5 rounded-md
                 font-display text-sm tracking-wide transition-colors
                 ${
-                  isActive('/admin/styles')
+                  isActive('/admin/styles-periods')
                     ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 }
               `}
             >
               <Palette size={18} />
-              Styles
-            </Link>
-
-            <Link
-              to="/admin/periods"
-              onClick={() => setIsOpen(false)}
-              className={`
-                flex items-center gap-3 px-4 py-2.5 rounded-md
-                font-display text-sm tracking-wide transition-colors
-                ${
-                  isActive('/admin/periods')
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                }
-              `}
-            >
-              <Clock size={18} />
-              Periods
+              Styles / Periods
             </Link>
 
             <Link

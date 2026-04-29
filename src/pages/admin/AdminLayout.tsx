@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import {
-  LayoutDashboard, Package, Users, Palette, LogOut, Tag, Globe,
+  LayoutDashboard, Package, Users, Palette, LogOut, Globe,
   Clock, Layers, ShoppingBag, MessageSquare, HandCoins, Menu,
   UserCheck, FolderOpen, Archive,
 } from 'lucide-react';
@@ -87,11 +87,8 @@ const AdminLayout = () => {
       <Link to="/admin/collections" onClick={onNavigate} className={linkClass(isActive('/admin/collections'))}>
         <FolderOpen size={16} /> Collections
       </Link>
-      <Link to="/admin/styles" onClick={onNavigate} className={linkClass(isActive('/admin/styles'))}>
-        <Palette size={16} /> Styles
-      </Link>
-      <Link to="/admin/periods" onClick={onNavigate} className={linkClass(isActive('/admin/periods'))}>
-        <Tag size={16} /> Periods
+      <Link to="/admin/styles-periods" onClick={onNavigate} className={linkClass(isActive('/admin/styles-periods'))}>
+        <Palette size={16} /> Styles / Periods
       </Link>
       <Link to="/admin/countries" onClick={onNavigate} className={linkClass(isActive('/admin/countries'))}>
         <Globe size={16} /> Countries

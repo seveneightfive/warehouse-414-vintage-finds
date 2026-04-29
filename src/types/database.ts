@@ -10,10 +10,9 @@ export type ProductMaker = {
   maker: Pick<Maker, 'id' | 'name' | 'slug'> | null;
 };
 
-export type ProductCategory = {
-  is_primary: boolean;
-  category: Pick<Category, 'id' | 'name' | 'slug'> | null;
-  subcategory: Pick<Subcategory, 'id' | 'name' | 'slug'> | null;
+export type ProductStylesPeriods = {
+  attribution_type: string | null;
+  styles_periods: Pick<StylesPeriods, 'id' | 'name' | 'slug'> | null;
 };
 
 // ─── Core Types ───────────────────────────────────────────────────────────────
@@ -36,8 +35,6 @@ export type Product = {
   maker_id: string | null;
   category_id: string | null;
   subcategory_id: string | null;
-  style_id: string | null;
-  period_id: string | null;
   country_id: string | null;
 
   year_created: string | null;
@@ -55,7 +52,6 @@ export type Product = {
   // Attribution strings (used with period; designer/maker attribution now lives in junction)
   designer_attribution: string | null;
   maker_attribution: string | null;
-  period_attribution: string | null;
 
   firstdibs_url: string | null;
   chairish_url: string | null;
@@ -70,6 +66,7 @@ export type Product = {
   product_designers?: ProductDesigner[];
   product_makers?: ProductMaker[];
   product_categories?: ProductCategory[];
+  product_styles_periods?: ProductStylesPeriods[];
 
   // ── Legacy single joined relations (still returned by some list queries) ──
   /** @deprecated Use product_designers instead */
@@ -80,8 +77,6 @@ export type Product = {
   category?: Category | null;
 
   // ── Other relations ───────────────────────────────────────────────────────
-  style?: Style | null;
-  period?: Period | null;
   country?: Country | null;
   product_images?: ProductImage[];
   product_colors?: ProductColor[];
@@ -119,14 +114,7 @@ export type Subcategory = {
   created_at: string;
 };
 
-export type Style = {
-  id: string;
-  name: string;
-  slug: string | null;
-  created_at: string;
-};
-
-export type Period = {
+export type StylesPeriods = {
   id: string;
   name: string;
   slug: string | null;

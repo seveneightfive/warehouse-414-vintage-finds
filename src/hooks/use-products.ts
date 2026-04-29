@@ -16,8 +16,7 @@ const PRODUCT_DETAIL_SELECT = `
     category:categories(id, name, slug),
     subcategory:subcategories(id, name, slug)
   ),
-  style:styles(*),
-  period:periods(*),
+  product_styles_periods ( attribution_type, styles_periods:styles_periods(id, name, slug) ),
   country:countries(*),
   product_images(*),
   product_colors(*, color:colors(*))
@@ -29,6 +28,7 @@ const PRODUCT_CARD_SELECT = `
   product_designers ( attribution_type, designer:designers(id, name, slug) ),
   product_makers    ( attribution_type, maker:makers(id, name, slug) ),
   product_categories( is_primary, category:categories(id, name, slug) ),
+  product_styles_periods ( attribution_type, styles_periods:styles_periods(id, name, slug) ),
   product_images(image_url, sort_order)
 `;
 
@@ -40,8 +40,7 @@ type ProductFilters = {
   designer_slug?: string;
   maker_slug?: string;
   category_id?: string;
-  style_id?: string;
-  period_id?: string;
+  style_period_id?: string;
   country_id?: string;
   color_id?: string;
   search?: string;
@@ -92,10 +91,11 @@ export function useInfiniteProducts(filters?: ProductFilters) {
       if (filters?.category_id) {
         query = (query as any).eq("product_categories.category_id", filters.category_id);
       }
+      if (filters?.style_period_id) {
+        query = (query as any).eq("product_styles_periods.styles_periods.id", filters.style_period_id);
+      }
 
       // Direct-column filters
-      if (filters?.style_id) query = query.eq("style_id", filters.style_id);
-      if (filters?.period_id) query = query.eq("period_id", filters.period_id);
       if (filters?.country_id) query = query.eq("country_id", filters.country_id);
       if (filters?.search) query = query.ilike("name", `%${filters.search}%`);
       if (filters?.year_min) query = query.gte("year_created", filters.year_min);
@@ -122,8 +122,7 @@ export function useProducts(filters?: {
   designer_id?: string;
   maker_id?: string;
   category_id?: string;
-  style_id?: string;
-  period_id?: string;
+  style_period_id?: string;
   country_id?: string;
   search?: string;
   status?: string;
@@ -177,8 +176,15 @@ export function useProducts(filters?: {
         query = query.in("id", ids);
       }
 
-      if (filters?.style_id) query = query.eq("style_id", filters.style_id);
-      if (filters?.period_id) query = query.eq("period_id", filters.period_id);
+      if (filters?.style_period_id) {
+        const { data: psps } = await supabase
+          .from("product_styles_periods")
+          .select("product_id")
+          .eq("style_period_id", filters.style_period_id);
+        const ids = (psps ?? []).map((r) => r.product_id);
+        if (ids.length === 0) return [] as Product[];
+        query = query.in("id", ids);
+      }
       if (filters?.country_id) query = query.eq("country_id", filters.country_id);
       if (filters?.search) query = query.ilike("name", `%${filters.search}%`);
 
@@ -285,13 +291,12 @@ export function useFilterOptions() {
   return useQuery({
     queryKey: ["filter-options"],
     queryFn: async () => {
-      const [designers, makers, categories, styles, periods, countries, colors] =
+      const [designers, makers, categories, stylesPeriods, countries, colors] =
         await Promise.all([
           supabase.from("designers").select("*").order("name"),
           supabase.from("makers").select("*").order("name"),
           supabase.from("categories").select("*, subcategories(*)").order("name"),
-          supabase.from("styles").select("*").order("name"),
-          supabase.from("periods").select("*").order("name"),
+          supabase.from("styles_periods").select("*").order("name"),
           supabase.from("countries").select("*").order("name"),
           supabase.from("colors").select("*").order("name"),
         ]);
@@ -299,8 +304,7 @@ export function useFilterOptions() {
         designers: designers.data || [],
         makers: makers.data || [],
         categories: categories.data || [],
-        styles: styles.data || [],
-        periods: periods.data || [],
+        stylesPeriods: stylesPeriods.data || [],
         countries: countries.data || [],
         colors: colors.data || [],
       };

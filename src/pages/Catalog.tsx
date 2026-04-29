@@ -26,8 +26,7 @@ const Catalog = () => {
   const designerSlug = searchParams.get('designer') || '';
   const makerSlug = searchParams.get('maker') || '';
   const categoryId = searchParams.get('category') || '';
-  const styleId = searchParams.get('style') || '';
-  const periodId = searchParams.get('period') || '';
+  const stylePeriodId = searchParams.get('style_period') || '';
   const countryId = searchParams.get('country') || '';
 
   const setParam = (key: string, value: string) => {
@@ -56,8 +55,7 @@ const Catalog = () => {
     designer_slug: designerSlug || undefined,
     maker_slug: makerSlug || undefined,
     category_id: categoryId || undefined,
-    style_id: styleId || undefined,
-    period_id: periodId || undefined,
+    style_period_id: stylePeriodId || undefined,
     country_id: countryId || undefined,
     status: hideSold ? 'available' : undefined,
   });
@@ -73,7 +71,7 @@ const Catalog = () => {
     isFetchingNextPage,
   });
 
-  const activeFilterCount = [designerSlug, makerSlug, categoryId, styleId, periodId, countryId].filter(Boolean).length;
+  const activeFilterCount = [designerSlug, makerSlug, categoryId, stylePeriodId, countryId].filter(Boolean).length;
 
   const clearFilters = () => {
     setSearchParams({}, { replace: true });
@@ -225,11 +223,23 @@ const Catalog = () => {
             <SheetTitle className="font-display lowercase font-bold">filters</SheetTitle>
           </SheetHeader>
           <div className="mt-6 space-y-4">
+<<<<<<< HEAD
             {filterSelect('Category', 'category', categoryId, filterOptions?.categories)}
             {filterSelect('Style', 'style', styleId, filterOptions?.styles)}
             {filterSelect('Designer', 'designer', designerSlug, filterOptions?.designers?.map(d => ({ id: d.slug || d.id, name: d.name })))}
             {filterSelect('Maker', 'maker', makerSlug, filterOptions?.makers?.map(m => ({ id: m.slug || m.id, name: m.name })))}
             {filterSelect('Period', 'period', periodId, filterOptions?.periods)}
+=======
+            {/* Cascading category filter */}
+            {filterOptions?.categories && (
+              <CascadingCategoryFilter
+                categories={filterOptions.categories}
+                value={categoryId}
+                onChange={(v) => setParam('category', v)}
+              />
+            )}
+            {filterSelect('Style / Period', 'style_period', stylePeriodId, filterOptions?.stylesPeriods)}
+>>>>>>> aa219e6 (Updated Styles and Periods)
             {filterSelect('Country', 'country', countryId, filterOptions?.countries)}
           </div>
           <div className="mt-6 flex items-center gap-3">

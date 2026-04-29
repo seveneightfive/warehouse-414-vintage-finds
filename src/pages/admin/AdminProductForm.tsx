@@ -40,6 +40,11 @@ const ATTRIBUTION_OPTIONS = [
   { value: 'in the style of', label: 'in the style of' },
 ];
 
+const STYLES_PERIODS_ATTRIBUTION_OPTIONS = [
+  { value: 'in the style of', label: 'in the style of' },
+  { value: 'of the period',   label: 'of the period'   },
+];
+
 const SectionHeading = ({ children }: { children: React.ReactNode }) => (
   <div className="w-full bg-foreground px-4 py-2.5">
     <h2 className="text-sm font-semibold tracking-[0.15em] uppercase text-background">{children}</h2>
@@ -52,7 +57,7 @@ const FieldLabel = ({ children }: { children: React.ReactNode }) => (
 
 type DesignerRow = { designer_id: string | null; attribution_type: string };
 type MakerRow    = { maker_id:    string | null; attribution_type: string };
-type PeriodRow   = { period_id:   string | null; attribution_type: string };
+type StylesPeriodsRow = { style_period_id: string | null; attribution_type: string };
 type CategoryRow = {
   category_id:        string | null;
   subcategory_id:     string | null;
@@ -71,12 +76,9 @@ const schema = z.object({
   maker_id: z.string().nullable().optional(),
   category_id: z.string().nullable().optional(),
   subcategory_id: z.string().nullable().optional(),
-  style_id: z.string().nullable().optional(),
-  period_id: z.string().nullable().optional(),
   country_id: z.string().nullable().optional(),
   designer_attribution: z.string().nullable().optional(),
   maker_attribution: z.string().nullable().optional(),
-  period_attribution: z.string().nullable().optional(),
   product_dimensions: z.string().nullable().optional(),
   box_dimensions: z.string().nullable().optional(),
   dimension_notes: z.string().nullable().optional(),
@@ -104,8 +106,7 @@ const useTaxonomyOptions = () => {
     designers:  useQuery({ queryKey: ['taxonomy-designers'],  queryFn: fetch('designers')  }).data,
     makers:     useQuery({ queryKey: ['taxonomy-makers'],     queryFn: fetch('makers')     }).data,
     categories: useQuery({ queryKey: ['taxonomy-categories'], queryFn: fetch('categories') }).data,
-    styles:     useQuery({ queryKey: ['taxonomy-styles'],     queryFn: fetch('styles')     }).data,
-    periods:    useQuery({ queryKey: ['taxonomy-periods'],    queryFn: fetch('periods')    }).data,
+    stylesPeriods: useQuery({ queryKey: ['taxonomy-styles-periods'], queryFn: fetch('styles_periods') }).data,
     countries:  useQuery({ queryKey: ['taxonomy-countries'],  queryFn: fetch('countries')  }).data,
   };
 };
@@ -215,7 +216,7 @@ const AdminProductForm = () => {
 
   const [designers,  setDesigners]  = useState<DesignerRow[]>([{ designer_id: null, attribution_type: 'by' }]);
   const [makers,     setMakers]     = useState<MakerRow[]>([{ maker_id: null, attribution_type: 'by' }]);
-  const [periods,    setPeriods]    = useState<PeriodRow[]>([{ period_id: null, attribution_type: 'by' }]);
+  const [stylesPeriods, setStylesPeriods] = useState<StylesPeriodsRow[]>([{ style_period_id: null, attribution_type: 'of the period' }]);
   const [categories, setCategories] = useState<CategoryRow[]>([{ category_id: null, subcategory_id: null, sub_subcategory_id: null }]);
 
   const { data: consignors } = useQuery({
@@ -232,10 +233,10 @@ const AdminProductForm = () => {
 
   useEffect(() => {
     const sub = form.watch((values) => {
-      localStorage.setItem(draftKey, JSON.stringify({ form: values, designers, makers, periods, categories }));
+      localStorage.setItem(draftKey, JSON.stringify({ form: values, designers, makers, stylesPeriods, categories }));
     });
     return () => sub.unsubscribe();
-  }, [form, draftKey, designers, makers, periods, categories]);
+  }, [form, draftKey, designers, makers, stylesPeriods, categories]);
 
   useEffect(() => {
     if (isEditing) return;
@@ -246,7 +247,7 @@ const AdminProductForm = () => {
         form.reset(p.form ?? p);
         if (p.designers)  setDesigners(p.designers);
         if (p.makers)     setMakers(p.makers);
-        if (p.periods)    setPeriods(p.periods);
+        if (p.stylesPeriods) setStylesPeriods(p.stylesPeriods);
         if (p.categories) setCategories(p.categories);
         toast.info('Draft restored', { description: 'Your unsaved changes were recovered.' });
       } catch {}
@@ -301,11 +302,8 @@ const AdminProductForm = () => {
     const dbM: MakerRow[] = (product as any).product_makers?.map((r: any) => ({ maker_id: r.maker_id, attribution_type: r.attribution_type || 'by' })) ?? [];
     setMakers(dbM.length > 0 ? dbM : [{ maker_id: null, attribution_type: 'by' }]);
 
-    const existingPeriodId   = (product as any).period_id ?? null;
-    const existingPeriodAttr = (product as any).period_attribution ?? 'by';
-    setPeriods(existingPeriodId
-      ? [{ period_id: existingPeriodId, attribution_type: existingPeriodAttr }]
-      : [{ period_id: null, attribution_type: 'by' }]);
+    const dbSP: StylesPeriodsRow[] = (product as any).product_styles_periods?.map((r: any) => ({ style_period_id: r.style_period_id, attribution_type: r.attribution_type || 'of the period' })) ?? [];
+    setStylesPeriods(dbSP.length > 0 ? dbSP : [{ style_period_id: null, attribution_type: 'of the period' }]);
 
     const dbC: CategoryRow[] = [...((product as any).product_categories ?? [])]
       .sort((a: any, b: any) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0))
@@ -336,16 +334,12 @@ const AdminProductForm = () => {
 
     const firstD = designers.find((d) => d.designer_id);
     const firstM = makers.find((m) => m.maker_id);
-    const firstP = periods.find((p) => p.period_id);
     const firstC = categories.find((c) => c.category_id);
 
     payload.designer_id          = firstD?.designer_id ?? null;
     payload.designer_attribution = firstD?.attribution_type ?? null;
     payload.maker_id             = firstM?.maker_id ?? null;
     payload.maker_attribution    = firstM?.attribution_type ?? null;
-    payload.period_id            = firstP?.period_id ?? null;
-    const validAttr = ['by', 'attributed to', 'in the style of'];
-    payload.period_attribution   = firstP?.period_id && validAttr.includes(firstP.attribution_type) ? firstP.attribution_type : null;
     payload.category_id          = firstC?.category_id ?? null;
     payload.subcategory_id       = firstC?.sub_subcategory_id ?? firstC?.subcategory_id ?? null;
 
@@ -385,6 +379,13 @@ const AdminProductForm = () => {
         subcategory_id: c.sub_subcategory_id ?? c.subcategory_id ?? null,
         is_primary:     i === 0,
       })));
+      if (error) throw error;
+    }
+
+    await supabase.from('product_styles_periods').delete().eq('product_id', productId);
+    const vSP = stylesPeriods.filter((sp) => sp.style_period_id);
+    if (vSP.length > 0) {
+      const { error } = await supabase.from('product_styles_periods').insert(vSP.map((sp) => ({ product_id: productId, style_period_id: sp.style_period_id, attribution_type: sp.attribution_type || 'of the period' })));
       if (error) throw error;
     }
 
@@ -715,22 +716,25 @@ const AdminProductForm = () => {
               ))}
             </div>
 
-            {/* Period — same layout as Designers/Makers */}
+            {/* Styles / Periods — same layout as Designers/Makers */}
             <div className="space-y-2">
-              <p className="text-[11px] font-semibold tracking-[0.1em] uppercase text-foreground/70">Period</p>
-              {periods.map((row, i) => (
+              <p className="text-[11px] font-semibold tracking-[0.1em] uppercase text-foreground/70">Styles / Periods</p>
+              {stylesPeriods.map((row, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  <Select value={row.attribution_type || 'by'} onValueChange={(val) => setPeriods((prev) => prev.map((r, j) => j === i ? { ...r, attribution_type: val } : r))}>
+                  <Select value={row.attribution_type || 'of the period'} onValueChange={(val) => setStylesPeriods((prev) => prev.map((r, j) => j === i ? { ...r, attribution_type: val } : r))}>
                     <SelectTrigger className="w-[25%] shrink-0"><SelectValue /></SelectTrigger>
-                    <SelectContent>{ATTRIBUTION_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                    <SelectContent>{STYLES_PERIODS_ATTRIBUTION_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                   </Select>
-                  <InlineCombobox value={row.period_id} onChange={(val) => setPeriods((prev) => prev.map((r, j) => j === i ? { ...r, period_id: val } : r))} options={taxonomy.periods} placeholder="Select period…" className="flex-1" />
-                  <div className="w-[25%] shrink-0" />
+                  <InlineCombobox value={row.style_period_id} onChange={(val) => setStylesPeriods((prev) => prev.map((r, j) => j === i ? { ...r, style_period_id: val } : r))} options={taxonomy.stylesPeriods} placeholder="Select style/period…" className="flex-1" />
+                  <div className="w-[25%] flex justify-end items-center gap-1 shrink-0">
+                    {i === stylesPeriods.length - 1 && <Button type="button" variant="outline" size="sm" className="gap-1 text-xs whitespace-nowrap" onClick={() => setStylesPeriods((prev) => [...prev, { style_period_id: null, attribution_type: 'of the period' }])}><Plus size={12} /> Add</Button>}
+                    {stylesPeriods.length > 1 && <button type="button" onClick={() => setStylesPeriods((prev) => prev.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-destructive transition-colors p-1"><X size={16} /></button>}
+                  </div>
                 </div>
               ))}
             </div>
 
-            {/* Line + Style + Country */}
+            {/* Line + Country */}
             <FormField control={form.control} name="line" render={({ field }) => (
               <FormItem>
                 <FormLabel><FieldLabel>Line / Collection</FieldLabel></FormLabel>
@@ -740,7 +744,6 @@ const AdminProductForm = () => {
             )} />
 
             <div className="grid grid-cols-2 gap-4">
-              <ComboboxField name="style_id" label="Style" options={taxonomy.styles} />
               <ComboboxField name="country_id" label="Country" options={taxonomy.countries} />
             </div>
 

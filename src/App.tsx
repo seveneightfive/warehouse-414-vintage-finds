@@ -94,12 +94,20 @@ const App = () => (
             <Route path="/admin/categories" element={<AdminLayout><AdminCategoryManager /></AdminLayout>} />
             <Route path="/admin/curated-sets" element={<AdminLayout><AdminCollections /></AdminLayout>} />
             <Route path="/admin/curated-sets/:id" element={<AdminLayout><AdminCollectionDetail /></AdminLayout>} />
-            <Route path="/admin/styles" element={<AdminLayout><AdminCrudList title="Styles" tableName="styles" /></AdminLayout>} />
-            <Route path="/admin/periods" element={<AdminLayout><AdminCrudList title="Periods" tableName="periods" /></AdminLayout>} />
+            <Route path="/admin/styles-periods" element={<AdminLayout><AdminCrudList title="Styles / Periods" tableName="styles_periods" /></AdminLayout>} />
             <Route path="/admin/countries" element={<AdminLayout><AdminCrudList title="Countries" tableName="countries" /></AdminLayout>} />
 
+<<<<<<< HEAD
+            {/* Inventory */}
+            <Route path="/admin/inventory" element={<AdminLayout><AdminInventory /></AdminLayout>} />
+
+            {/* Legacy route — redirect to available (in case old bookmarks) */}
+            <Route path="/admin/products" element={<AdminLayout><AdminProductsAvailable /></AdminLayout>} />
+
+=======
             {/* Inventory - NEW */}
             <Route path="/admin/inventory" element={<AdminLayout><AdminCrudList title="Inventory" tableName="inventory" columns={[{ key: 'name', label: 'Name' }]} /></AdminLayout>} />
+>>>>>>> cbac2fb (Unify admin products into one page and remove old status pages)
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
