@@ -216,7 +216,7 @@ export type CollectionProduct = {
   product?: Product;
 };
 
-export type Consignor = {
+export type Consignors = {
   id: string;
   first_name: string | null;
   last_name: string | null;
