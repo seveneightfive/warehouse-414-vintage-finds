@@ -215,3 +215,16 @@ export type CollectionProduct = {
   product_id: string;
   product?: Product;
 };
+
+export type Consignor = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  consignor_code: string;
+  email: string | null;
+  phone: string | null;
+  notes: string | null;
+  payment_type: string | null;
+  payment_address: string | null;
+  created_at: string;
+};

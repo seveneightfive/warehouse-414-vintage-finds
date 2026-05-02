@@ -20,6 +20,8 @@ type ConsignorStats = {
   email: string | null;
   phone: string | null;
   notes: string | null;
+  payment_type: string | null;
+  payment_address: string | null;
   created_at: string;
   total_products: number;
   available_products: number;
@@ -33,6 +35,8 @@ type ConsignorForm = {
   email: string;
   phone: string;
   notes: string;
+  payment_type: string;
+  payment_address: string;
 };
 
 const emptyForm: ConsignorForm = {
@@ -42,6 +46,8 @@ const emptyForm: ConsignorForm = {
   email: '',
   phone: '',
   notes: '',
+  payment_type: '',
+  payment_address: '',
 };
 
 const AdminConsignors = () => {
@@ -72,6 +78,8 @@ const AdminConsignors = () => {
         email: values.email || null,
         phone: values.phone || null,
         notes: values.notes || null,
+        payment_type: values.payment_type || null,
+        payment_address: values.payment_address || null,
       };
       if (values.id) {
         const { error } = await supabase.from('consignors' as any).update(payload).eq('id', values.id);
@@ -104,6 +112,8 @@ const AdminConsignors = () => {
       email: c.email || '',
       phone: c.phone || '',
       notes: c.notes || '',
+      payment_type: c.payment_type || '',
+      payment_address: c.payment_address || '',
     });
     setModalOpen(true);
   };
@@ -164,6 +174,8 @@ const AdminConsignors = () => {
                 <TableHead>Code</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
+                <TableHead>Payment Type</TableHead>
+                <TableHead>Payment Address</TableHead>
                 <TableHead>Notes</TableHead>
                 <TableHead>Products</TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
@@ -179,6 +191,8 @@ const AdminConsignors = () => {
                     <TableCell className="font-mono text-xs">{c.consignor_code}</TableCell>
                     <TableCell className="text-sm">{c.email || '—'}</TableCell>
                     <TableCell className="text-sm">{c.phone || '—'}</TableCell>
+                    <TableCell className="text-sm">{c.payment_type || '—'}</TableCell>
+                    <TableCell className="text-sm max-w-[150px] truncate">{c.payment_address || '—'}</TableCell>
                     <TableCell className="text-sm max-w-[200px] truncate">{c.notes || '—'}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5 flex-wrap">
@@ -212,7 +226,7 @@ onClick={() => navigate(`/admin/consignors/${c.id}`)}
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                     No consignors found
                   </TableCell>
                 </TableRow>
@@ -255,6 +269,14 @@ onClick={() => navigate(`/admin/consignors/${c.id}`)}
             <div className="space-y-1">
               <Label>Phone</Label>
               <Input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+            </div>
+            <div className="space-y-1">
+              <Label>Payment Type</Label>
+              <Input value={form.payment_type} onChange={(e) => setForm((f) => ({ ...f, payment_type: e.target.value }))} />
+            </div>
+            <div className="space-y-1">
+              <Label>Payment Address</Label>
+              <Input value={form.payment_address} onChange={(e) => setForm((f) => ({ ...f, payment_address: e.target.value }))} />
             </div>
             <div className="space-y-1">
               <Label>Notes</Label>

@@ -19,6 +19,8 @@ type ConsignorForm = {
   email: string;
   phone: string;
   notes: string;
+  payment_type: string;
+  payment_address: string;
 };
 
 type Product = {
@@ -112,7 +114,7 @@ const AdminConsignorDetail = () => {
   const navigate = useNavigate();
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<ConsignorForm>({
-    first_name: '', last_name: '', consignor_code: '', email: '', phone: '', notes: '',
+    first_name: '', last_name: '', consignor_code: '', email: '', phone: '', notes: '', payment_type: '', payment_address: '',
   });
 
   const { data: consignor, isLoading, refetch } = useQuery({
@@ -153,6 +155,8 @@ const AdminConsignorDetail = () => {
           email: values.email || null,
           phone: values.phone || null,
           notes: values.notes || null,
+          payment_type: values.payment_type || null,
+          payment_address: values.payment_address || null,
         })
         .eq('id', id!);
       if (error) throw error;
@@ -173,6 +177,8 @@ const AdminConsignorDetail = () => {
       email: consignor.email || '',
       phone: consignor.phone || '',
       notes: consignor.notes || '',
+      payment_type: consignor.payment_type || '',
+      payment_address: consignor.payment_address || '',
     });
     setModalOpen(true);
   };
@@ -212,7 +218,7 @@ const AdminConsignorDetail = () => {
       </div>
 
       {/* Consignor Info */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-lg border border-border bg-card text-sm">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 p-4 rounded-lg border border-border bg-card text-sm">
         <div>
           <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Email</p>
           <p>{consignor.email || '—'}</p>
@@ -220,6 +226,14 @@ const AdminConsignorDetail = () => {
         <div>
           <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Phone</p>
           <p>{consignor.phone || '—'}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Payment Type</p>
+          <p>{consignor.payment_type || '—'}</p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Payment Address</p>
+          <p className="truncate">{consignor.payment_address || '—'}</p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Notes</p>
@@ -307,6 +321,14 @@ const AdminConsignorDetail = () => {
             <div className="space-y-1">
               <Label>Phone</Label>
               <Input value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: e.target.value }))} />
+            </div>
+            <div className="space-y-1">
+              <Label>Payment Type</Label>
+              <Input value={form.payment_type} onChange={(e) => setForm(f => ({ ...f, payment_type: e.target.value }))} />
+            </div>
+            <div className="space-y-1">
+              <Label>Payment Address</Label>
+              <Input value={form.payment_address} onChange={(e) => setForm(f => ({ ...f, payment_address: e.target.value }))} />
             </div>
             <div className="space-y-1">
               <Label>Notes</Label>
