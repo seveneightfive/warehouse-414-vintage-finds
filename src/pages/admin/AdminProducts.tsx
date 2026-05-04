@@ -19,7 +19,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Search,
   ChevronLeft,
@@ -61,6 +61,7 @@ type StatusTab = {
 const STATUS_TABS: StatusTab[] = [
   { id: 'available', label: 'Available', subtitle: 'Ready to sell' },
   { id: 'draft', label: 'Draft', subtitle: 'Work in progress' },
+  { id: 'on_hold', label: 'On Hold', subtitle: 'Held for customers' },
   { id: 'at_auction', label: 'At Auction', subtitle: 'Listed on marketplaces' },
   { id: 'sold', label: 'Sold', subtitle: 'Historical sales' },
 ];
@@ -141,8 +142,31 @@ const fetchStatusCounts = async () => {
 };
 
 const AdminProducts = () => {
-  const queryClient = useQueryClient();
-  const [selectedStatus, setSelectedStatus] = useState<ProductStatusKey>('available');
+  cconst queryClient = useQueryClient();
+const [searchParams, setSearchParams] = useSearchParams();
+
+const urlStatus = searchParams.get('status') as ProductStatusKey | null;
+const validStatuses: ProductStatusKey[] = ['available', 'draft', 'at_auction', 'sold', 'on_hold', 'inventory', 'deactivated'];
+const initialStatus: ProductStatusKey = urlStatus && validStatuses.includes(urlStatus) ? urlStatus : 'available';
+
+const [selectedStatus, setSelectedStatus] = useState<ProductStatusKey>(initialStatus);
+
+// Keep the URL in sync if the user clicks a tab
+useEffect(() => {
+  const current = searchParams.get('status');
+  if (current !== selectedStatus) {
+    setSearchParams({ status: selectedStatus }, { replace: true });
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [selectedStatus]);
+
+// Pick up URL changes (e.g. clicking a different dashboard card while already on this page)
+useEffect(() => {
+  if (urlStatus && validStatuses.includes(urlStatus) && urlStatus !== selectedStatus) {
+    setSelectedStatus(urlStatus);
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [urlStatus]);
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(0);
   const [moveStatusProduct, setMoveStatusProduct] = useState<Product | null>(null);
