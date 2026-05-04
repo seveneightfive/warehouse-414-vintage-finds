@@ -88,6 +88,8 @@ const STATUS_BADGE: Record<ProductStatusKey, { label: string; className: string 
 
 const STATUS_OPTIONS: ProductStatusKey[] = ['available', 'draft', 'on_hold', 'at_auction', 'sold', 'inventory', 'deactivated'];
 
+const VALID_STATUSES: ProductStatusKey[] = ['available', 'draft', 'at_auction', 'sold', 'on_hold', 'inventory', 'deactivated'];
+
 const defaultCounts: CountsMap = {
   available: 0,
   draft: 0,
@@ -142,31 +144,15 @@ const fetchStatusCounts = async () => {
 };
 
 const AdminProducts = () => {
-  cconst queryClient = useQueryClient();
-const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-const urlStatus = searchParams.get('status') as ProductStatusKey | null;
-const validStatuses: ProductStatusKey[] = ['available', 'draft', 'at_auction', 'sold', 'on_hold', 'inventory', 'deactivated'];
-const initialStatus: ProductStatusKey = urlStatus && validStatuses.includes(urlStatus) ? urlStatus : 'available';
+  // Read initial status from URL (?status=available, etc.). Fall back to 'available' if missing/invalid.
+  const urlStatus = searchParams.get('status') as ProductStatusKey | null;
+  const initialStatus: ProductStatusKey =
+    urlStatus && VALID_STATUSES.includes(urlStatus) ? urlStatus : 'available';
 
-const [selectedStatus, setSelectedStatus] = useState<ProductStatusKey>(initialStatus);
-
-// Keep the URL in sync if the user clicks a tab
-useEffect(() => {
-  const current = searchParams.get('status');
-  if (current !== selectedStatus) {
-    setSearchParams({ status: selectedStatus }, { replace: true });
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [selectedStatus]);
-
-// Pick up URL changes (e.g. clicking a different dashboard card while already on this page)
-useEffect(() => {
-  if (urlStatus && validStatuses.includes(urlStatus) && urlStatus !== selectedStatus) {
-    setSelectedStatus(urlStatus);
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [urlStatus]);
+  const [selectedStatus, setSelectedStatus] = useState<ProductStatusKey>(initialStatus);
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(0);
   const [moveStatusProduct, setMoveStatusProduct] = useState<Product | null>(null);
@@ -176,6 +162,24 @@ useEffect(() => {
   const [linksProduct, setLinksProduct] = useState<Product | null>(null);
   const [linksState, setLinksState] = useState({ firstdibs_url: '', chairish_url: '', ebay_url: '' });
 
+  // When the user clicks a tab, sync the URL so it's bookmarkable / shareable.
+  useEffect(() => {
+    const current = searchParams.get('status');
+    if (current !== selectedStatus) {
+      setSearchParams({ status: selectedStatus }, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStatus]);
+
+  // When the URL changes (e.g. dashboard card click while page is mounted), sync the tab.
+  useEffect(() => {
+    if (urlStatus && VALID_STATUSES.includes(urlStatus) && urlStatus !== selectedStatus) {
+      setSelectedStatus(urlStatus);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlStatus]);
+
+  // Reset to page 0 when filter changes
   useEffect(() => {
     setPage(0);
   }, [selectedStatus]);
