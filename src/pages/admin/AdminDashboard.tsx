@@ -112,12 +112,12 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
 
   const [stats, setStats] = useState<Stat[]>([
-    { key: "available", label: "Available", count: 0, href: "/admin/products/available", icon: Package },
-    { key: "draft", label: "Draft", count: 0, href: "/admin/products/draft", icon: Pencil },
-    { key: "at_auction", label: "At Auction", count: 0, href: "/admin/products/at-auction", icon: Gavel },
-    { key: "sold", label: "Sold", count: 0, href: "/admin/products/sold", icon: CheckCircle2 },
-    { key: "on_hold", label: "On Hold", count: 0, href: "/admin/holds", icon: Clock },
-  ]);
+  { key: "available", label: "Available", count: 0, href: "/admin/products?status=available", icon: Package },
+  { key: "draft", label: "Draft", count: 0, href: "/admin/products?status=draft", icon: Pencil },
+  { key: "at_auction", label: "At Auction", count: 0, href: "/admin/products?status=at_auction", icon: Gavel },
+  { key: "sold", label: "Sold", count: 0, href: "/admin/products?status=sold", icon: CheckCircle2 },
+  { key: "on_hold", label: "On Hold", count: 0, href: "/admin/holds", icon: Clock },
+]);
 
   const [weeks, setWeeks] = useState<ProductionWeek[]>([]);
   const [weekProducts, setWeekProducts] = useState<Record<string, WeekProduct[]>>({});
