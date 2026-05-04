@@ -28,6 +28,7 @@ import AdminConsignorDetail from "./pages/admin/AdminConsignorDetail";
 import AdminInventory from "./pages/admin/AdminInventory";
 import CollectionDetail from "./pages/CollectionDetail";
 import AdminSidebar from "./components/AdminSidebar";
+import ProtectedAdminRoute from "@/components/ProtectedAdminRoute";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
