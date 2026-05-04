@@ -85,5 +85,7 @@ export default function AdminInventory() {
         </tbody>
       </table>
     </div>
-  )}
+    )}
 </div>
+);
+}
