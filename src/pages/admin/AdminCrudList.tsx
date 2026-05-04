@@ -20,7 +20,7 @@ type AdminCrudListProps = {
   productJunction?: string;
 };
 
-const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Name' }], productFk, productJuntion, }: AdminCrudListProps) => {
+const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Name' }], productFk, productJunction, }: AdminCrudListProps) => {
   const queryClient = useQueryClient();
   const [editItem, setEditItem] = useState<Record<string, string> | null>(null);
   const [newItem, setNewItem] = useState<Record<string, string>>({});
