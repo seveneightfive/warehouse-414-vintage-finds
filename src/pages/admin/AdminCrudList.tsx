@@ -16,9 +16,11 @@ type AdminCrudListProps = {
   columns?: { key: string; label: string; type?: 'text' | 'textarea' }[];
   /** Foreign key column name on products table, e.g. "designer_id". When set, a Products count column is shown. */
   productFk?: string;
+  /** Junction table for many-to-many relationships, e.g. "product_makers". When set, productFk is treated as the column on the junction table. */
+  productJunction?: string;
 };
 
-const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Name' }], productFk }: AdminCrudListProps) => {
+const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Name' }], productFk, productJuntion, }: AdminCrudListProps) => {
   const queryClient = useQueryClient();
   const [editItem, setEditItem] = useState<Record<string, string> | null>(null);
   const [newItem, setNewItem] = useState<Record<string, string>>({});
@@ -41,25 +43,46 @@ const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Nam
 
   // Fetch product counts per item when productFk is set
   const { data: productCounts } = useQuery({
-    queryKey: [tableName, 'product-counts'],
-    queryFn: async () => {
-      if (!productFk || !items?.length) return {};
-      const ids = items.map((i: any) => i.id);
+  queryKey: [tableName, 'product-counts', productJunction],
+  queryFn: async () => {
+    if (!productFk || !items?.length) return {};
+    const ids = items.map((i: any) => i.id);
+    
+    // Many-to-many: count rows in junction table
+    if (productJunction) {
       const { data, error } = await supabase
-        .from('products')
-        .select(`id, ${productFk}`)
+        .from(productJunction)
+        .select(`product_id, ${productFk}`)
         .in(productFk, ids);
       if (error) throw error;
       const counts: Record<string, number> = {};
-      data?.forEach((p: any) => {
-        const fkVal = p[productFk];
-        if (fkVal) counts[fkVal] = (counts[fkVal] || 0) + 1;
+      // Use a Set per item-id to dedupe in case a product appears more than once
+      const seen: Record<string, Set<string>> = {};
+      data?.forEach((row: any) => {
+        const fk = row[productFk];
+        if (!fk) return;
+        (seen[fk] ||= new Set()).add(row.product_id);
       });
+      Object.entries(seen).forEach(([k, v]) => { counts[k] = v.size; });
       return counts;
-    },
-    enabled: !!productFk && !!items?.length,
-  });
+    }
 
+    // One-to-many: count via FK on products table
+    const { data, error } = await supabase
+      .from('products')
+      .select(`id, ${productFk}`)
+      .in(productFk, ids);
+    if (error) throw error;
+    const counts: Record<string, number> = {};
+    data?.forEach((p: any) => {
+      const fkVal = p[productFk];
+      if (fkVal) counts[fkVal] = (counts[fkVal] || 0) + 1;
+    });
+    return counts;
+  },
+  enabled: !!productFk && !!items?.length,
+});
+  
   const upsertMutation = useMutation({
     mutationFn: async (item: Record<string, string>) => {
       if (item.id) {
