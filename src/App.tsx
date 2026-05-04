@@ -17,7 +17,8 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminProducts from "./pages/admin/AdminProducts";
 import AdminProductForm from "./pages/admin/AdminProductForm";
 import AdminHolds from "./pages/admin/AdminHolds";
-import AdminInbox from "./pages/admin/AdminInbox";
+import AdminOffers from "@/pages/admin/AdminOffers";
+import AdminInquiries from "@/pages/admin/AdminInquiries";
 import AdminCrudList from "./pages/admin/AdminCrudList";
 import AdminCategoryManager from "./pages/admin/AdminCategoryManager";
 import AdminCollections from "./pages/admin/AdminCollections";
@@ -84,9 +85,9 @@ const App = () => (
             <Route path="/admin/consignors/:id" element={<AdminLayout><AdminConsignorDetail /></AdminLayout>} />
 
             {/* Inquiries & Offers */}
-            <Route path="/admin/offers" element={<AdminLayout><AdminInbox title="Offers" tableName="purchase_inquiries" filterType="offer" showAmount /></AdminLayout>} />
-            <Route path="/admin/inquiries" element={<AdminLayout><AdminInbox title="Inquiries" tableName="purchase_inquiries" filterType="non-offer" /></AdminLayout>} />
-
+            <Route path="/admin/offers" element={<ProtectedAdminRoute><AdminOffers /></ProtectedAdminRoute>} />
+            <Route path="/admin/inquiries" element={<ProtectedAdminRoute><AdminInquiries /></ProtectedAdminRoute>} />
+            
             {/* Designers & Makers */}
             <Route path="/admin/designers" element={<AdminLayout><AdminCrudList title="Designers" tableName="designers" columns={[{ key: 'name', label: 'Name' }, { key: 'about', label: 'Bio', type: 'textarea' }]} productFk="designer_id" /></AdminLayout>} />
             <Route path="/admin/makers" element={<AdminLayout><AdminCrudList title="Makers" tableName="makers" columns={[{ key: 'name', label: 'Name' }, { key: 'about', label: 'Bio', type: 'textarea' }]} productFk="maker_id" /></AdminLayout>} />
