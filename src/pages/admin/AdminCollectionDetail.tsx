@@ -8,9 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ArrowLeft, Trash2, GripVertical, Search, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
-type CollectionProductRow = {
+type CuratedSetProductRow = {
   id: string;
-  collection_id: string;
+  curated_set_id: string;
   product_id: string;
   display_order: number | null;
   product: {
@@ -30,37 +30,37 @@ const AdminCollectionDetail = () => {
   const [searching, setSearching] = useState(false);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
-  const { data: collection } = useQuery({
-    queryKey: ['admin-collection', id],
+  const { data: curatedSet } = useQuery({
+    queryKey: ['admin-curated-set', id],
     enabled: !!id,
     queryFn: async () => {
-      const { data, error } = await supabase.from('collections').select('*').eq('id', id!).single();
+      const { data, error } = await supabase.from('curated_sets').select('*').eq('id', id!).single();
       if (error) throw error;
       return data;
     },
   });
 
-  const { data: products, isLoading } = useQuery<CollectionProductRow[]>({
-    queryKey: ['admin-collection-products', id],
+  const { data: products, isLoading } = useQuery<CuratedSetProductRow[]>({
+    queryKey: ['admin-curated-set-products', id],
     enabled: !!id,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('collection_products')
+        .from('curated_set_products')
         .select('*, product:products(id, name, sku, status, featured_image_url)')
-        .eq('collection_id', id!)
+        .eq('curated_set_id', id!)
         .order('display_order', { ascending: true, nullsFirst: false });
       if (error) throw error;
-      return (data ?? []) as unknown as CollectionProductRow[];
+      return (data ?? []) as unknown as CuratedSetProductRow[];
     },
   });
 
   const removeMutation = useMutation({
     mutationFn: async (cpId: string) => {
-      const { error } = await supabase.from('collection_products').delete().eq('id', cpId);
+      const { error } = await supabase.from('curated_set_products').delete().eq('id', cpId);
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['admin-collection-products', id] });
+      qc.invalidateQueries({ queryKey: ['admin-curated-set-products', id] });
       toast.success('Product removed');
     },
     onError: (err) => toast.error(err.message),
@@ -69,15 +69,15 @@ const AdminCollectionDetail = () => {
   const addMutation = useMutation({
     mutationFn: async (productId: string) => {
       const nextOrder = (products?.length ?? 0);
-      const { error } = await supabase.from('collection_products').insert({
-        collection_id: id!,
+      const { error } = await supabase.from('curated_set_products').insert({
+        curated_set_id: id!,
         product_id: productId,
         display_order: nextOrder,
       });
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['admin-collection-products', id] });
+      qc.invalidateQueries({ queryKey: ['admin-curated-set-products', id] });
       setSearchResults([]);
       setSearchQuery('');
       toast.success('Product added');
@@ -99,7 +99,6 @@ const AdminCollectionDetail = () => {
     setSearching(false);
   }, [products]);
 
-  // Drag reorder
   const handleDragStart = (idx: number) => setDragIdx(idx);
   const handleDrop = async (targetIdx: number) => {
     if (dragIdx === null || dragIdx === targetIdx || !products) return;
@@ -108,34 +107,31 @@ const AdminCollectionDetail = () => {
     reordered.splice(targetIdx, 0, moved);
     setDragIdx(null);
 
-    // Optimistic update
-    qc.setQueryData(['admin-collection-products', id], reordered);
+    qc.setQueryData(['admin-curated-set-products', id], reordered);
 
-    // Persist new display_order
     const updates = reordered.map((cp, i) =>
-      supabase.from('collection_products').update({ display_order: i }).eq('id', cp.id)
+      supabase.from('curated_set_products').update({ display_order: i }).eq('id', cp.id)
     );
     await Promise.all(updates);
-    qc.invalidateQueries({ queryKey: ['admin-collection-products', id] });
+    qc.invalidateQueries({ queryKey: ['admin-curated-set-products', id] });
   };
 
   return (
     <div>
       <div className="flex items-center gap-3 mb-6">
-        <Link to="/admin/collections">
+        <Link to="/admin/curated-sets">
           <Button variant="ghost" size="icon"><ArrowLeft size={18} /></Button>
         </Link>
         <div>
           <h1 className="font-display text-2xl tracking-wide text-foreground">
-            {collection?.name ?? 'Collection'}
+            {curatedSet?.name ?? 'Curated Set'}
           </h1>
-          {collection?.description && (
-            <p className="text-sm text-muted-foreground mt-1">{collection.description}</p>
+          {curatedSet?.description && (
+            <p className="text-sm text-muted-foreground mt-1">{curatedSet.description}</p>
           )}
         </div>
       </div>
 
-      {/* Add products search */}
       <div className="mb-6">
         <Label className="text-sm font-medium mb-2 block">Add Products</Label>
         <div className="relative">
@@ -170,7 +166,6 @@ const AdminCollectionDetail = () => {
         {searching && <p className="text-xs text-muted-foreground mt-1">Searching...</p>}
       </div>
 
-      {/* Products in collection */}
       <h2 className="font-display text-lg tracking-wide text-foreground mb-3">
         Products ({products?.length ?? 0})
       </h2>
@@ -178,7 +173,7 @@ const AdminCollectionDetail = () => {
       {isLoading ? (
         <p className="text-muted-foreground">Loading...</p>
       ) : !products?.length ? (
-        <p className="text-muted-foreground text-sm">No products in this collection yet.</p>
+        <p className="text-muted-foreground text-sm">No products in this curated set yet.</p>
       ) : (
         <Table>
           <TableHeader>
@@ -216,7 +211,7 @@ const AdminCollectionDetail = () => {
                 <TableCell className="text-xs text-muted-foreground capitalize">{cp.product?.status}</TableCell>
                 <TableCell>
                   <Button variant="ghost" size="icon" onClick={() => {
-                    if (confirm('Remove from collection?')) removeMutation.mutate(cp.id);
+                    if (confirm('Remove from curated set?')) removeMutation.mutate(cp.id);
                   }}>
                     <Trash2 size={14} />
                   </Button>
@@ -230,7 +225,6 @@ const AdminCollectionDetail = () => {
   );
 };
 
-// Small Label component used inline
 const Label = ({ className, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) => (
   <label className={className} {...props} />
 );
