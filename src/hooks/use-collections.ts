@@ -7,7 +7,7 @@ export function useCollections() {
     queryKey: ['collections'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('collections')
+        .from('curated_sets')
         .select('*')
         .eq('is_active', true)
         .order('display_order', { ascending: true, nullsFirst: false });
@@ -28,13 +28,13 @@ export function useCollectionBySlug(slug: string | undefined) {
     queryFn: async () => {
       // Try with and without the collection/ prefix
       let { data, error } = await supabase
-        .from('collections')
+        .from('curated_sets')
         .select('*')
         .eq('slug', slug!)
         .maybeSingle();
       if (!data) {
         ({ data, error } = await supabase
-          .from('collections')
+          .from('curated_sets')
           .select('*')
           .eq('slug', `collection/${slug}`)
           .single());
@@ -51,10 +51,9 @@ export function useCollectionProducts(collectionId: string | undefined) {
     enabled: !!collectionId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('collection_products')
+        .from('curated_set_products')
         .select('*, product:products(*, designer:designers(*), product_images(*))')
-        .eq('collection_id', collectionId!)
-        ;
+        .eq('curated_set_id', collectionId!);
       if (error) throw error;
       return (data ?? []) as unknown as CollectionProduct[];
     },

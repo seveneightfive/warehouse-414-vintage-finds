@@ -43,9 +43,15 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
           {children}
         </div>
       </main>
-    </div>  // <-- This closing div tag was missing!
+    </div>
   );
 }
+
+const STAT_COLUMNS = [
+  { key: 'total_products', label: 'Total' },
+  { key: 'available_products', label: 'Available' },
+  { key: 'sold_products', label: 'Sold' },
+];
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -86,38 +92,57 @@ const App = () => (
             <Route path="/admin/consignors/:id" element={<AdminLayout><AdminConsignorDetail /></AdminLayout>} />
 
             {/* Inquiries & Offers */}
-            <Route path="/admin/offers" element={<ProtectedAdminRoute><AdminOffers /></ProtectedAdminRoute>} />
-            <Route path="/admin/inquiries" element={<ProtectedAdminRoute><AdminInquiries /></ProtectedAdminRoute>} />
-            
-            {/* Designers & Makers */}
-            <Route path="/admin/designers" element={
-  <ProtectedAdminRoute>
-    <AdminCrudList 
-      title="Designers" 
-      tableName="designers" 
-      columns={[{ key: 'name', label: 'Name' }, { key: 'about', label: 'Bio', type: 'textarea' }]} 
-      productFk="designer_id" 
-      productJunction="product_designers"
-    />
-  </ProtectedAdminRoute>
-} />
+            <Route path="/admin/offers" element={<ProtectedAdminRoute><AdminLayout><AdminOffers /></AdminLayout></ProtectedAdminRoute>} />
+            <Route path="/admin/inquiries" element={<ProtectedAdminRoute><AdminLayout><AdminInquiries /></AdminLayout></ProtectedAdminRoute>} />
 
-<Route path="/admin/makers" element={
-  <ProtectedAdminRoute>
-    <AdminCrudList 
-      title="Makers" 
-      tableName="makers" 
-      columns={[{ key: 'name', label: 'Name' }, { key: 'about', label: 'Bio', type: 'textarea' }]} 
-      productFk="maker_id" 
-      productJunction="product_makers"
-    />
-  </ProtectedAdminRoute>
-} />
+            {/* Designers & Makers — read from stats views, write to base table */}
+            <Route path="/admin/designers" element={
+              <ProtectedAdminRoute>
+                <AdminLayout>
+                  <AdminCrudList
+                    title="Designers"
+                    tableName="designers"
+                    viewName="designers_with_stats"
+                    columns={[
+                      { key: 'name', label: 'Name' },
+                      { key: 'about', label: 'Bio', type: 'textarea' },
+                    ]}
+                    statColumns={STAT_COLUMNS}
+                  />
+                </AdminLayout>
+              </ProtectedAdminRoute>
+            } />
+            <Route path="/admin/makers" element={
+              <ProtectedAdminRoute>
+                <AdminLayout>
+                  <AdminCrudList
+                    title="Makers"
+                    tableName="makers"
+                    viewName="makers_with_stats"
+                    columns={[
+                      { key: 'name', label: 'Name' },
+                      { key: 'about', label: 'Bio', type: 'textarea' },
+                    ]}
+                    statColumns={STAT_COLUMNS}
+                  />
+                </AdminLayout>
+              </ProtectedAdminRoute>
+            } />
+
             {/* Taxonomy */}
             <Route path="/admin/categories" element={<AdminLayout><AdminCategoryManager /></AdminLayout>} />
             <Route path="/admin/curated-sets" element={<AdminLayout><AdminCollections /></AdminLayout>} />
             <Route path="/admin/curated-sets/:id" element={<AdminLayout><AdminCollectionDetail /></AdminLayout>} />
-            <Route path="/admin/styles-periods" element={<AdminLayout><AdminCrudList title="Styles / Periods" tableName="styles_periods" /></AdminLayout>} />
+            <Route path="/admin/styles-periods" element={
+              <AdminLayout>
+                <AdminCrudList
+                  title="Styles / Periods"
+                  tableName="styles_periods"
+                  viewName="styles_periods_with_stats"
+                  statColumns={STAT_COLUMNS}
+                />
+              </AdminLayout>
+            } />
             <Route path="/admin/countries" element={<AdminLayout><AdminCrudList title="Countries" tableName="countries" /></AdminLayout>} />
 
             {/* Inventory */}
