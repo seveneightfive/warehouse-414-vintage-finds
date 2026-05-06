@@ -1,5 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import ProductImageManager from './ProductImageManager';
+import ProductImageManager from '@/components/ProductImageManager';
 
 interface QuickUploadImagesModalProps {
   productId: string | null;
