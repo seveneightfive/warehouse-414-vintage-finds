@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,25 +13,19 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
-import { ArrowLeft, Save, Check, ChevronsUpDown, Upload, Loader2, Star, Trash2, Plus, X } from 'lucide-react';
+import { ArrowLeft, Save, Check, ChevronsUpDown, Plus, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import {
-  DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  SortableContext, rectSortingStrategy, useSortable, arrayMove,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import ProductImageManager from './ProductImageManager';
 
 const SOLD_ON_OPTIONS = ['1stDibs', 'Chairish', 'eBay', 'Website', 'Direct', 'Other'];
 
 const STATUS_OPTIONS = [
-  { value: 'available',  label: 'Available'  },
+  { value: 'draft',      label: 'Draft'       },
+  { value: 'available',  label: 'Available'   },
   { value: 'on_hold',    label: 'On Hold'     },
   { value: 'at_auction', label: 'At Auction'  },
   { value: 'sold',       label: 'Sold'        },
   { value: 'inventory',  label: 'Inventory'   },
-  { value: 'draft',      label: 'Draft'       },
 ];
 
 const ATTRIBUTION_OPTIONS = [
@@ -73,7 +67,7 @@ const schema = z.object({
   long_description: z.string().nullable().optional(),
   price: z.coerce.number().nullable().optional(),
   sale_price: z.coerce.number().nullable().optional(),
-  status: z.enum(['available', 'on_hold', 'sold', 'inventory', 'at_auction']).default('available'),
+  status: z.enum(['draft', 'available', 'on_hold', 'sold', 'inventory', 'at_auction']).default('draft'),
   designer_id: z.string().nullable().optional(),
   maker_id: z.string().nullable().optional(),
   category_id: z.string().nullable().optional(),
@@ -113,27 +107,6 @@ const useTaxonomyOptions = () => {
     stylesPeriods: useQuery({ queryKey: ['taxonomy-styles-periods'], queryFn: fetch('styles_periods') }).data,
     countries:  useQuery({ queryKey: ['taxonomy-countries'],  queryFn: fetch('countries')  }).data,
   };
-};
-
-const SortableImage = ({ img, isFeatured, onSetFeatured, onDelete }: {
-  img: { id: string; image_url: string };
-  isFeatured: boolean;
-  onSetFeatured: (url: string) => void;
-  onDelete: (id: string, url: string) => void;
-}) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: img.id });
-  return (
-    <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 10 : undefined }} className="relative group cursor-grab active:cursor-grabbing">
-      <img src={img.image_url} alt="" className={cn('w-full aspect-square object-cover rounded-md', isFeatured ? 'border-2 border-primary' : 'border border-border')} {...attributes} {...listeners} />
-      {isFeatured && <span className="absolute bottom-1 left-1 bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded">Featured</span>}
-      <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        {!isFeatured && (
-          <button type="button" onClick={() => onSetFeatured(img.image_url)} className="bg-accent text-accent-foreground rounded-full p-1"><Star size={14} /></button>
-        )}
-        <button type="button" onClick={() => onDelete(img.id, img.image_url)} className="bg-destructive text-destructive-foreground rounded-full p-1"><Trash2 size={14} /></button>
-      </div>
-    </div>
-  );
 };
 
 const InlineCombobox = ({ value, onChange, options, placeholder, className }: {
@@ -232,7 +205,12 @@ const AdminProductForm = () => {
     },
   });
 
-  const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: { name: '', status: 'available' } });
+  // Default new products to 'draft' so they don't appear on the website
+  // until images are uploaded.
+  const form = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { name: '', status: 'draft' },
+  });
   const draftKey = `product-draft-${id ?? 'new'}`;
 
   useEffect(() => {
@@ -254,21 +232,26 @@ const AdminProductForm = () => {
         if (p.stylesPeriods) setStylesPeriods(p.stylesPeriods);
         if (p.categories) setCategories(p.categories);
         toast.info('Draft restored', { description: 'Your unsaved changes were recovered.' });
-      } catch {}
+      } catch {
+        // ignore corrupt drafts
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const watchStatus = form.watch('status');
   const auctionUrlRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (watchStatus === 'at_auction') setTimeout(() => auctionUrlRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+    if (watchStatus === 'at_auction') {
+      setTimeout(() => auctionUrlRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+    }
   }, [watchStatus]);
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['admin-product', id],
     queryFn: async () => {
       const { data, error } = await supabase.from('products')
-        .select(`*, product_images(id, image_url, sort_order), product_designers(designer_id, attribution_type), product_makers(maker_id, attribution_type), product_categories(category_id, subcategory_id, is_primary)`)
+        .select(`*, product_designers(designer_id, attribution_type), product_makers(maker_id, attribution_type), product_categories(category_id, subcategory_id, is_primary), product_styles_periods(style_period_id, attribution_type)`)
         .eq('id', id!).single();
       if (error) throw error;
       return data;
@@ -323,18 +306,32 @@ const AdminProductForm = () => {
 
   const generateSlug = (name: string) =>
     name.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-  const ensureUniqueSlug = async (slug: string) => {
-    const { data } = await supabase.from('products').select('id').eq('slug', slug).maybeSingle();
-    return data ? `${slug}-${Math.floor(1000 + Math.random() * 9000)}` : slug;
+
+  // Try the base slug first; on collision, retry with a 4-digit suffix up to 5 times.
+  // Last resort uses Date.now() which is essentially guaranteed unique.
+  const ensureUniqueSlug = async (baseSlug: string): Promise<string> => {
+    let candidate = baseSlug;
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const { data } = await supabase.from('products').select('id').eq('slug', candidate).maybeSingle();
+      if (!data) return candidate;
+      candidate = `${baseSlug}-${Math.floor(1000 + Math.random() * 9000)}`;
+    }
+    return `${baseSlug}-${Date.now()}`;
   };
 
-  const performSave = async (values: FormValues, overrideStatus?: string) => {
-    const payload: Record<string, unknown> = { ...values };
-    if (overrideStatus) payload.status = overrideStatus;
-    if (typeof payload.tags === 'string' && payload.tags) {
-      payload.tags = (payload.tags as string).split(',').map((t: string) => t.trim()).filter(Boolean);
+  const performSave = async (values: FormValues): Promise<string> => {
+    // Separate the form's `tags` (string) from the DB column (text[]).
+    const { tags: tagsString, ...rest } = values;
+    const payload: Record<string, unknown> = { ...rest };
+
+    payload.tags = typeof tagsString === 'string' && tagsString.trim()
+      ? tagsString.split(',').map((t) => t.trim()).filter(Boolean)
+      : null;
+
+    // Empty strings → null for cleaner DB rows.
+    for (const [k, v] of Object.entries(payload)) {
+      if (v === '' || v === undefined) payload[k] = null;
     }
-    for (const [k, v] of Object.entries(payload)) if (v === '' || v === undefined) payload[k] = null;
 
     const firstD = designers.find((d) => d.designer_id);
     const firstM = makers.find((m) => m.maker_id);
@@ -347,7 +344,9 @@ const AdminProductForm = () => {
     payload.category_id          = firstC?.category_id ?? null;
     payload.subcategory_id       = firstC?.sub_subcategory_id ?? firstC?.subcategory_id ?? null;
 
-    if (!isEditing && values.name) payload.slug = await ensureUniqueSlug(generateSlug(values.name));
+    if (!isEditing && values.name) {
+      payload.slug = await ensureUniqueSlug(generateSlug(values.name));
+    }
 
     let productId: string;
     if (isEditing) {
@@ -360,17 +359,27 @@ const AdminProductForm = () => {
       productId = data.id;
     }
 
+    // Replace junction rows. With RLS allowing authenticated INSERT/DELETE on
+    // these tables, all of these should succeed.
     await supabase.from('product_designers').delete().eq('product_id', productId);
     const vD = designers.filter((d) => d.designer_id);
     if (vD.length > 0) {
-      const { error } = await supabase.from('product_designers').insert(vD.map((d) => ({ product_id: productId, designer_id: d.designer_id, attribution_type: d.attribution_type || 'by' })));
+      const { error } = await supabase.from('product_designers').insert(vD.map((d) => ({
+        product_id: productId,
+        designer_id: d.designer_id,
+        attribution_type: d.attribution_type || 'by',
+      })));
       if (error) throw error;
     }
 
     await supabase.from('product_makers').delete().eq('product_id', productId);
     const vM = makers.filter((m) => m.maker_id);
     if (vM.length > 0) {
-      const { error } = await supabase.from('product_makers').insert(vM.map((m) => ({ product_id: productId, maker_id: m.maker_id, attribution_type: m.attribution_type || 'by' })));
+      const { error } = await supabase.from('product_makers').insert(vM.map((m) => ({
+        product_id: productId,
+        maker_id: m.maker_id,
+        attribution_type: m.attribution_type || 'by',
+      })));
       if (error) throw error;
     }
 
@@ -389,94 +398,38 @@ const AdminProductForm = () => {
     await supabase.from('product_styles_periods').delete().eq('product_id', productId);
     const vSP = stylesPeriods.filter((sp) => sp.style_period_id);
     if (vSP.length > 0) {
-      const { error } = await supabase.from('product_styles_periods').insert(vSP.map((sp) => ({ product_id: productId, style_period_id: sp.style_period_id, attribution_type: sp.attribution_type || 'of the period' })));
+      const { error } = await supabase.from('product_styles_periods').insert(vSP.map((sp) => ({
+        product_id: productId,
+        style_period_id: sp.style_period_id,
+        attribution_type: sp.attribution_type || 'of the period',
+      })));
       if (error) throw error;
     }
 
     return productId;
   };
 
-  const onSuccess = (newId: string, statusLabel: string) => {
+  const onSuccess = (newId: string) => {
     queryClient.invalidateQueries({ queryKey: ['admin-products'] });
     queryClient.invalidateQueries({ queryKey: ['admin-product-counts'] });
-    queryClient.invalidateQueries({ queryKey: ['admin-product', newId] });
     localStorage.removeItem(draftKey);
-    toast.success(statusLabel);
+
     if (isEditing) {
+      queryClient.invalidateQueries({ queryKey: ['admin-product', newId] });
+      toast.success('Product updated');
       navigate(`/admin/products?highlight=${id}&status=${form.getValues('status')}`);
     } else {
+      // After creating, send the user to the edit page so they can upload images.
+      toast.success('Product created — now add images');
       navigate(`/admin/products/${newId}`);
     }
   };
 
   const saveMutation = useMutation({
     mutationFn: (v: FormValues) => performSave(v),
-    onSuccess: (id) => onSuccess(id, isEditing ? 'Product updated' : 'Product created'),
+    onSuccess: (newId) => onSuccess(newId),
     onError: (err: Error) => toast.error(err.message),
   });
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
-
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id || !product?.product_images) return;
-    const reordered = arrayMove(product.product_images,
-      product.product_images.findIndex((img: any) => img.id === active.id),
-      product.product_images.findIndex((img: any) => img.id === over.id));
-    await Promise.all(reordered.map((img: any, i: number) => supabase.from('product_images').update({ sort_order: i }).eq('id', img.id)));
-    if (reordered[0]?.image_url !== product.featured_image_url)
-      await supabase.from('products').update({ featured_image_url: reordered[0].image_url }).eq('id', product.id);
-    queryClient.invalidateQueries({ queryKey: ['admin-product', id] });
-  };
-
-  const uploadImages = async (files: FileList) => {
-    if (!id) return;
-    const sku = form.getValues('sku');
-    if (!sku) { toast.error('Product must have a SKU before uploading images'); return; }
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { toast.error('Not authenticated'); return; }
-    let nextSort = (product?.product_images || []).length;
-    for (const file of Array.from(files)) {
-      const tempId = `${file.name}-${Date.now()}`;
-      setUploadingFiles((prev) => [...prev, tempId]);
-      try {
-        const fd = new FormData();
-        fd.append('file', file); fd.append('productId', id); fd.append('sku', sku); fd.append('sort_order', String(nextSort));
-        const res = await supabase.functions.invoke('upload-product-images', { body: fd });
-        if (res.error) throw new Error(res.error.message);
-        nextSort++;
-      } catch (err: unknown) {
-        toast.error(`Failed to upload ${file.name}: ${err instanceof Error ? err.message : 'Unknown error'}`);
-      } finally {
-        setUploadingFiles((prev) => prev.filter((f) => f !== tempId));
-      }
-    }
-    queryClient.invalidateQueries({ queryKey: ['admin-product', id] });
-    toast.success('Images uploaded');
-  };
-
-  const deleteImage = async (imageId: string, imageUrl: string) => {
-    const { error } = await supabase.from('product_images').delete().eq('id', imageId);
-    if (error) { toast.error('Delete failed', { description: error.message }); return; }
-    if (product?.featured_image_url === imageUrl) await supabase.from('products').update({ featured_image_url: null }).eq('id', product.id);
-    toast.success('Image deleted');
-    queryClient.invalidateQueries({ queryKey: ['admin-product', id] });
-  };
-
-  const setFeaturedImage = async (imageUrl: string) => {
-    const { error } = await supabase.from('products').update({ featured_image_url: imageUrl }).eq('id', product.id);
-    if (error) { toast.error('Failed to set featured image', { description: error.message }); return; }
-    const images = [...(product.product_images ?? [])].sort((a: any, b: any) => a.sort_order - b.sort_order);
-    const idx = images.findIndex((img: any) => img.image_url === imageUrl);
-    if (idx > 0) {
-      const reordered = arrayMove(images, idx, 0);
-      await Promise.all(reordered.map((img: any, i: number) => supabase.from('product_images').update({ sort_order: i }).eq('id', img.id)));
-    }
-    toast.success('Featured image updated');
-    queryClient.invalidateQueries({ queryKey: ['admin-product', id] });
-  };
 
   if (isEditing && isLoading) return <p className="text-muted-foreground">Loading…</p>;
 
@@ -577,6 +530,12 @@ const AdminProductForm = () => {
                 </FormItem>
               )} />
             </div>
+
+            {!isEditing && watchStatus === 'draft' && (
+              <p className="text-xs text-muted-foreground">
+                New products default to <strong>Draft</strong> so they don't appear on the website. Change to <strong>Available</strong> after uploading images.
+              </p>
+            )}
 
             {watchStatus === 'at_auction' && (
               <p className="text-xs text-muted-foreground">
@@ -720,7 +679,7 @@ const AdminProductForm = () => {
               ))}
             </div>
 
-            {/* Styles / Periods — same layout as Designers/Makers */}
+            {/* Styles / Periods */}
             <div className="space-y-2">
               <p className="text-[11px] font-semibold tracking-[0.1em] uppercase text-foreground/70">Styles / Periods</p>
               {stylesPeriods.map((row, i) => (
@@ -751,7 +710,6 @@ const AdminProductForm = () => {
               <ComboboxField name="country_id" label="Country" options={taxonomy.countries} />
             </div>
 
-            {/* Materials — full width */}
             <FormField control={form.control} name="materials" render={({ field }) => (
               <FormItem>
                 <FormLabel><FieldLabel>Materials</FieldLabel></FormLabel>
@@ -760,7 +718,6 @@ const AdminProductForm = () => {
               </FormItem>
             )} />
 
-            {/* Year Created — half width */}
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="year_created" render={({ field }) => (
                 <FormItem>
@@ -874,30 +831,8 @@ const AdminProductForm = () => {
             <SectionHeading>Images</SectionHeading>
             {!isEditing
               ? <p className="text-sm text-muted-foreground">Save the product first, then you can upload images.</p>
-              : (
-                <>
-                  <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => e.target.files && uploadImages(e.target.files)} />
-                  <Button type="button" variant="outline" className="gap-2" onClick={() => fileInputRef.current?.click()}>
-                    <Upload size={16} /> Upload Images
-                  </Button>
-                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                    <SortableContext items={(product?.product_images ?? []).map((img: any) => img.id)} strategy={rectSortingStrategy}>
-                      <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
-                        {(product?.product_images ?? [])
-                          .sort((a: any, b: any) => a.sort_order - b.sort_order)
-                          .map((img: any) => (
-                            <SortableImage key={img.id} img={img} isFeatured={product?.featured_image_url === img.image_url} onSetFeatured={setFeaturedImage} onDelete={deleteImage} />
-                          ))}
-                        {uploadingFiles.map((tempId) => (
-                          <div key={tempId} className="w-full aspect-square rounded-md border border-border flex items-center justify-center bg-muted">
-                            <Loader2 className="animate-spin text-muted-foreground" size={24} />
-                          </div>
-                        ))}
-                      </div>
-                    </SortableContext>
-                  </DndContext>
-                </>
-              )}
+              : <ProductImageManager productId={id!} sku={form.watch('sku')} />
+            }
           </section>
 
           {/* ── ACTION BUTTONS ── */}
