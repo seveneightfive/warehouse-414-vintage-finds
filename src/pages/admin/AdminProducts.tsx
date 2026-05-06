@@ -39,7 +39,7 @@ import { toast } from 'sonner';
 import type { Product } from '@/types/database';
 import MarkSoldDialog from '@/components/MarkSoldDialog';
 import AdminPlaceHoldDialog from '@/components/AdminPlaceHoldDialog';
-import QuickUploadImagesModal from './QuickUploadImagesModal';
+import QuickUploadImagesModal from '@/components/QuickUploadImagesModal';
 
 const PAGE_SIZE = 25;
 
