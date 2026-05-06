@@ -92,42 +92,38 @@ const App = () => (
             <Route path="/admin/consignors/:id" element={<AdminLayout><AdminConsignorDetail /></AdminLayout>} />
 
             {/* Inquiries & Offers */}
-            <Route path="/admin/offers" element={<ProtectedAdminRoute><AdminLayout><AdminOffers /></AdminLayout></ProtectedAdminRoute>} />
-            <Route path="/admin/inquiries" element={<ProtectedAdminRoute><AdminLayout><AdminInquiries /></AdminLayout></ProtectedAdminRoute>} />
+            <Route path="/admin/offers" element={<AdminLayout><AdminOffers /></AdminLayout>} />
+            <Route path="/admin/inquiries" element={<AdminLayout><AdminInquiries /></AdminLayout>} />
 
             {/* Designers & Makers — read from stats views, write to base table */}
             <Route path="/admin/designers" element={
-              <ProtectedAdminRoute>
-                <AdminLayout>
-                  <AdminCrudList
-                    title="Designers"
-                    tableName="designers"
-                    viewName="designers_with_stats"
-                    columns={[
-                      { key: 'name', label: 'Name' },
-                      { key: 'about', label: 'Bio', type: 'textarea' },
-                    ]}
-                    statColumns={STAT_COLUMNS}
-                  />
-                </AdminLayout>
-              </ProtectedAdminRoute>
-            } />
+  <ProtectedAdminRoute>
+    <AdminCrudList
+      title="Designers"
+      tableName="designers"
+      viewName="designers_with_stats"
+      columns={[
+        { key: 'name', label: 'Name' },
+        { key: 'about', label: 'Bio', type: 'textarea' },
+      ]}
+      statColumns={STAT_COLUMNS}
+    />
+  </ProtectedAdminRoute>
+} />
             <Route path="/admin/makers" element={
-              <ProtectedAdminRoute>
-                <AdminLayout>
-                  <AdminCrudList
-                    title="Makers"
-                    tableName="makers"
-                    viewName="makers_with_stats"
-                    columns={[
-                      { key: 'name', label: 'Name' },
-                      { key: 'about', label: 'Bio', type: 'textarea' },
-                    ]}
-                    statColumns={STAT_COLUMNS}
-                  />
-                </AdminLayout>
-              </ProtectedAdminRoute>
-            } />
+  <ProtectedAdminRoute>
+    <AdminCrudList
+      title="Makers"
+      tableName="makers"
+      viewName="makers_with_stats"
+      columns={[
+        { key: 'name', label: 'Name' },
+        { key: 'about', label: 'Bio', type: 'textarea' },
+      ]}
+      statColumns={STAT_COLUMNS}
+    />
+  </ProtectedAdminRoute>
+} />
 
             {/* Taxonomy */}
             <Route path="/admin/categories" element={<AdminLayout><AdminCategoryManager /></AdminLayout>} />
