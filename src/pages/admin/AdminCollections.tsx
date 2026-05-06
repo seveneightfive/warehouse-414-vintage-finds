@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Plus, Pencil, Trash2, Upload, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-type CollectionRow = {
+type CuratedSetRow = {
   id: string;
   name: string;
   slug: string | null;
@@ -34,17 +34,17 @@ const AdminCollections = () => {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: collections, isLoading } = useQuery<CollectionRow[]>({
-    queryKey: ['admin-collections'],
+  const { data: curatedSets, isLoading } = useQuery<CuratedSetRow[]>({
+    queryKey: ['admin-curated-sets'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('collections')
-        .select('*, collection_products(id)')
+        .from('curated_sets')
+        .select('*, curated_set_products(id)')
         .order('display_order', { ascending: true, nullsFirst: false });
       if (error) throw error;
       return (data ?? []).map((c: any) => ({
         ...c,
-        product_count: c.collection_products?.length ?? 0,
+        product_count: c.curated_set_products?.length ?? 0,
       }));
     },
   });
@@ -60,13 +60,13 @@ const AdminCollections = () => {
         is_active: payload.is_active ?? true,
       };
       if (payload.id) {
-        const { error } = await supabase.from('collections').update(row).eq('id', payload.id);
+        const { error } = await supabase.from('curated_sets').update(row).eq('id', payload.id);
         if (error) throw error;
       } else {
-        const { data, error } = await supabase.from('collections').insert(row).select('id, slug').single();
+        const { data, error } = await supabase.from('curated_sets').insert(row).select('id, slug').single();
         if (error) throw error;
 
-        // Upload pending file for newly created collection
+        // Upload pending file for newly created curated set
         if (payload._pendingFile && data) {
           const fd = new FormData();
           fd.append('file', payload._pendingFile);
@@ -77,8 +77,8 @@ const AdminCollections = () => {
       }
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['admin-collections'] });
-      toast.success(editId ? 'Collection updated' : 'Collection added');
+      qc.invalidateQueries({ queryKey: ['admin-curated-sets'] });
+      toast.success(editId ? 'Curated set updated' : 'Curated set added');
       closeModal();
     },
     onError: (err) => toast.error(err.message),
@@ -86,12 +86,12 @@ const AdminCollections = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('collections').delete().eq('id', id);
+      const { error } = await supabase.from('curated_sets').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['admin-collections'] });
-      toast.success('Collection deleted');
+      qc.invalidateQueries({ queryKey: ['admin-curated-sets'] });
+      toast.success('Curated set deleted');
     },
     onError: (err) => toast.error(err.message),
   });
@@ -102,7 +102,7 @@ const AdminCollections = () => {
     setDialogOpen(true);
   };
 
-  const openEdit = (c: CollectionRow) => {
+  const openEdit = (c: CuratedSetRow) => {
     setEditId(c.id);
     setForm({
       name: c.name,
@@ -129,11 +129,9 @@ const AdminCollections = () => {
   };
 
   const handleCoverUpload = async (file: File) => {
-    // For new collections we need to save first, so just show a preview
-    const slug = form.slug || slugify(form.name || 'collection');
+    const slug = form.slug || slugify(form.name || 'curated-set');
 
     if (editId) {
-      // Upload directly for existing collections
       setUploading(true);
       try {
         const fd = new FormData();
@@ -147,14 +145,13 @@ const AdminCollections = () => {
 
         setForm((prev: Record<string, any>) => ({ ...prev, cover_image: data.cdn_url }));
         toast.success('Cover image uploaded');
-        qc.invalidateQueries({ queryKey: ['admin-collections'] });
+        qc.invalidateQueries({ queryKey: ['admin-curated-sets'] });
       } catch (err: any) {
         toast.error('Upload failed', { description: err.message });
       } finally {
         setUploading(false);
       }
     } else {
-      // For new collections, store the file to upload after creation
       setForm((prev: Record<string, any>) => ({ ...prev, _pendingFile: file, _previewUrl: URL.createObjectURL(file) }));
     }
   };
@@ -167,9 +164,9 @@ const AdminCollections = () => {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display text-2xl tracking-wide text-foreground">Collections</h1>
+        <h1 className="font-display text-2xl tracking-wide text-foreground">Curated Sets</h1>
         <Button onClick={openNew} className="text-xs tracking-[0.1em] uppercase">
-          <Plus size={14} className="mr-1" /> Add Collection
+          <Plus size={14} className="mr-1" /> Add Curated Set
         </Button>
       </div>
 
@@ -177,7 +174,7 @@ const AdminCollections = () => {
         <DialogContent className="bg-card border-border">
           <DialogHeader>
             <DialogTitle className="font-display tracking-wide">
-              {editId ? 'Edit Collection' : 'New Collection'}
+              {editId ? 'Edit Curated Set' : 'New Curated Set'}
             </DialogTitle>
           </DialogHeader>
           <form
@@ -274,7 +271,7 @@ const AdminCollections = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {collections?.map((c) => (
+            {curatedSets?.map((c) => (
               <TableRow key={c.id}>
                 <TableCell>
                   {c.cover_image ? (
@@ -284,7 +281,7 @@ const AdminCollections = () => {
                   )}
                 </TableCell>
                 <TableCell className="font-medium">
-                  <Link to={`/admin/collections/${c.id}`} className="hover:underline text-foreground">
+                  <Link to={`/admin/curated-sets/${c.id}`} className="hover:underline text-foreground">
                     {c.name}
                   </Link>
                 </TableCell>
@@ -299,7 +296,7 @@ const AdminCollections = () => {
                       <Pencil size={14} />
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => {
-                      if (confirm('Delete this collection?')) deleteMutation.mutate(c.id);
+                      if (confirm('Delete this curated set?')) deleteMutation.mutate(c.id);
                     }}>
                       <Trash2 size={14} />
                     </Button>
