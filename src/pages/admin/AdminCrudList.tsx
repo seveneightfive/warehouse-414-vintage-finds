@@ -5,91 +5,98 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Pencil, Trash2, Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
+type Column = { key: string; label: string; type?: 'text' | 'textarea' };
+type StatColumn = { key: string; label: string };
+
 type AdminCrudListProps = {
   title: string;
+  /** Table to write to (insert/update/delete). Always the base table. */
   tableName: string;
-  columns?: { key: string; label: string; type?: 'text' | 'textarea' }[];
-  /** Foreign key column name on products table, e.g. "designer_id". When set, a Products count column is shown. */
-  productFk?: string;
+  /** View to read from for display. Defaults to tableName if not provided. Must include `id`. */
+  viewName?: string;
+  /** Editable columns — these are the fields shown in the dialog form and written to tableName. */
+  columns?: Column[];
+  /** Read-only stat columns from the view to show as extra columns on the right. */
+  statColumns?: StatColumn[];
+  /** Column to sort the list by. Defaults to 'name'. Set to null to skip ordering. */
+  defaultSort?: string | null;
+  /** Extra column keys to include in the search filter beyond `columns`. */
+  extraSearchKeys?: string[];
 };
 
-const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Name' }], productFk }: AdminCrudListProps) => {
+const AdminCrudList = ({
+  title,
+  tableName,
+  viewName,
+  columns = [{ key: 'name', label: 'Name' }],
+  statColumns,
+  defaultSort = 'name',
+  extraSearchKeys = [],
+}: AdminCrudListProps) => {
   const queryClient = useQueryClient();
-  const [editItem, setEditItem] = useState<Record<string, string> | null>(null);
-  const [newItem, setNewItem] = useState<Record<string, string>>({});
+  const readSource = viewName ?? tableName;
+
+  const [editItem, setEditItem] = useState<Record<string, any> | null>(null);
+  const [newItem, setNewItem] = useState<Record<string, any>>({});
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Reset search query when navigating to a different taxonomy page
   useEffect(() => {
     setSearchQuery('');
-  }, [tableName]);
+  }, [readSource]);
 
   const { data: items, isLoading } = useQuery({
-    queryKey: [tableName],
+    queryKey: [readSource],
     queryFn: async () => {
-      const { data, error } = await supabase.from(tableName).select('*').order('name');
+      let q = supabase.from(readSource).select('*');
+      if (defaultSort) q = q.order(defaultSort);
+      const { data, error } = await q;
       if (error) throw error;
       return data;
     },
   });
 
-  // Fetch product counts per item when productFk is set
-  const { data: productCounts } = useQuery({
-    queryKey: [tableName, 'product-counts'],
-    queryFn: async () => {
-      if (!productFk || !items?.length) return {};
-      const ids = items.map((i: any) => i.id);
-      const { data, error } = await supabase
-        .from('products')
-        .select(`id, ${productFk}`)
-        .in(productFk, ids);
-      if (error) throw error;
-      const counts: Record<string, number> = {};
-      data?.forEach((p: any) => {
-        const fkVal = p[productFk];
-        if (fkVal) counts[fkVal] = (counts[fkVal] || 0) + 1;
-      });
-      return counts;
-    },
-    enabled: !!productFk && !!items?.length,
-  });
-
   const upsertMutation = useMutation({
-    mutationFn: async (item: Record<string, string>) => {
+    mutationFn: async (item: Record<string, any>) => {
+      const editableKeys = new Set(columns.map((c) => c.key));
+      const payload: Record<string, any> = {};
+      for (const k of Object.keys(item)) {
+        if (editableKeys.has(k)) payload[k] = item[k];
+      }
+
       if (item.id) {
-        const { error } = await supabase.from(tableName).update(item).eq('id', item.id);
+        const { error } = await supabase.from(tableName).update(payload).eq('id', item.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from(tableName).insert(item);
+        const { error } = await supabase.from(tableName).insert(payload);
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [tableName] });
+      queryClient.invalidateQueries({ queryKey: [readSource] });
       toast.success('Saved');
       setDialogOpen(false);
       setEditItem(null);
       setNewItem({});
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (id: string | number) => {
       const { error } = await supabase.from(tableName).delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [tableName] });
+      queryClient.invalidateQueries({ queryKey: [readSource] });
       toast.success('Deleted');
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const openNew = () => {
@@ -98,17 +105,31 @@ const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Nam
     setDialogOpen(true);
   };
 
-  const openEdit = (item: Record<string, string>) => {
+  const openEdit = (item: Record<string, any>) => {
     setEditItem(item);
     setNewItem({});
     setDialogOpen(true);
   };
 
   const currentValues = editItem || newItem;
-  const setCurrentValues = (vals: Record<string, string>) => {
+  const setCurrentValues = (vals: Record<string, any>) => {
     if (editItem) setEditItem(vals);
     else setNewItem(vals);
   };
+
+  const formatStat = (val: any) => {
+    if (val === null || val === undefined) return '—';
+    if (typeof val === 'number') return val.toLocaleString();
+    return String(val);
+  };
+
+  const searchKeys = [...columns.map((c) => c.key), ...extraSearchKeys];
+
+  const filteredItems = items?.filter((item: Record<string, any>) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return searchKeys.some((k) => String(item[k] ?? '').toLowerCase().includes(q));
+  });
 
   return (
     <div>
@@ -163,7 +184,11 @@ const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Nam
                 )}
               </div>
             ))}
-            <Button type="submit" disabled={upsertMutation.isPending} className="w-full text-xs tracking-[0.1em] uppercase">
+            <Button
+              type="submit"
+              disabled={upsertMutation.isPending}
+              className="w-full text-xs tracking-[0.1em] uppercase"
+            >
               {upsertMutation.isPending ? 'Saving...' : 'Save'}
             </Button>
           </form>
@@ -179,31 +204,35 @@ const AdminCrudList = ({ title, tableName, columns = [{ key: 'name', label: 'Nam
               {columns.map((col) => (
                 <TableHead key={col.key}>{col.label}</TableHead>
               ))}
-              {productFk && <TableHead>Products</TableHead>}
+              {statColumns?.map((col) => (
+                <TableHead key={col.key}>{col.label}</TableHead>
+              ))}
               <TableHead className="w-20">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items?.filter((item: Record<string, string>) => {
-              if (!searchQuery) return true;
-              const q = searchQuery.toLowerCase();
-              return columns.some(col => String(item[col.key] || '').toLowerCase().includes(q));
-            }).map((item: Record<string, string>) => (
+            {filteredItems?.map((item: Record<string, any>) => (
               <TableRow key={item.id}>
                 {columns.map((col) => (
                   <TableCell key={col.key}>{item[col.key] || '—'}</TableCell>
                 ))}
-                {productFk && (
-                  <TableCell className="text-muted-foreground">{productCounts?.[item.id] ?? 0}</TableCell>
-                )}
+                {statColumns?.map((col) => (
+                  <TableCell key={col.key} className="text-muted-foreground tabular-nums">
+                    {formatStat(item[col.key])}
+                  </TableCell>
+                ))}
                 <TableCell>
                   <div className="flex gap-1">
                     <Button variant="ghost" size="icon" onClick={() => openEdit(item)}>
                       <Pencil size={14} />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => {
-                      if (confirm('Delete?')) deleteMutation.mutate(item.id);
-                    }}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        if (confirm('Delete?')) deleteMutation.mutate(item.id);
+                      }}
+                    >
                       <Trash2 size={14} />
                     </Button>
                   </div>
