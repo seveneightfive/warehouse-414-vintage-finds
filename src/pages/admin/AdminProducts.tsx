@@ -33,11 +33,13 @@ import {
   Clock,
   CircleDollarSign,
   ArrowLeft,
+  ImagePlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Product } from '@/types/database';
 import MarkSoldDialog from '@/components/MarkSoldDialog';
 import AdminPlaceHoldDialog from '@/components/AdminPlaceHoldDialog';
+import QuickUploadImagesModal from './QuickUploadImagesModal';
 
 const PAGE_SIZE = 25;
 
@@ -147,7 +149,6 @@ const AdminProducts = () => {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Read initial status from URL (?status=available, etc.). Fall back to 'available' if missing/invalid.
   const urlStatus = searchParams.get('status') as ProductStatusKey | null;
   const initialStatus: ProductStatusKey =
     urlStatus && VALID_STATUSES.includes(urlStatus) ? urlStatus : 'available';
@@ -161,8 +162,11 @@ const AdminProducts = () => {
   const [holdProduct, setHoldProduct] = useState<Product | null>(null);
   const [linksProduct, setLinksProduct] = useState<Product | null>(null);
   const [linksState, setLinksState] = useState({ firstdibs_url: '', chairish_url: '', ebay_url: '' });
+  const [isSavingLinks, setIsSavingLinks] = useState(false);
 
-  // When the user clicks a tab, sync the URL so it's bookmarkable / shareable.
+  // Quick-action: upload images modal — available for any product, any status.
+  const [uploadProduct, setUploadProduct] = useState<Product | null>(null);
+
   useEffect(() => {
     const current = searchParams.get('status');
     if (current !== selectedStatus) {
@@ -171,7 +175,6 @@ const AdminProducts = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStatus]);
 
-  // When the URL changes (e.g. dashboard card click while page is mounted), sync the tab.
   useEffect(() => {
     if (urlStatus && VALID_STATUSES.includes(urlStatus) && urlStatus !== selectedStatus) {
       setSelectedStatus(urlStatus);
@@ -179,7 +182,6 @@ const AdminProducts = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlStatus]);
 
-  // Reset to page 0 when filter changes
   useEffect(() => {
     setPage(0);
   }, [selectedStatus]);
@@ -246,7 +248,7 @@ const AdminProducts = () => {
     return { previousProducts, previousCounts };
   };
 
-  const statusChangeOnError = (err: Error, variables: StatusChangeVariables, context: any) => {
+  const statusChangeOnError = (err: Error, _variables: StatusChangeVariables, context: any) => {
     if (context?.previousProducts) {
       queryClient.setQueryData(['admin-products', selectedStatus, page, searchQuery], context.previousProducts);
     }
@@ -295,6 +297,29 @@ const AdminProducts = () => {
       ebay_url: (product as any).ebay_url ?? '',
     });
     setLinksProduct(product);
+  };
+
+  // Awaited save handler — fixes the previous bug where the Supabase call wasn't awaited
+  // so `error` was always undefined and the success path always fired.
+  const saveLinks = async () => {
+    if (!linksProduct) return;
+    setIsSavingLinks(true);
+    try {
+      const { error } = await supabase.from('products').update({
+        firstdibs_url: linksState.firstdibs_url || null,
+        chairish_url: linksState.chairish_url || null,
+        ebay_url: linksState.ebay_url || null,
+      } as any).eq('id', linksProduct.id);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      toast.success('External links updated');
+      setLinksProduct(null);
+      queryClient.invalidateQueries({ queryKey: ['admin-products', selectedStatus, page, searchQuery] });
+    } finally {
+      setIsSavingLinks(false);
+    }
   };
 
   const moveToStatusOptions = STATUS_OPTIONS.filter((status) => status !== moveStatusProduct?.status);
@@ -368,6 +393,7 @@ const AdminProducts = () => {
             <TableBody>
               {products.map((product) => {
                 const thumb = product.product_images?.sort((a, b) => a.sort_order - b.sort_order)?.[0];
+                const hasImages = !!thumb || !!product.featured_image_url;
 
                 return (
                   <TableRow key={product.id}>
@@ -377,11 +403,27 @@ const AdminProducts = () => {
                       ) : product.featured_image_url ? (
                         <img src={product.featured_image_url} alt={product.name} className="w-12 h-12 rounded-sm object-cover" />
                       ) : (
-                        <div className="w-12 h-12 rounded-sm bg-muted" />
+                        <button
+                          type="button"
+                          onClick={() => setUploadProduct(product)}
+                          title="Upload images"
+                          className="w-12 h-12 rounded-sm bg-muted hover:bg-muted/70 flex items-center justify-center text-muted-foreground transition-colors"
+                        >
+                          <ImagePlus size={16} />
+                        </button>
                       )}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{product.sku || '—'}</TableCell>
-                    <TableCell className="font-medium">{product.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <span>{product.name}</span>
+                        {!hasImages && (
+                          <span className="text-[10px] font-semibold tracking-wider uppercase text-amber-700 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-300 px-1.5 py-0.5 rounded">
+                            No images
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <button
                         type="button"
@@ -414,6 +456,15 @@ const AdminProducts = () => {
                               <Pencil size={13} /> Edit Product
                             </Link>
                           </DropdownMenuItem>
+
+                          {/* Quick action: upload/manage images without leaving this page */}
+                          <DropdownMenuItem
+                            onClick={() => setUploadProduct(product)}
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            <ImagePlus size={13} /> Manage Images
+                          </DropdownMenuItem>
+
                           <DropdownMenuSeparator />
 
                           {selectedStatus === 'available' && (
@@ -534,6 +585,15 @@ const AdminProducts = () => {
         isLoading={changeStatusMutation.isPending}
       />
 
+      {/* Quick-action: upload/manage images modal — works for any status */}
+      <QuickUploadImagesModal
+        productId={uploadProduct?.id ?? null}
+        productName={uploadProduct?.name ?? null}
+        sku={uploadProduct?.sku ?? null}
+        open={!!uploadProduct}
+        onClose={() => setUploadProduct(null)}
+      />
+
       <Dialog open={!!moveStatusProduct} onOpenChange={(open) => { if (!open) { setMoveStatusProduct(null); setPendingStatus('available'); } }}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
@@ -610,26 +670,9 @@ const AdminProducts = () => {
             </div>
           </div>
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setLinksProduct(null)}>Cancel</Button>
-            <Button
-              disabled={changeStatusMutation.isPending}
-              onClick={() => {
-                if (!linksProduct) return;
-                const { error } = supabase.from('products').update({
-                  firstdibs_url: linksState.firstdibs_url || null,
-                  chairish_url: linksState.chairish_url || null,
-                  ebay_url: linksState.ebay_url || null,
-                } as any).eq('id', linksProduct.id);
-                if (error) {
-                  toast.error(error.message);
-                } else {
-                  toast.success('External links updated');
-                  setLinksProduct(null);
-                  queryClient.invalidateQueries({ queryKey: ['admin-products', selectedStatus, page, searchQuery] });
-                }
-              }}
-            >
-              Save Links
+            <Button variant="outline" onClick={() => setLinksProduct(null)} disabled={isSavingLinks}>Cancel</Button>
+            <Button disabled={isSavingLinks} onClick={saveLinks}>
+              {isSavingLinks ? 'Saving…' : 'Save Links'}
             </Button>
           </DialogFooter>
         </DialogContent>
