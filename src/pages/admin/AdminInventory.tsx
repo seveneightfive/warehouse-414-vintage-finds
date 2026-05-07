@@ -253,6 +253,282 @@ function AddInventoryModal({
   );
 }
 
+// ── Edit Inventory Modal ───────────────────────────────────────────────────
+function EditInventoryModal({
+  product,
+  consignors,
+  onClose,
+  onSaved,
+}: {
+  product: InventoryProduct;
+  consignors: Consignor[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [form, setForm] = useState({
+    name: product.name || "",
+    consignor_id: product.consignor_id ? String(product.consignor_id) : "",
+    price: product.price != null ? String(product.price) : "",
+    date_received: product.date_received || "",
+    notes: product.notes || "",
+    materials: product.materials || "",
+  });
+  // For each slot: existing URL (if any), new file (if user uploaded), and preview
+  const [imageUrls, setImageUrls] = useState<(string | null)[]>([
+    product.intake_image_1,
+    product.intake_image_2,
+    product.intake_image_3,
+  ]);
+  const [newFiles, setNewFiles] = useState<(File | null)[]>([null, null, null]);
+  const [previews, setPreviews] = useState<(string | null)[]>([
+    product.intake_image_1,
+    product.intake_image_2,
+    product.intake_image_3,
+  ]);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
+
+  const isAssignedToWeek = !!(product.production_week_products && product.production_week_products.length > 0);
+
+  function handleImageChange(idx: number, file: File | null) {
+    const nf = [...newFiles];
+    nf[idx] = file;
+    setNewFiles(nf);
+
+    const pv = [...previews];
+    pv[idx] = file ? URL.createObjectURL(file) : null;
+    setPreviews(pv);
+
+    // If user is replacing/removing, clear the existing URL too
+    const urls = [...imageUrls];
+    urls[idx] = null;
+    setImageUrls(urls);
+  }
+
+  async function handleSave() {
+    if (!form.name.trim()) { setError("Title is required."); return; }
+    setSaving(true);
+    setError(null);
+
+    // Upload any new files; otherwise keep the existing URL
+    const finalUrls: (string | null)[] = [...imageUrls];
+    for (let i = 0; i < 3; i++) {
+      if (newFiles[i]) {
+        const url = await uploadIntakeImage(newFiles[i]!);
+        finalUrls[i] = url;
+      }
+    }
+
+    const { error: dbErr } = await supabase
+      .from("products")
+      .update({
+        name: form.name.trim(),
+        consignor_id: form.consignor_id ? Number(form.consignor_id) : null,
+        price: form.price ? parseFloat(form.price) : null,
+        date_received: form.date_received || null,
+        notes: form.notes.trim() || null,
+        materials: form.materials.trim() || null,
+        intake_image_1: finalUrls[0],
+        intake_image_2: finalUrls[1],
+        intake_image_3: finalUrls[2],
+      })
+      .eq("id", product.id);
+
+    setSaving(false);
+    if (dbErr) { setError(dbErr.message); return; }
+    onSaved();
+    onClose();
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    setError(null);
+
+    // If assigned to a week, remove the join rows first
+    if (isAssignedToWeek) {
+      const { error: joinErr } = await supabase
+        .from("production_week_products")
+        .delete()
+        .eq("product_id", product.id);
+      if (joinErr) {
+        setError(joinErr.message);
+        setDeleting(false);
+        return;
+      }
+    }
+
+    const { error: dbErr } = await supabase
+      .from("products")
+      .delete()
+      .eq("id", product.id);
+
+    setDeleting(false);
+    if (dbErr) { setError(dbErr.message); return; }
+    onSaved();
+    onClose();
+  }
+
+  return (
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal-box">
+        <div className="modal-header">
+          <h2>Edit Inventory</h2>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+
+        <div className="modal-body">
+          {error && <div className="form-error">{error}</div>}
+
+          {isAssignedToWeek && (
+            <div className="form-info">
+              This item is currently assigned to a production week.
+            </div>
+          )}
+
+          <div className="form-grid">
+            <div className="form-field full">
+              <label>Title <span className="req">*</span></label>
+              <input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="Item title"
+              />
+            </div>
+
+            <div className="form-field">
+              <label>Consignor</label>
+              <select
+                value={form.consignor_id}
+                onChange={(e) => setForm({ ...form, consignor_id: e.target.value })}
+              >
+                <option value="">— None —</option>
+                {consignors.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {consignorLabel(c)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-field">
+              <label>Est. Price</label>
+              <div className="input-prefix">
+                <span>$</span>
+                <input
+                  type="number"
+                  value={form.price}
+                  onChange={(e) => setForm({ ...form, price: e.target.value })}
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+            </div>
+
+            <div className="form-field">
+              <label>Date Received</label>
+              <input
+                type="date"
+                value={form.date_received}
+                onChange={(e) => setForm({ ...form, date_received: e.target.value })}
+              />
+            </div>
+
+            <div className="form-field">
+              <label>Materials</label>
+              <input
+                value={form.materials}
+                onChange={(e) => setForm({ ...form, materials: e.target.value })}
+                placeholder="e.g. walnut, brass, wool"
+              />
+            </div>
+
+            <div className="form-field full">
+              <label>Notes</label>
+              <textarea
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                placeholder="Condition notes, provenance, etc."
+                rows={3}
+              />
+            </div>
+          </div>
+
+          {/* Image uploads */}
+          <div className="image-upload-section">
+            <label className="section-label">Intake Photos <span className="muted">(click to replace)</span></label>
+            <div className="image-upload-row">
+              {[0, 1, 2].map((idx) => (
+                <div
+                  key={idx}
+                  className={`image-slot ${previews[idx] ? "has-image" : ""}`}
+                  onClick={() => fileRefs[idx].current?.click()}
+                >
+                  {previews[idx] ? (
+                    <>
+                      <img src={previews[idx]!} alt="" />
+                      <button
+                        className="remove-image"
+                        onClick={(e) => { e.stopPropagation(); handleImageChange(idx, null); }}
+                      >✕</button>
+                    </>
+                  ) : (
+                    <div className="image-placeholder">
+                      <span className="plus">+</span>
+                      <span className="slot-label">Photo {idx + 1}</span>
+                    </div>
+                  )}
+                  <input
+                    ref={fileRefs[idx]}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: "none" }}
+                    onChange={(e) => handleImageChange(idx, e.target.files?.[0] || null)}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Delete confirmation */}
+          {confirmDelete && (
+            <div className="delete-confirm">
+              <p><strong>Delete this item?</strong> This cannot be undone.{isAssignedToWeek && " It will also be removed from its production week."}</p>
+              <div className="delete-confirm-actions">
+                <button className="btn-secondary" onClick={() => setConfirmDelete(false)} disabled={deleting}>
+                  Cancel
+                </button>
+                <button className="btn-danger" onClick={handleDelete} disabled={deleting}>
+                  {deleting ? "Deleting…" : "Yes, Delete"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="modal-footer modal-footer--split">
+          <button
+            className="btn-danger-outline"
+            onClick={() => setConfirmDelete(true)}
+            disabled={saving || deleting || confirmDelete}
+          >
+            Delete
+          </button>
+          <div className="footer-right">
+            <button className="btn-secondary" onClick={onClose} disabled={saving || deleting}>Cancel</button>
+            <button className="btn-primary" onClick={handleSave} disabled={saving || deleting}>
+              {saving ? "Saving…" : "Save Changes"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Create Production Week Modal ───────────────────────────────────────────
 function CreateWeekModal({
   selectedIds,
@@ -343,6 +619,7 @@ export default function AdminInventory() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showWeekModal, setShowWeekModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<InventoryProduct | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
 
@@ -433,6 +710,27 @@ export default function AdminInventory() {
         .cell-price { font-variant-numeric: tabular-nums; }
         .badge-grouped { display: inline-block; font-size: .65rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; background: #e8f5e9; color: #2e7d32; padding: 2px 7px; border: 1px solid #c8e6c9; }
         .empty-state { text-align: center; padding: 48px; color: #aaa; font-size: .9rem; }
+
+        /* ── Row action button ── */
+        .col-actions { width: 60px; text-align: right; }
+        .btn-edit-row {
+          background: transparent;
+          border: 1px solid #d8d4cb;
+          color: #555;
+          font-family: inherit;
+          font-size: .68rem;
+          font-weight: 700;
+          letter-spacing: .08em;
+          text-transform: uppercase;
+          padding: 4px 10px;
+          cursor: pointer;
+          transition: all .15s;
+        }
+        .btn-edit-row:hover {
+          background: #111;
+          color: #fff;
+          border-color: #111;
+        }
         
         /* ── Modals ── */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
@@ -444,6 +742,8 @@ export default function AdminInventory() {
         .modal-close:hover { color: #111; }
         .modal-body { padding: 20px 24px; flex: 1; }
         .modal-footer { padding: 16px 24px; border-top: 1px solid #e5e2d9; display: flex; gap: 10px; justify-content: flex-end; }
+        .modal-footer--split { justify-content: space-between; }
+        .footer-right { display: flex; gap: 10px; }
         
         /* ── Form ── */
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -456,6 +756,7 @@ export default function AdminInventory() {
         .input-prefix span { padding: 0 8px; color: #999; font-size: .85rem; }
         .input-prefix input { border: none; padding: 8px 8px 8px 0; flex: 1; outline: none; font-family: inherit; font-size: .85rem; }
         .form-error { background: #ffeaea; border: 1px solid #ffbaba; color: #c00; padding: 8px 12px; font-size: .82rem; margin-bottom: 12px; }
+        .form-info { background: #fdf8ee; border: 1px solid #f0e4c2; color: #6b5a1f; padding: 8px 12px; font-size: .82rem; margin-bottom: 12px; }
         .req { color: #e00; }
         
         /* ── Image upload ── */
@@ -477,7 +778,23 @@ export default function AdminInventory() {
         .btn-primary:disabled { opacity: .5; cursor: default; }
         .btn-secondary { background: transparent; color: #111; border: 1px solid #d8d4cb; padding: 10px 22px; font-family: inherit; font-size: .8rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
         .btn-secondary:hover { background: #f5f2eb; }
-        
+        .btn-danger { background: #c0392b; color: #fff; border: none; padding: 10px 22px; font-family: inherit; font-size: .8rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
+        .btn-danger:hover:not(:disabled) { background: #a93226; }
+        .btn-danger:disabled { opacity: .5; cursor: default; }
+        .btn-danger-outline { background: transparent; color: #c0392b; border: 1px solid #e6c2bd; padding: 10px 22px; font-family: inherit; font-size: .8rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
+        .btn-danger-outline:hover:not(:disabled) { background: #fdecea; border-color: #c0392b; }
+        .btn-danger-outline:disabled { opacity: .4; cursor: default; }
+
+        /* ── Delete confirm ── */
+        .delete-confirm {
+          margin-top: 20px;
+          padding: 14px 16px;
+          background: #fdecea;
+          border: 1px solid #f5c2bc;
+        }
+        .delete-confirm p { margin: 0 0 10px; font-size: .85rem; color: #7a2419; }
+        .delete-confirm-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
         /* ── Week count badge ── */
         .week-item-count { font-size: .85rem; color: #555; margin: 0 0 16px; padding: 10px 12px; background: #f7f5f0; border-left: 3px solid #111; }
       `}</style>
@@ -542,6 +859,7 @@ export default function AdminInventory() {
                         <th>Received</th>
                         <th>Materials</th>
                         <th>Notes</th>
+                        <th className="col-actions"></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -571,6 +889,11 @@ export default function AdminInventory() {
                           <td>{formatDate(p.date_received)}</td>
                           <td>{p.materials || "—"}</td>
                           <td>{p.notes ? p.notes.slice(0, 60) + (p.notes.length > 60 ? "…" : "") : "—"}</td>
+                          <td className="col-actions">
+                            <button className="btn-edit-row" onClick={() => setEditingProduct(p)}>
+                              Edit
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -592,6 +915,7 @@ export default function AdminInventory() {
                         <th>Est. Price</th>
                         <th>Received</th>
                         <th>Week</th>
+                        <th className="col-actions"></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -610,6 +934,11 @@ export default function AdminInventory() {
                           <td className="cell-price">{p.price != null ? `$${Number(p.price).toLocaleString()}` : "—"}</td>
                           <td>{formatDate(p.date_received)}</td>
                           <td><span className="badge-grouped">In Week</span></td>
+                          <td className="col-actions">
+                            <button className="btn-edit-row" onClick={() => setEditingProduct(p)}>
+                              Edit
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -634,6 +963,15 @@ export default function AdminInventory() {
           selectedIds={Array.from(selected)}
           onClose={() => setShowWeekModal(false)}
           onSaved={() => { setSelected(new Set()); loadData(); }}
+        />
+      )}
+
+      {editingProduct && (
+        <EditInventoryModal
+          product={editingProduct}
+          consignors={consignors}
+          onClose={() => setEditingProduct(null)}
+          onSaved={loadData}
         />
       )}
     </>
