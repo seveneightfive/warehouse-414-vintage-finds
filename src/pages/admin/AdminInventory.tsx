@@ -29,8 +29,12 @@ interface ProductionWeek {
   id: string;
   title: string;
   work_week_date: string;
-  status: string;
+  status: string | null;
   notes: string | null;
+}
+
+interface ProductionWeekWithProducts extends ProductionWeek {
+  products: InventoryProduct[];
 }
 
 // ── Utility ────────────────────────────────────────────────────────────────
@@ -99,7 +103,6 @@ function AddInventoryModal({
     setSaving(true);
     setError(null);
 
-    // Upload images
     const urls: (string | null)[] = [null, null, null];
     for (let i = 0; i < 3; i++) {
       if (images[i]) urls[i] = await uploadIntakeImage(images[i]!);
@@ -205,7 +208,6 @@ function AddInventoryModal({
             </div>
           </div>
 
-          {/* Image uploads */}
           <div className="image-upload-section">
             <label className="section-label">Intake Photos <span className="muted">(internal reference, up to 3)</span></label>
             <div className="image-upload-row">
@@ -273,7 +275,6 @@ function EditInventoryModal({
     notes: product.notes || "",
     materials: product.materials || "",
   });
-  // For each slot: existing URL (if any), new file (if user uploaded), and preview
   const [imageUrls, setImageUrls] = useState<(string | null)[]>([
     product.intake_image_1,
     product.intake_image_2,
@@ -302,7 +303,6 @@ function EditInventoryModal({
     pv[idx] = file ? URL.createObjectURL(file) : null;
     setPreviews(pv);
 
-    // If user is replacing/removing, clear the existing URL too
     const urls = [...imageUrls];
     urls[idx] = null;
     setImageUrls(urls);
@@ -313,7 +313,6 @@ function EditInventoryModal({
     setSaving(true);
     setError(null);
 
-    // Upload any new files; otherwise keep the existing URL
     const finalUrls: (string | null)[] = [...imageUrls];
     for (let i = 0; i < 3; i++) {
       if (newFiles[i]) {
@@ -347,7 +346,6 @@ function EditInventoryModal({
     setDeleting(true);
     setError(null);
 
-    // If assigned to a week, remove the join rows first
     if (isAssignedToWeek) {
       const { error: joinErr } = await supabase
         .from("production_week_products")
@@ -457,7 +455,6 @@ function EditInventoryModal({
             </div>
           </div>
 
-          {/* Image uploads */}
           <div className="image-upload-section">
             <label className="section-label">Intake Photos <span className="muted">(click to replace)</span></label>
             <div className="image-upload-row">
@@ -493,7 +490,6 @@ function EditInventoryModal({
             </div>
           </div>
 
-          {/* Delete confirmation */}
           {confirmDelete && (
             <div className="delete-confirm">
               <p><strong>Delete this item?</strong> This cannot be undone.{isAssignedToWeek && " It will also be removed from its production week."}</p>
@@ -612,20 +608,106 @@ function CreateWeekModal({
   );
 }
 
+// ── Edit Production Week Modal ─────────────────────────────────────────────
+function EditWeekModal({
+  week,
+  onClose,
+  onSaved,
+}: {
+  week: ProductionWeek;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [title, setTitle] = useState(week.title || "");
+  const [weekDate, setWeekDate] = useState(week.work_week_date || "");
+  const [status, setStatus] = useState(week.status || "planned");
+  const [notes, setNotes] = useState(week.notes || "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSave() {
+    if (!title.trim()) { setError("Week title is required."); return; }
+    setSaving(true);
+    setError(null);
+
+    const { error: wErr } = await supabase
+      .from("production_weeks")
+      .update({
+        title: title.trim(),
+        work_week_date: weekDate,
+        status,
+        notes: notes.trim() || null,
+      })
+      .eq("id", week.id);
+
+    setSaving(false);
+    if (wErr) { setError(wErr.message); return; }
+    onSaved();
+    onClose();
+  }
+
+  return (
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal-box modal-box--sm">
+        <div className="modal-header">
+          <h2>Edit Production Week</h2>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+          {error && <div className="form-error">{error}</div>}
+
+          <div className="form-grid">
+            <div className="form-field full">
+              <label>Week Title <span className="req">*</span></label>
+              <input value={title} onChange={(e) => setTitle(e.target.value)} />
+            </div>
+            <div className="form-field">
+              <label>Week of</label>
+              <input type="date" value={weekDate} onChange={(e) => setWeekDate(e.target.value)} />
+            </div>
+            <div className="form-field">
+              <label>Status</label>
+              <select value={status} onChange={(e) => setStatus(e.target.value)}>
+                <option value="planned">Planned</option>
+                <option value="in_progress">In Progress</option>
+                <option value="complete">Complete</option>
+                <option value="archived">Archived</option>
+              </select>
+            </div>
+            <div className="form-field full">
+              <label>Notes</label>
+              <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
+            </div>
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn-primary" onClick={handleSave} disabled={saving}>
+            {saving ? "Saving…" : "Save Changes"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Page ──────────────────────────────────────────────────────────────
 export default function AdminInventory() {
+  const [view, setView] = useState<"inventory" | "weeks">("inventory");
   const [products, setProducts] = useState<InventoryProduct[]>([]);
   const [consignors, setConsignors] = useState<Consignor[]>([]);
+  const [weeks, setWeeks] = useState<ProductionWeekWithProducts[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showWeekModal, setShowWeekModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<InventoryProduct | null>(null);
+  const [editingWeek, setEditingWeek] = useState<ProductionWeek | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
 
   async function loadData() {
     setLoading(true);
-    const [{ data: prods }, { data: cons }] = await Promise.all([
+    const [{ data: prods }, { data: cons }, { data: ws }] = await Promise.all([
       supabase
         .from("products")
         .select(`
@@ -638,9 +720,43 @@ export default function AdminInventory() {
         .order("date_received", { ascending: false })
         .order("created_at", { ascending: false }),
       supabase.from("consignors").select("id, first_name, last_name, consignor_code").order("last_name"),
+      supabase
+        .from("production_weeks")
+        .select(`
+          id, title, work_week_date, status, notes,
+          production_week_products (
+            sort_order,
+            products (
+              id, name, price, status, date_received, notes, materials,
+              intake_image_1, intake_image_2, intake_image_3, consignor_id,
+              consignors ( id, first_name, last_name, consignor_code )
+            )
+          )
+        `)
+        .order("work_week_date", { ascending: false }),
     ]);
+
     setProducts((prods as InventoryProduct[]) || []);
     setConsignors((cons as Consignor[]) || []);
+
+    // Flatten production_week_products → products array, sorted by sort_order
+    const weeksFlat: ProductionWeekWithProducts[] = ((ws as any[]) || []).map((w) => {
+      const items = (w.production_week_products || [])
+        .slice()
+        .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+        .map((joined: any) => joined.products)
+        .filter(Boolean);
+      return {
+        id: w.id,
+        title: w.title,
+        work_week_date: w.work_week_date,
+        status: w.status,
+        notes: w.notes,
+        products: items,
+      };
+    });
+    setWeeks(weeksFlat);
+
     setLoading(false);
   }
 
@@ -670,6 +786,22 @@ export default function AdminInventory() {
     (p) => p.production_week_products && p.production_week_products.length > 0
   );
 
+  // Search-filtered weeks: a week shows if its title matches OR any of its items match
+  const filteredWeeks = weeks
+    .map((w) => ({
+      ...w,
+      products: search
+        ? w.products.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
+        : w.products,
+    }))
+    .filter((w) =>
+      !search ||
+      w.title.toLowerCase().includes(search.toLowerCase()) ||
+      w.products.length > 0
+    );
+
+  const totalItemsInWeeks = weeks.reduce((sum, w) => sum + w.products.length, 0);
+
   return (
     <>
       <style>{`
@@ -684,14 +816,33 @@ export default function AdminInventory() {
         .btn-add-inventory:hover { background: #333; }
         
         /* ── Toolbar ── */
-        .inv-toolbar { display: flex; align-items: center; gap: 12px; padding: 16px 32px; border-bottom: 1px solid #e5e2d9; }
-        .inv-search { flex: 1; max-width: 320px; }
+        .inv-toolbar { display: flex; align-items: center; gap: 12px; padding: 16px 32px; border-bottom: 1px solid #e5e2d9; flex-wrap: wrap; }
+        .inv-search { flex: 1; max-width: 320px; min-width: 200px; }
         .inv-search input { width: 100%; border: 1px solid #d8d4cb; background: #fff; padding: 8px 12px; font-family: inherit; font-size: .85rem; outline: none; color: #111; }
         .inv-search input:focus { border-color: #111; }
         .inv-count { font-size: .75rem; color: #888; margin-left: auto; }
         .btn-group-week { background: #f0ede6; color: #111; border: 1px solid #c8c4bb; padding: 8px 16px; font-family: inherit; font-size: .78rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; cursor: pointer; transition: background .15s; }
         .btn-group-week:hover:not(:disabled) { background: #e0dcd3; }
         .btn-group-week:disabled { opacity: .4; cursor: default; }
+        .btn-view-weeks {
+          background: #fff;
+          color: #111;
+          border: 1px solid #c8c4bb;
+          padding: 8px 16px;
+          font-family: inherit;
+          font-size: .78rem;
+          font-weight: 600;
+          letter-spacing: .06em;
+          text-transform: uppercase;
+          cursor: pointer;
+          transition: all .15s;
+        }
+        .btn-view-weeks:hover { background: #f0ede6; }
+        .btn-view-weeks.is-active {
+          background: #111;
+          color: #fff;
+          border-color: #111;
+        }
         
         /* ── Table ── */
         .inv-table-wrap { padding: 24px 32px; }
@@ -730,6 +881,97 @@ export default function AdminInventory() {
           background: #111;
           color: #fff;
           border-color: #111;
+        }
+
+        /* ── Production week section ── */
+        .week-section {
+          margin-bottom: 32px;
+          border: 1px solid #e5e2d9;
+          background: #fff;
+        }
+        .week-header {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 16px;
+          padding: 16px 20px;
+          background: #f7f5f0;
+          border-bottom: 1px solid #e5e2d9;
+        }
+        .week-header-info { flex: 1; min-width: 0; }
+        .week-header-title-row {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-wrap: wrap;
+          margin-bottom: 4px;
+        }
+        .week-title {
+          font-size: 1rem;
+          font-weight: 700;
+          letter-spacing: .04em;
+          text-transform: uppercase;
+          color: #111;
+          margin: 0;
+        }
+        .week-date {
+          font-size: .78rem;
+          color: #555;
+          font-weight: 600;
+          font-variant-numeric: tabular-nums;
+        }
+        .week-status {
+          display: inline-block;
+          font-size: .62rem;
+          font-weight: 700;
+          letter-spacing: .1em;
+          text-transform: uppercase;
+          padding: 2px 8px;
+          border: 1px solid;
+        }
+        .week-status--planned { background: #eef2ff; color: #3f4cb1; border-color: #c8d0f0; }
+        .week-status--in_progress { background: #fff7e0; color: #8a6800; border-color: #f0deb0; }
+        .week-status--complete { background: #e8f5e9; color: #2e7d32; border-color: #c8e6c9; }
+        .week-status--archived { background: #f0f0f0; color: #777; border-color: #d8d4cb; }
+        .week-notes {
+          font-size: .8rem;
+          color: #666;
+          margin: 6px 0 0;
+          line-height: 1.45;
+        }
+        .week-meta-counts { font-size: .72rem; color: #888; margin-top: 4px; }
+        .btn-edit-week {
+          background: transparent;
+          border: 1px solid #c8c4bb;
+          color: #555;
+          font-family: inherit;
+          font-size: .68rem;
+          font-weight: 700;
+          letter-spacing: .08em;
+          text-transform: uppercase;
+          padding: 5px 11px;
+          cursor: pointer;
+          transition: all .15s;
+          flex-shrink: 0;
+        }
+        .btn-edit-week:hover {
+          background: #111;
+          color: #fff;
+          border-color: #111;
+        }
+        .week-table-wrap { padding: 0; }
+        .week-table-wrap table.inv-table { margin-bottom: 0; }
+        .week-table-wrap .inv-table th:first-child,
+        .week-table-wrap .inv-table td:first-child { padding-left: 20px; }
+        .week-table-wrap .inv-table th:last-child,
+        .week-table-wrap .inv-table td:last-child { padding-right: 20px; }
+        .week-table-wrap .inv-table tr:last-child td { border-bottom: none; }
+        .week-empty {
+          padding: 20px;
+          text-align: center;
+          color: #aaa;
+          font-size: .85rem;
+          font-style: italic;
         }
         
         /* ── Modals ── */
@@ -804,7 +1046,11 @@ export default function AdminInventory() {
         <div className="inv-header">
           <div>
             <h1>Inventory</h1>
-            <div className="inv-meta">{products.length} item{products.length !== 1 ? "s" : ""} in inventory</div>
+            <div className="inv-meta">
+              {view === "inventory"
+                ? `${products.length} item${products.length !== 1 ? "s" : ""} in inventory`
+                : `${weeks.length} production week${weeks.length !== 1 ? "s" : ""} · ${totalItemsInWeeks} item${totalItemsInWeeks !== 1 ? "s" : ""} assigned`}
+            </div>
           </div>
           <button className="btn-add-inventory" onClick={() => setShowAddModal(true)}>
             + Add Inventory
@@ -815,137 +1061,232 @@ export default function AdminInventory() {
         <div className="inv-toolbar">
           <div className="inv-search">
             <input
-              placeholder="Search inventory…"
+              placeholder={view === "inventory" ? "Search inventory…" : "Search weeks or items…"}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          {view === "inventory" && (
+            <button
+              className="btn-group-week"
+              disabled={selected.size === 0}
+              onClick={() => setShowWeekModal(true)}
+            >
+              Group into Week {selected.size > 0 ? `(${selected.size})` : ""}
+            </button>
+          )}
           <button
-            className="btn-group-week"
-            disabled={selected.size === 0}
-            onClick={() => setShowWeekModal(true)}
+            className={`btn-view-weeks ${view === "weeks" ? "is-active" : ""}`}
+            onClick={() => {
+              setSelected(new Set());
+              setView(view === "weeks" ? "inventory" : "weeks");
+            }}
           >
-            Group into Week {selected.size > 0 ? `(${selected.size})` : ""}
+            {view === "weeks" ? "← Back to Inventory" : `Production Weeks (${weeks.length})`}
           </button>
-          <span className="inv-count">{filtered.length} shown</span>
+          <span className="inv-count">
+            {view === "inventory" ? `${filtered.length} shown` : `${filteredWeeks.length} week${filteredWeeks.length !== 1 ? "s" : ""}`}
+          </span>
         </div>
 
-        {/* Table */}
+        {/* Body */}
         <div className="inv-table-wrap">
           {loading ? (
             <div className="empty-state">Loading…</div>
-          ) : filtered.length === 0 ? (
-            <div className="empty-state">No inventory items found.</div>
-          ) : (
-            <>
-              {/* Ungrouped */}
-              {ungrouped.length > 0 && (
-                <>
-                  <div className="inv-section-label">Unassigned ({ungrouped.length})</div>
-                  <table className="inv-table">
-                    <thead>
-                      <tr>
-                        <th>
-                          <input
-                            type="checkbox"
-                            checked={selected.size === filtered.length && filtered.length > 0}
-                            onChange={toggleAll}
-                          />
-                        </th>
-                        <th>Photos</th>
-                        <th>Title</th>
-                        <th>Consignor</th>
-                        <th>Est. Price</th>
-                        <th>Received</th>
-                        <th>Materials</th>
-                        <th>Notes</th>
-                        <th className="col-actions"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {ungrouped.map((p) => (
-                        <tr key={p.id} className={selected.has(p.id) ? "is-selected" : ""}>
-                          <td>
+          ) : view === "inventory" ? (
+            // ── INVENTORY VIEW ──────────────────────────────────────────────
+            filtered.length === 0 ? (
+              <div className="empty-state">No inventory items found.</div>
+            ) : (
+              <>
+                {ungrouped.length > 0 && (
+                  <>
+                    <div className="inv-section-label">Unassigned ({ungrouped.length})</div>
+                    <table className="inv-table">
+                      <thead>
+                        <tr>
+                          <th>
                             <input
                               type="checkbox"
-                              checked={selected.has(p.id)}
-                              onChange={() => toggleSelect(p.id)}
+                              checked={selected.size === filtered.length && filtered.length > 0}
+                              onChange={toggleAll}
                             />
-                          </td>
-                          <td>
-                            <div className="cell-thumb">
-                              {[p.intake_image_1, p.intake_image_2, p.intake_image_3].map((url, i) =>
-                                url ? (
-                                  <img key={i} src={url} className="thumb" alt="" />
-                                ) : (
-                                  <div key={i} className="thumb-empty" />
-                                )
-                              )}
-                            </div>
-                          </td>
-                          <td className="cell-title">{p.name}</td>
-                          <td className="cell-consignor">{consignorLabel(p.consignors)}</td>
-                          <td className="cell-price">{p.price != null ? `$${Number(p.price).toLocaleString()}` : "—"}</td>
-                          <td>{formatDate(p.date_received)}</td>
-                          <td>{p.materials || "—"}</td>
-                          <td>{p.notes ? p.notes.slice(0, 60) + (p.notes.length > 60 ? "…" : "") : "—"}</td>
-                          <td className="col-actions">
-                            <button className="btn-edit-row" onClick={() => setEditingProduct(p)}>
-                              Edit
-                            </button>
-                          </td>
+                          </th>
+                          <th>Photos</th>
+                          <th>Title</th>
+                          <th>Consignor</th>
+                          <th>Est. Price</th>
+                          <th>Received</th>
+                          <th>Materials</th>
+                          <th>Notes</th>
+                          <th className="col-actions"></th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </>
-              )}
+                      </thead>
+                      <tbody>
+                        {ungrouped.map((p) => (
+                          <tr key={p.id} className={selected.has(p.id) ? "is-selected" : ""}>
+                            <td>
+                              <input
+                                type="checkbox"
+                                checked={selected.has(p.id)}
+                                onChange={() => toggleSelect(p.id)}
+                              />
+                            </td>
+                            <td>
+                              <div className="cell-thumb">
+                                {[p.intake_image_1, p.intake_image_2, p.intake_image_3].map((url, i) =>
+                                  url ? (
+                                    <img key={i} src={url} className="thumb" alt="" />
+                                  ) : (
+                                    <div key={i} className="thumb-empty" />
+                                  )
+                                )}
+                              </div>
+                            </td>
+                            <td className="cell-title">{p.name}</td>
+                            <td className="cell-consignor">{consignorLabel(p.consignors)}</td>
+                            <td className="cell-price">{p.price != null ? `$${Number(p.price).toLocaleString()}` : "—"}</td>
+                            <td>{formatDate(p.date_received)}</td>
+                            <td>{p.materials || "—"}</td>
+                            <td>{p.notes ? p.notes.slice(0, 60) + (p.notes.length > 60 ? "…" : "") : "—"}</td>
+                            <td className="col-actions">
+                              <button className="btn-edit-row" onClick={() => setEditingProduct(p)}>
+                                Edit
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </>
+                )}
 
-              {/* Grouped */}
-              {grouped.length > 0 && (
-                <>
-                  <div className="inv-section-label">Assigned to a Week ({grouped.length})</div>
-                  <table className="inv-table">
-                    <thead>
-                      <tr>
-                        <th><input type="checkbox" disabled /></th>
-                        <th>Photos</th>
-                        <th>Title</th>
-                        <th>Consignor</th>
-                        <th>Est. Price</th>
-                        <th>Received</th>
-                        <th>Week</th>
-                        <th className="col-actions"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {grouped.map((p) => (
-                        <tr key={p.id}>
-                          <td><input type="checkbox" disabled checked={false} /></td>
-                          <td>
-                            <div className="cell-thumb">
-                              {[p.intake_image_1, p.intake_image_2, p.intake_image_3].map((url, i) =>
-                                url ? <img key={i} src={url} className="thumb" alt="" /> : <div key={i} className="thumb-empty" />
-                              )}
-                            </div>
-                          </td>
-                          <td className="cell-title">{p.name}</td>
-                          <td className="cell-consignor">{consignorLabel(p.consignors)}</td>
-                          <td className="cell-price">{p.price != null ? `$${Number(p.price).toLocaleString()}` : "—"}</td>
-                          <td>{formatDate(p.date_received)}</td>
-                          <td><span className="badge-grouped">In Week</span></td>
-                          <td className="col-actions">
-                            <button className="btn-edit-row" onClick={() => setEditingProduct(p)}>
-                              Edit
-                            </button>
-                          </td>
+                {grouped.length > 0 && (
+                  <>
+                    <div className="inv-section-label">Assigned to a Week ({grouped.length})</div>
+                    <table className="inv-table">
+                      <thead>
+                        <tr>
+                          <th><input type="checkbox" disabled /></th>
+                          <th>Photos</th>
+                          <th>Title</th>
+                          <th>Consignor</th>
+                          <th>Est. Price</th>
+                          <th>Received</th>
+                          <th>Week</th>
+                          <th className="col-actions"></th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </>
-              )}
-            </>
+                      </thead>
+                      <tbody>
+                        {grouped.map((p) => {
+                          const weekId = p.production_week_products?.[0]?.production_week_id;
+                          const weekRef = weeks.find((w) => w.id === weekId);
+                          return (
+                            <tr key={p.id}>
+                              <td><input type="checkbox" disabled checked={false} /></td>
+                              <td>
+                                <div className="cell-thumb">
+                                  {[p.intake_image_1, p.intake_image_2, p.intake_image_3].map((url, i) =>
+                                    url ? <img key={i} src={url} className="thumb" alt="" /> : <div key={i} className="thumb-empty" />
+                                  )}
+                                </div>
+                              </td>
+                              <td className="cell-title">{p.name}</td>
+                              <td className="cell-consignor">{consignorLabel(p.consignors)}</td>
+                              <td className="cell-price">{p.price != null ? `$${Number(p.price).toLocaleString()}` : "—"}</td>
+                              <td>{formatDate(p.date_received)}</td>
+                              <td>{weekRef ? formatDate(weekRef.work_week_date) : <span className="badge-grouped">In Week</span>}</td>
+                              <td className="col-actions">
+                                <button className="btn-edit-row" onClick={() => setEditingProduct(p)}>
+                                  Edit
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </>
+                )}
+              </>
+            )
+          ) : (
+            // ── PRODUCTION WEEKS VIEW ───────────────────────────────────────
+            filteredWeeks.length === 0 ? (
+              <div className="empty-state">
+                {weeks.length === 0
+                  ? "No production weeks yet. Select inventory items and click \"Group into Week\" to create one."
+                  : "No weeks match your search."}
+              </div>
+            ) : (
+              filteredWeeks.map((w) => (
+                <div key={w.id} className="week-section">
+                  <div className="week-header">
+                    <div className="week-header-info">
+                      <div className="week-header-title-row">
+                        <h3 className="week-title">{w.title}</h3>
+                        <span className="week-date">{formatDate(w.work_week_date)}</span>
+                        {w.status && (
+                          <span className={`week-status week-status--${w.status}`}>
+                            {w.status.replace(/_/g, " ")}
+                          </span>
+                        )}
+                      </div>
+                      {w.notes && <p className="week-notes">{w.notes}</p>}
+                      <div className="week-meta-counts">
+                        {w.products.length} item{w.products.length !== 1 ? "s" : ""}
+                      </div>
+                    </div>
+                    <button className="btn-edit-week" onClick={() => setEditingWeek(w)}>
+                      Edit Week
+                    </button>
+                  </div>
+
+                  <div className="week-table-wrap">
+                    {w.products.length === 0 ? (
+                      <div className="week-empty">No items in this week{search ? " match your search" : ""}.</div>
+                    ) : (
+                      <table className="inv-table">
+                        <thead>
+                          <tr>
+                            <th>Photos</th>
+                            <th>Title</th>
+                            <th>Consignor</th>
+                            <th>Est. Price</th>
+                            <th>Received</th>
+                            <th>Materials</th>
+                            <th className="col-actions"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {w.products.map((p) => (
+                            <tr key={p.id}>
+                              <td>
+                                <div className="cell-thumb">
+                                  {[p.intake_image_1, p.intake_image_2, p.intake_image_3].map((url, i) =>
+                                    url ? <img key={i} src={url} className="thumb" alt="" /> : <div key={i} className="thumb-empty" />
+                                  )}
+                                </div>
+                              </td>
+                              <td className="cell-title">{p.name}</td>
+                              <td className="cell-consignor">{consignorLabel(p.consignors)}</td>
+                              <td className="cell-price">{p.price != null ? `$${Number(p.price).toLocaleString()}` : "—"}</td>
+                              <td>{formatDate(p.date_received)}</td>
+                              <td>{p.materials || "—"}</td>
+                              <td className="col-actions">
+                                <button className="btn-edit-row" onClick={() => setEditingProduct(p)}>
+                                  Edit
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </div>
+              ))
+            )
           )}
         </div>
       </div>
@@ -971,6 +1312,14 @@ export default function AdminInventory() {
           product={editingProduct}
           consignors={consignors}
           onClose={() => setEditingProduct(null)}
+          onSaved={loadData}
+        />
+      )}
+
+      {editingWeek && (
+        <EditWeekModal
+          week={editingWeek}
+          onClose={() => setEditingWeek(null)}
           onSaved={loadData}
         />
       )}
