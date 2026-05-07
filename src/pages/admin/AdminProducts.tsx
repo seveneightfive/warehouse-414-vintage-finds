@@ -66,6 +66,8 @@ const STATUS_TABS: StatusTab[] = [
   { id: 'on_hold', label: 'On Hold', subtitle: 'Held for customers' },
   { id: 'at_auction', label: 'At Auction', subtitle: 'Listed on marketplaces' },
   { id: 'sold', label: 'Sold', subtitle: 'Historical sales' },
+  { id: 'inventory', label: 'Inventory', subtitle: 'Awaiting production' },
+  { id: 'deactivated', label: 'Deactivated', subtitle: 'Hidden from site' },
 ];
 
 const STATUS_LABELS: Record<ProductStatusKey, string> = {
@@ -496,6 +498,32 @@ const AdminProducts = () => {
                             <DropdownMenuItem
                               onClick={() => {
                                 if (confirm('Move this item back to Available?')) {
+                                  changeStatusMutation.mutate({ id: product.id, oldStatus: product.status as ProductStatusKey, newStatus: 'available' });
+                                }
+                              }}
+                              className="flex items-center gap-2 cursor-pointer"
+                            >
+                              <ArrowLeft size={13} /> Move to Available
+                            </DropdownMenuItem>
+                          )}
+
+                          {selectedStatus === 'deactivated' && (
+                            <DropdownMenuItem
+                              onClick={() => {
+                                if (confirm('Reactivate this product and move it back to Available?')) {
+                                  changeStatusMutation.mutate({ id: product.id, oldStatus: product.status as ProductStatusKey, newStatus: 'available' });
+                                }
+                              }}
+                              className="flex items-center gap-2 cursor-pointer"
+                            >
+                              <ArrowLeft size={13} /> Reactivate
+                            </DropdownMenuItem>
+                          )}
+
+                          {selectedStatus === 'inventory' && (
+                            <DropdownMenuItem
+                              onClick={() => {
+                                if (confirm('Promote this inventory item to Available?')) {
                                   changeStatusMutation.mutate({ id: product.id, oldStatus: product.status as ProductStatusKey, newStatus: 'available' });
                                 }
                               }}
