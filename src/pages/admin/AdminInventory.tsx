@@ -1326,4 +1326,3 @@ export default function AdminInventory() {
     </>
   );
 }
-c

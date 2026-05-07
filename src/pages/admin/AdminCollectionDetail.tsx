@@ -218,7 +218,7 @@ const AdminCollectionDetail = () => {
                 </TableCell>
               </TableRow>
             ))}
-          </TableBodycc
+          </TableBody>
         </Table>
       )}
     </div>
