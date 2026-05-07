@@ -19,13 +19,13 @@ type CuratedSetRow = {
   description: string | null;
   cover_image: string | null;
   display_order: number | null;
-  is_active: boolean | null;
+  is_active: boolean | nullc
   product_count: number;
 };
 
 const slugify = (s: string) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-
+c
 const AdminCollections = () => {
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -41,13 +41,13 @@ const AdminCollections = () => {
         .from('curated_sets')
         .select('*, curated_set_products(id)')
         .order('display_order', { ascending: true, nullsFirst: false });
-      if (error) throw error;
-      return (data ?? []).map((c: any) => ({
+      if (error) throw errorc
+      return (data ?? []).map((c: any) => (c
         ...c,
         product_count: c.curated_set_products?.length ?? 0,
-      }));
+      }))cc
     },
-  });
+  })c
 
   const upsertMutation = useMutation({
     mutationFn: async (payload: Record<string, any>) => {
@@ -162,13 +162,15 @@ const AdminCollections = () => {
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display text-2xl tracking-wide text-foreground">Curated Sets</h1>
-        <Button onClick={openNew} className="text-xs tracking-[0.1em] uppercase">
-          <Plus size={14} className="mr-1" /> Add Curated Set
-        </Button>
-      </div>
+    <div className="flex items-center justify-between mb-2">
+  <h1 className="font-display text-2xl tracking-wide text-foreground">Curated Sets</h1>
+  <Button onClick={openNew} className="text-xs tracking-[0.1em] uppercase">
+    <Plus size={14} className="mr-1" /> Add Curated Set
+  </Button>
+</div>
+<div className="mb-6 p-3 bg-muted/50 border border-border rounded-md text-sm text-muted-foreground">
+  <span className="text-foreground font-medium">Tip:</span> Click on a curated set's name to add or remove products. Active sets appear on the shop home page.
+</div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="bg-card border-border">

@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ArrowLeft, Trash2, GripVertical, Search, Plus } from 'lucide-react';
+import { ArrowLeft, X, GripVertical, Search, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 type CuratedSetProductRow = {
@@ -61,7 +61,7 @@ const AdminCollectionDetail = () => {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-curated-set-products', id] });
-      toast.success('Product removed');
+      toast.success('Removed from set');
     },
     onError: (err) => toast.error(err.message),
   });
@@ -80,7 +80,7 @@ const AdminCollectionDetail = () => {
       qc.invalidateQueries({ queryKey: ['admin-curated-set-products', id] });
       setSearchResults([]);
       setSearchQuery('');
-      toast.success('Product added');
+      toast.success('Product added to set');
     },
     onError: (err) => toast.error(err.message),
   });
@@ -211,14 +211,14 @@ const AdminCollectionDetail = () => {
                 <TableCell className="text-xs text-muted-foreground capitalize">{cp.product?.status}</TableCell>
                 <TableCell>
                   <Button variant="ghost" size="icon" onClick={() => {
-                    if (confirm('Remove from curated set?')) removeMutation.mutate(cp.id);
+                    if (confirm('Remove from curated set? The product will not be deleted.')) removeMutation.mutate(cp.id);
                   }}>
-                    <Trash2 size={14} />
+                    <X size={14} />
                   </Button>
                 </TableCell>
               </TableRow>
             ))}
-          </TableBody>
+          </TableBodycc
         </Table>
       )}
     </div>
