@@ -34,58 +34,24 @@ export default function AdminInventory() {
   }
 
   return (
-  <div className="p-6">
-  <h1 className="text-2xl font-bold mb-4 lowercase">inventory management</h1>
-  <p className="mb-4 lowercase">found {products.length} inventory items</p>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">Inventory Management</h1>
+      <p className="mb-4">Found {products.length} inventory items</p>
 
-  {products.length === 0 ? (
-    <div className="text-center py-8 text-muted-foreground lowercase">
-      no inventory items found
-    </div>
-  ) : (
-    <div className="border rounded overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="border-b bg-black text-white lowercase">
-          <tr>
-            <th className="text-left p-3">name</th>
-            <th className="text-left p-3">status</th>
-            <th className="text-left p-3">actions</th>
-          </tr>
-        </thead>
-
-        <tbody>
+      {products.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground">
+          No inventory items found. Products with status "inventory" will appear here.
+        </div>
+      ) : (
+        <div className="space-y-2">
           {products.map((product: any) => (
-            <tr
-              key={product.id}
-              className="border-b hover:bg-gray-50"
-            >
-              <td className="p-3">{product.name}</td>
-
-              <td className="p-3 text-muted-foreground">
-                {product.status}
-              </td>
-
-              <td className="p-3">
-                <div className="flex gap-2">
-                  <button className="text-xs border px-2 py-1 hover:bg-black hover:text-white">
-                    edit
-                  </button>
-
-                  <button className="text-xs border px-2 py-1 hover:bg-black hover:text-white">
-                    view
-                  </button>
-
-                  <button className="text-xs border px-2 py-1 hover:bg-black hover:text-white">
-                    sold
-                  </button>
-                </div>
-              </td>
-            </tr>
+            <div key={product.id} className="p-4 border rounded">
+              <h3 className="font-semibold">{product.name}</h3>
+              <p className="text-sm text-muted-foreground">Status: {product.status}</p>
+            </div>
           ))}
-        </tbody>
-      </table>
+        </div>
+      )}
     </div>
-    )}
-</div>
-);
+  );
 }

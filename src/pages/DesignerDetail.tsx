@@ -41,7 +41,7 @@ const DesignerDetail = () => {
       {products && products.length > 0 && (
         <div>
           <h2 className="font-display text-xl tracking-[0.2em] uppercase text-foreground mb-8">
-            Pieces by {designer.name}
+            pieces by or attributed to {designer.name}
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {products.map((p) => (
