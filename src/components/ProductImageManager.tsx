@@ -66,7 +66,12 @@ const SortableImage = ({ img, isFeatured, onSetFeatured, onDelete }: {
         {!isFeatured && (
           <button
             type="button"
-            onClick={() => onSetFeatured(img.image_url)}
+            // Stop the drag handler on the image from also firing.
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSetFeatured(img.image_url);
+            }}
             className="bg-accent text-accent-foreground rounded-full p-1"
             title="Set as featured"
           >
@@ -75,7 +80,11 @@ const SortableImage = ({ img, isFeatured, onSetFeatured, onDelete }: {
         )}
         <button
           type="button"
-          onClick={() => onDelete(img.id)}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(img.id);
+          }}
           className="bg-destructive text-destructive-foreground rounded-full p-1"
           title="Delete image"
         >
@@ -123,6 +132,42 @@ const ProductImageManager = ({ productId, sku: skuProp }: ProductImageManagerPro
     queryClient.invalidateQueries({ queryKey: ['admin-products'] });
   };
 
+  /**
+   * Persist a new image order and, if the lead image changed, also update
+   * products.featured_image_url so it stays in sync. We do this explicitly
+   * from the client rather than relying on a DB trigger.
+   */
+  const persistOrder = async (ordered: ProductImage[]) => {
+    if (ordered.length === 0) return;
+
+    // 1) Write all sort_orders.
+    const updates = await Promise.all(
+      ordered.map((img, i) =>
+        supabase.from('product_images').update({ sort_order: i }).eq('id', img.id),
+      ),
+    );
+    const firstErr = updates.find((u) => u.error)?.error;
+    if (firstErr) {
+      toast.error('Failed to update order', { description: firstErr.message });
+      return false;
+    }
+
+    // 2) Sync products.featured_image_url to whatever is now at sort_order 0.
+    const newFeaturedUrl = ordered[0].image_url;
+    if (newFeaturedUrl !== product?.featured_image_url) {
+      const { error: featErr } = await supabase
+        .from('products')
+        .update({ featured_image_url: newFeaturedUrl })
+        .eq('id', productId);
+      if (featErr) {
+        toast.error('Failed to update featured image', { description: featErr.message });
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   const validateFile = (file: File): string | null => {
     if (!ACCEPTED_TYPES.includes(file.type)) {
       return `${file.name}: not a supported image type`;
@@ -146,6 +191,7 @@ const ProductImageManager = ({ productId, sku: skuProp }: ProductImageManagerPro
 
     let nextSort = images.length;
     let successCount = 0;
+    const isFirstUpload = images.length === 0;
 
     for (const file of Array.from(files)) {
       const validationError = validateFile(file);
@@ -176,6 +222,24 @@ const ProductImageManager = ({ productId, sku: skuProp }: ProductImageManagerPro
       }
     }
 
+    // If this product had no images and now does, make sure the first
+    // uploaded image becomes the featured one on products.
+    if (isFirstUpload && successCount > 0) {
+      const { data: refreshed } = await supabase
+        .from('product_images')
+        .select('id, image_url, sort_order')
+        .eq('product_id', productId)
+        .order('sort_order', { ascending: true })
+        .limit(1);
+      const first = refreshed?.[0];
+      if (first) {
+        await supabase
+          .from('products')
+          .update({ featured_image_url: first.image_url })
+          .eq('id', productId);
+      }
+    }
+
     invalidate();
 
     if (successCount > 0) {
@@ -194,26 +258,32 @@ const ProductImageManager = ({ productId, sku: skuProp }: ProductImageManagerPro
     if (oldIndex === -1 || newIndex === -1) return;
 
     const reordered = arrayMove(images, oldIndex, newIndex);
-
-    // Write all sort_orders. The DB trigger trg_sync_featured_image will
-    // keep products.featured_image_url in sync automatically.
-    await Promise.all(
-      reordered.map((img, i) =>
-        supabase.from('product_images').update({ sort_order: i }).eq('id', img.id),
-      ),
-    );
-    invalidate();
+    const ok = await persistOrder(reordered);
+    if (ok) invalidate();
   };
 
   const deleteImage = async (imageId: string) => {
     if (!confirm('Delete this image? This cannot be undone.')) return;
+
+    const wasFeatured = images.find((i) => i.id === imageId)?.image_url === product?.featured_image_url;
 
     const { error } = await supabase.from('product_images').delete().eq('id', imageId);
     if (error) {
       toast.error('Delete failed', { description: error.message });
       return;
     }
-    // The DB trigger handles featured_image_url sync.
+
+    // If we just deleted the featured image, promote the new first image
+    // (if any) so featured_image_url is never stale.
+    if (wasFeatured) {
+      const remaining = images.filter((i) => i.id !== imageId);
+      const newFeaturedUrl = remaining[0]?.image_url ?? null;
+      await supabase
+        .from('products')
+        .update({ featured_image_url: newFeaturedUrl })
+        .eq('id', productId);
+    }
+
     toast.success('Image deleted');
     invalidate();
   };
@@ -221,18 +291,33 @@ const ProductImageManager = ({ productId, sku: skuProp }: ProductImageManagerPro
   const setFeaturedImage = async (imageUrl: string) => {
     if (!product) return;
 
-    // Move the chosen image to sort_order 0; the trigger will sync featured_image_url.
     const idx = images.findIndex((img) => img.image_url === imageUrl);
-    if (idx <= 0) return;
+    if (idx === -1) return;
+
+    // If the image is already at index 0 but products.featured_image_url is
+    // out of sync, fix the products row only. Otherwise reorder + sync.
+    if (idx === 0) {
+      if (product.featured_image_url !== imageUrl) {
+        const { error } = await supabase
+          .from('products')
+          .update({ featured_image_url: imageUrl })
+          .eq('id', productId);
+        if (error) {
+          toast.error('Failed to update featured image', { description: error.message });
+          return;
+        }
+        toast.success('Featured image updated');
+        invalidate();
+      }
+      return;
+    }
 
     const reordered = arrayMove(images, idx, 0);
-    await Promise.all(
-      reordered.map((img, i) =>
-        supabase.from('product_images').update({ sort_order: i }).eq('id', img.id),
-      ),
-    );
-    toast.success('Featured image updated');
-    invalidate();
+    const ok = await persistOrder(reordered);
+    if (ok) {
+      toast.success('Featured image updated');
+      invalidate();
+    }
   };
 
   if (isLoading) {
