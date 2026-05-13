@@ -54,6 +54,16 @@ type StatusChangeVariables = {
   extraData?: Record<string, unknown>;
 };
 
+type HoldFormData = {
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  hold_duration_hours: number;
+  expires_at: string;
+  notes: string;
+  platform: string;
+};
+
 type StatusTab = {
   id: ProductStatusKey;
   label: string;
@@ -264,7 +274,6 @@ const AdminProducts = () => {
     setMoveStatusProduct(null);
     setPendingStatus('available');
     setSoldProduct(null);
-    setHoldProduct(null);
     setLinksProduct(null);
     toast.success('Status updated');
   };
@@ -277,6 +286,73 @@ const AdminProducts = () => {
     onMutate: statusChangeOnMutate,
     onError: statusChangeOnError,
     onSuccess: statusChangeOnSuccess,
+  });
+
+  // Place-hold has its own mutation because hold data belongs on `product_holds`,
+  // NOT on `products`. The `on_product_hold_created` trigger automatically flips
+  // products.status to 'on_hold' after the insert, so do NOT also update products
+  // from here — that's what caused the earlier PGRST204 "customer_email column
+  // does not exist on products" bug.
+  const placeHoldMutation = useMutation({
+    mutationFn: async ({ productId, holdData }: { productId: string; holdData: HoldFormData }) => {
+      const { error } = await supabase.from('product_holds').insert({
+        product_id: productId,
+        customer_name: holdData.customer_name,
+        customer_email: holdData.customer_email || null,
+        customer_phone: holdData.customer_phone || null,
+        hold_duration_hours: holdData.hold_duration_hours,
+        expires_at: holdData.expires_at,
+        notes: holdData.notes || null,
+        platform: holdData.platform || null,
+      });
+      if (error) throw error;
+    },
+    onMutate: async ({ productId }) => {
+      // Optimistically remove from the current (available) tab and bump counts,
+      // mirroring the changeStatusMutation pattern so the UI feels snappy.
+      await queryClient.cancelQueries({ queryKey: ['admin-products', selectedStatus, page, searchQuery] });
+      await queryClient.cancelQueries({ queryKey: ['admin-product-counts'] });
+
+      const previousProducts = queryClient.getQueryData<{ products: Product[]; total: number }>(['admin-products', selectedStatus, page, searchQuery]);
+      const previousCounts = queryClient.getQueryData<CountsMap>(['admin-product-counts']);
+
+      const movingProduct = previousProducts?.products.find((p) => p.id === productId);
+      const oldStatus = (movingProduct?.status as ProductStatusKey) ?? 'available';
+
+      if (previousProducts && oldStatus === selectedStatus) {
+        queryClient.setQueryData(['admin-products', selectedStatus, page, searchQuery], {
+          ...previousProducts,
+          products: previousProducts.products.filter((p) => p.id !== productId),
+          total: Math.max(0, previousProducts.total - 1),
+        });
+      }
+
+      if (previousCounts) {
+        queryClient.setQueryData<CountsMap>(['admin-product-counts'], {
+          ...previousCounts,
+          [oldStatus]: Math.max(0, (previousCounts[oldStatus] ?? 0) - 1),
+          on_hold: (previousCounts.on_hold ?? 0) + 1,
+        });
+      }
+
+      return { previousProducts, previousCounts };
+    },
+    onError: (err: Error, _variables, context: any) => {
+      if (context?.previousProducts) {
+        queryClient.setQueryData(['admin-products', selectedStatus, page, searchQuery], context.previousProducts);
+      }
+      if (context?.previousCounts) {
+        queryClient.setQueryData(['admin-product-counts'], context.previousCounts);
+      }
+      toast.error(err.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-products', selectedStatus, page, searchQuery] });
+      queryClient.invalidateQueries({ queryKey: ['admin-product-counts'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-holds'] });
+      setHoldProduct(null);
+      toast.success('Hold placed');
+    },
   });
 
   const deleteMutation = useMutation({
@@ -597,20 +673,21 @@ const AdminProducts = () => {
         isLoading={changeStatusMutation.isPending}
       />
 
+      {/*
+        Place-hold flow inserts into product_holds. A DB trigger
+        (on_product_hold_created -> update_product_status_on_hold) flips
+        products.status to 'on_hold' automatically, so we do NOT update the
+        products row from here.
+      */}
       <AdminPlaceHoldDialog
         open={!!holdProduct}
         onOpenChange={(open) => !open && setHoldProduct(null)}
         productName={holdProduct?.name ?? ''}
         onConfirm={(holdData) => {
           if (!holdProduct) return;
-          changeStatusMutation.mutate({
-            id: holdProduct.id,
-            oldStatus: holdProduct.status as ProductStatusKey,
-            newStatus: 'on_hold',
-            extraData: holdData,
-          });
+          placeHoldMutation.mutate({ productId: holdProduct.id, holdData });
         }}
-        isLoading={changeStatusMutation.isPending}
+        isLoading={placeHoldMutation.isPending}
       />
 
       {/* Quick-action: upload/manage images modal — works for any status */}
