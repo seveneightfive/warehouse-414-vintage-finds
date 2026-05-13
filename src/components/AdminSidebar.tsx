@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Package, Clock, Archive, BookOpen, BarChart3,
   ChevronDown, ChevronRight, Menu, X, MessageSquare, DollarSign,
