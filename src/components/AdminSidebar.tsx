@@ -3,8 +3,23 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Package, Clock, Archive, BookOpen, BarChart3,
   ChevronDown, ChevronRight, Menu, X, MessageSquare, DollarSign,
-  Grid, Users, Hammer, Palette, Globe,
+  Grid, Users, Hammer, Palette, Globe, LogOut,
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+
+const navigate = useNavigate();
+const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+const handleLogout = async () => {
+  setIsLoggingOut(true);
+  try {
+    await supabase.auth.signOut();
+    navigate('/admin/login', { replace: true });
+  } catch (err) {
+    console.error('Logout failed:', err);
+    setIsLoggingOut(false);
+  }
+};
 
 const AdminSidebar = () => {
   const location = useLocation();
@@ -353,10 +368,25 @@ const AdminSidebar = () => {
         </nav>
 
         {/* Footer */}
-        <div className="hidden lg:block px-6 py-4 border-t border-border text-xs text-muted-foreground text-center">
-          <p>Warehouse 414</p>
-          <p>v1.0</p>
-        </div>
+<div className="px-4 py-4 border-t border-border space-y-3">
+  <button
+    onClick={handleLogout}
+    disabled={isLoggingOut}
+    className="
+      w-full flex items-center gap-3 px-4 py-2.5 rounded-md
+      font-display text-sm tracking-wide transition-colors
+      text-muted-foreground hover:text-foreground hover:bg-muted
+      disabled:opacity-50 disabled:cursor-not-allowed
+    "
+  >
+    <LogOut size={18} />
+    {isLoggingOut ? 'Logging out…' : 'Log Out'}
+  </button>
+  <div className="hidden lg:block text-xs text-muted-foreground text-center">
+    <p>Warehouse 414</p>
+    <p>v1.0</p>
+  </div>
+</div>
       </aside>
 
       {/* Mobile overlay */}
