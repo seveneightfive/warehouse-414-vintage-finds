@@ -187,6 +187,7 @@ const AdminProductForm = () => {
   const queryClient = useQueryClient();
   const isEditing = !!id;
   const taxonomy = useTaxonomyOptions();
+  const hasHydratedRef = useRef(false);
 
   const returnStatus = new URLSearchParams(location.search).get('from') ?? null;
   const backUrl = returnStatus ? `/admin/products?status=${returnStatus}` : '/admin/products';
@@ -270,6 +271,8 @@ const AdminProductForm = () => {
 
   useEffect(() => {
     if (!product || !allSubcategories) return;
+    if (hasHydratedRef.current) return;
+    hasHydratedRef.current = true;
 
     const values: Partial<FormValues> = {};
     for (const key of Object.keys(schema.shape)) {
