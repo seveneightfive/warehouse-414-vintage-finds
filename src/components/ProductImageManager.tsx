@@ -66,7 +66,6 @@ const SortableImage = ({ img, isFeatured, onSetFeatured, onDelete }: {
         {!isFeatured && (
           <button
             type="button"
-            // Stop the drag handler on the image from also firing.
             onPointerDown={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation();
@@ -105,6 +104,10 @@ const ProductImageManager = ({ productId, sku: skuProp }: ProductImageManagerPro
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingFiles, setUploadingFiles] = useState<string[]>([]);
+  const [isDraggingFiles, setIsDraggingFiles] = useState(false);
+  // Drag-enter/leave fire on every child element, so we use a counter to
+  // decide when we're truly outside the drop zone.
+  const dragCounter = useRef(0);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const { data: product, isLoading } = useQuery({
@@ -140,7 +143,6 @@ const ProductImageManager = ({ productId, sku: skuProp }: ProductImageManagerPro
   const persistOrder = async (ordered: ProductImage[]) => {
     if (ordered.length === 0) return;
 
-    // 1) Write all sort_orders.
     const updates = await Promise.all(
       ordered.map((img, i) =>
         supabase.from('product_images').update({ sort_order: i }).eq('id', img.id),
@@ -152,7 +154,6 @@ const ProductImageManager = ({ productId, sku: skuProp }: ProductImageManagerPro
       return false;
     }
 
-    // 2) Sync products.featured_image_url to whatever is now at sort_order 0.
     const newFeaturedUrl = ordered[0].image_url;
     if (newFeaturedUrl !== product?.featured_image_url) {
       const { error: featErr } = await supabase
@@ -178,7 +179,7 @@ const ProductImageManager = ({ productId, sku: skuProp }: ProductImageManagerPro
     return null;
   };
 
-  const uploadImages = async (files: FileList) => {
+  const uploadImages = async (files: FileList | File[]) => {
     if (!sku) {
       toast.error('Product must have a SKU before uploading images');
       return;
@@ -222,8 +223,6 @@ const ProductImageManager = ({ productId, sku: skuProp }: ProductImageManagerPro
       }
     }
 
-    // If this product had no images and now does, make sure the first
-    // uploaded image becomes the featured one on products.
     if (isFirstUpload && successCount > 0) {
       const { data: refreshed } = await supabase
         .from('product_images')
@@ -273,8 +272,6 @@ const ProductImageManager = ({ productId, sku: skuProp }: ProductImageManagerPro
       return;
     }
 
-    // If we just deleted the featured image, promote the new first image
-    // (if any) so featured_image_url is never stale.
     if (wasFeatured) {
       const remaining = images.filter((i) => i.id !== imageId);
       const newFeaturedUrl = remaining[0]?.image_url ?? null;
@@ -294,8 +291,6 @@ const ProductImageManager = ({ productId, sku: skuProp }: ProductImageManagerPro
     const idx = images.findIndex((img) => img.image_url === imageUrl);
     if (idx === -1) return;
 
-    // If the image is already at index 0 but products.featured_image_url is
-    // out of sync, fix the products row only. Otherwise reorder + sync.
     if (idx === 0) {
       if (product.featured_image_url !== imageUrl) {
         const { error } = await supabase
@@ -320,6 +315,49 @@ const ProductImageManager = ({ productId, sku: skuProp }: ProductImageManagerPro
     }
   };
 
+  // ── Native HTML5 drag-and-drop file upload ────────────────────────────────
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current = 0;
+    setIsDraggingFiles(false);
+
+    const files = e.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+
+    const imageFiles = Array.from(files).filter((f) => f.type.startsWith('image/'));
+    if (imageFiles.length === 0) {
+      toast.error('Please drop image files only');
+      return;
+    }
+    uploadImages(imageFiles);
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer?.types?.includes('Files')) {
+      dragCounter.current += 1;
+      setIsDraggingFiles(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter.current -= 1;
+    if (dragCounter.current <= 0) {
+      dragCounter.current = 0;
+      setIsDraggingFiles(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    // Required for onDrop to fire.
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
   if (isLoading) {
     return <p className="text-sm text-muted-foreground">Loading images…</p>;
   }
@@ -333,7 +371,16 @@ const ProductImageManager = ({ productId, sku: skuProp }: ProductImageManagerPro
   }
 
   return (
-    <div className="space-y-4">
+    <div
+      onDrop={handleDrop}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      className={cn(
+        'space-y-4 relative rounded-md transition-colors',
+        isDraggingFiles && 'ring-2 ring-primary ring-offset-2 bg-primary/5',
+      )}
+    >
       <input
         ref={fileInputRef}
         type="file"
@@ -344,20 +391,43 @@ const ProductImageManager = ({ productId, sku: skuProp }: ProductImageManagerPro
           if (e.target.files && e.target.files.length > 0) {
             uploadImages(e.target.files);
           }
-          // reset so the same file can be re-selected if needed
           e.target.value = '';
         }}
       />
-      <Button
-        type="button"
-        variant="outline"
-        className="gap-2"
-        onClick={() => fileInputRef.current?.click()}
-      >
-        <Upload size={16} /> Upload Images
-      </Button>
 
-      {(images.length > 0 || uploadingFiles.length > 0) && (
+      <div className="flex items-center gap-3 flex-wrap">
+        <Button
+          type="button"
+          variant="outline"
+          className="gap-2"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <Upload size={16} /> Upload Images
+        </Button>
+        <p className="text-xs text-muted-foreground">
+          or drag and drop image files anywhere in this area
+        </p>
+      </div>
+
+      {/* Drop overlay shown while dragging files over the manager. */}
+      {isDraggingFiles && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none rounded-md bg-background/80 backdrop-blur-[1px]">
+          <div className="text-center space-y-1">
+            <Upload className="mx-auto text-primary" size={28} />
+            <p className="text-sm font-medium text-foreground">Drop to upload</p>
+            <p className="text-xs text-muted-foreground">JPG, PNG, WebP, GIF · up to 25MB each</p>
+          </div>
+        </div>
+      )}
+
+      {images.length === 0 && uploadingFiles.length === 0 ? (
+        <div className="border-2 border-dashed border-border rounded-md p-8 text-center">
+          <Upload className="mx-auto text-muted-foreground mb-2" size={24} />
+          <p className="text-sm text-muted-foreground">
+            No images yet. Click <span className="font-medium text-foreground">Upload Images</span> or drag files here.
+          </p>
+        </div>
+      ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={images.map((img) => img.id)} strategy={rectSortingStrategy}>
             <div className="grid grid-cols-4 md:grid-cols-6 gap-3">
