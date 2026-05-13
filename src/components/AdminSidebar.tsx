@@ -7,26 +7,25 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
-const navigate = useNavigate();
-const [isLoggingOut, setIsLoggingOut] = useState(false);
-
-const handleLogout = async () => {
-  setIsLoggingOut(true);
-  try {
-    await supabase.auth.signOut();
-    navigate('/admin/login', { replace: true });
-  } catch (err) {
-    console.error('Logout failed:', err);
-    setIsLoggingOut(false);
-  }
-};
-
 const AdminSidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [expandProducts, setExpandProducts] = useState(
     location.pathname.startsWith('/admin/products')
   );
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await supabase.auth.signOut();
+      navigate('/admin/login', { replace: true });
+    } catch (err) {
+      console.error('Logout failed:', err);
+      setIsLoggingOut(false);
+    }
+  };
 
   const isActive = (path: string) => location.pathname === path;
   const isProductsActive = location.pathname.startsWith('/admin/products');
