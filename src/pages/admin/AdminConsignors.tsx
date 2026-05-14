@@ -154,21 +154,20 @@ const AdminConsignors = () => {
         </Button>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="Search by name, code, or email…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
-      </div>
+      <div className="relative">
+  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+  <Input
+    placeholder="Search by name, code, or email…"
+    value={search}
+    onChange={(e) => setSearch(e.target.value)}
+    className="pl-9"
+  />
+</div>
 
-      {isLoading ? (
+{isLoading ? (
   <p className="text-muted-foreground text-sm">Loading…</p>
 ) : (
-  <div className="w-full rounded-md border overflow-x-auto">
-    <Table className="w-full min-w-[1100px]">
+  <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
