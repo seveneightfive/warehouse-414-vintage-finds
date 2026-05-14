@@ -165,10 +165,10 @@ const AdminConsignors = () => {
       </div>
 
       {isLoading ? (
-        <p className="text-muted-foreground text-sm">Loading…</p>
-      ) : (
-        <div className="rounded-md border overflow-x-auto">
-          <Table>
+  <p className="text-muted-foreground text-sm">Loading…</p>
+) : (
+  <div className="w-full rounded-md border overflow-x-auto">
+    <Table className="w-full min-w-[1100px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
