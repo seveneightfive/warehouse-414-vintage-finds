@@ -58,16 +58,17 @@ const AdminConsignors = () => {
   const [form, setForm] = useState<ConsignorForm>(emptyForm);
 
   const { data: consignors, isLoading, refetch: fetchConsignors } = useQuery({
-    queryKey: ['admin-consignors'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('consignors_with_stats' as any)
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return (data as any[]) as ConsignorStats[];
-    },
-  });
+  queryKey: ['admin-consignors'],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from('consignors_with_stats' as any)
+      .select('*')
+      .order('last_name', { ascending: true, nullsFirst: false })
+      .order('first_name', { ascending: true, nullsFirst: false });
+    if (error) throw error;
+    return (data as any[]) as ConsignorStats[];
+  },
+});
 
   const upsertMutation = useMutation({
     mutationFn: async (values: ConsignorForm & { id?: string }) => {
