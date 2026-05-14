@@ -24,6 +24,9 @@ import {
   Search,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
   MoreVertical,
   Eye,
   Pencil,
@@ -42,6 +45,9 @@ import AdminPlaceHoldDialog from '@/components/AdminPlaceHoldDialog';
 import QuickUploadImagesModal from '@/components/QuickUploadImagesModal';
 
 const PAGE_SIZE = 25;
+
+// 360 days in milliseconds — threshold for the "old listing" indicator.
+const STALE_LISTING_MS = 360 * 24 * 60 * 60 * 1000;
 
 type ProductStatusKey = 'available' | 'draft' | 'at_auction' | 'sold' | 'on_hold' | 'inventory' | 'deactivated';
 
@@ -63,6 +69,10 @@ type HoldFormData = {
   notes: string;
   platform: string;
 };
+
+// Sortable columns and direction. `default` reverts to created_at desc.
+type SortKey = 'default' | 'price' | 'created_at';
+type SortDir = 'asc' | 'desc';
 
 type StatusTab = {
   id: ProductStatusKey;
@@ -90,16 +100,6 @@ const STATUS_LABELS: Record<ProductStatusKey, string> = {
   deactivated: 'Deactivated',
 };
 
-const STATUS_BADGE: Record<ProductStatusKey, { label: string; className: string }> = {
-  available: { label: 'Available', className: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' },
-  on_hold: { label: 'On Hold', className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300' },
-  at_auction: { label: 'At Auction', className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300' },
-  sold: { label: 'Sold', className: 'bg-muted text-muted-foreground' },
-  inventory: { label: 'Inventory', className: 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300' },
-  draft: { label: 'Draft', className: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300' },
-  deactivated: { label: 'Deactivated', className: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' },
-};
-
 const STATUS_OPTIONS: ProductStatusKey[] = ['available', 'draft', 'on_hold', 'at_auction', 'sold', 'inventory', 'deactivated'];
 
 const VALID_STATUSES: ProductStatusKey[] = ['available', 'draft', 'at_auction', 'sold', 'on_hold', 'inventory', 'deactivated'];
@@ -112,15 +112,6 @@ const defaultCounts: CountsMap = {
   on_hold: 0,
   inventory: 0,
   deactivated: 0,
-};
-
-const StatusBadge = ({ status }: { status: ProductStatusKey }) => {
-  const config = STATUS_BADGE[status] ?? { label: status, className: 'bg-muted text-muted-foreground' };
-  return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase whitespace-nowrap ${config.className}`}>
-      {config.label}
-    </span>
-  );
 };
 
 const formatPrice = (product: Product) => {
@@ -138,6 +129,50 @@ const formatDate = (dateString?: string | null) => {
     day: 'numeric',
     year: 'numeric',
   });
+};
+
+// "Has this product been live for 360+ days?" Uses published_at, falling
+// back to created_at when products predate the column's existence.
+const isStaleListing = (product: Product) => {
+  const ref = (product as any).published_at ?? product.created_at;
+  if (!ref) return false;
+  return Date.now() - new Date(ref).getTime() > STALE_LISTING_MS;
+};
+
+const daysSince = (dateString?: string | null) => {
+  if (!dateString) return 0;
+  return Math.floor((Date.now() - new Date(dateString).getTime()) / (1000 * 60 * 60 * 24));
+};
+
+// Tiny monochrome chips for cross-listing presence. Dimmed when not listed.
+const CrossListChips = ({ product }: { product: Product }) => {
+  const platforms: { label: string; key: 'firstdibs_url' | 'chairish_url' | 'ebay_url'; title: string }[] = [
+    { label: '1D', key: 'firstdibs_url', title: '1stDibs' },
+    { label: 'CH', key: 'chairish_url', title: 'Chairish' },
+    { label: 'eB', key: 'ebay_url', title: 'eBay' },
+  ];
+  return (
+    <div className="flex gap-1">
+      {platforms.map((p) => {
+        const url = (product as any)[p.key];
+        const listed = !!(url && String(url).trim());
+        return (
+          <span
+            key={p.key}
+            title={listed ? `Listed on ${p.title}` : `Not on ${p.title}`}
+            className={
+              'inline-flex items-center justify-center text-[10px] font-semibold tracking-wider uppercase rounded-sm px-1.5 py-0.5 border ' +
+              (listed
+                ? 'border-foreground/70 text-foreground bg-foreground/5'
+                : 'border-border text-muted-foreground/40 bg-transparent')
+            }
+          >
+            {p.label}
+          </span>
+        );
+      })}
+    </div>
+  );
 };
 
 const fetchStatusCounts = async () => {
@@ -176,6 +211,10 @@ const AdminProducts = () => {
   const [linksState, setLinksState] = useState({ firstdibs_url: '', chairish_url: '', ebay_url: '' });
   const [isSavingLinks, setIsSavingLinks] = useState(false);
 
+  // Sort state — defaults to newest-first by created_at.
+  const [sortKey, setSortKey] = useState<SortKey>('default');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
+
   // Quick-action: upload images modal — available for any product, any status.
   const [uploadProduct, setUploadProduct] = useState<Product | null>(null);
 
@@ -196,7 +235,7 @@ const AdminProducts = () => {
 
   useEffect(() => {
     setPage(0);
-  }, [selectedStatus]);
+  }, [selectedStatus, sortKey, sortDir]);
 
   const { data: countsData } = useQuery({
     queryKey: ['admin-product-counts'],
@@ -205,7 +244,7 @@ const AdminProducts = () => {
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-products', selectedStatus, page, searchQuery],
+    queryKey: ['admin-products', selectedStatus, page, searchQuery, sortKey, sortDir],
     staleTime: 0,
     refetchOnWindowFocus: true,
     queryFn: async () => {
@@ -213,10 +252,25 @@ const AdminProducts = () => {
       let listQuery = supabase
         .from('products')
         .select('*, product_images(image_url, sort_order)')
-        .eq('status', selectedStatus)
-        .order('created_at', { ascending: false })
-        .order('id', { ascending: false })
-        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+        .eq('status', selectedStatus);
+
+      // Apply ordering. Default is newest-first by created_at, with id as
+      // a stable tiebreaker so pagination doesn't flicker.
+      if (sortKey === 'price') {
+        listQuery = listQuery
+          .order('price', { ascending: sortDir === 'asc', nullsFirst: false })
+          .order('id', { ascending: false });
+      } else if (sortKey === 'created_at') {
+        listQuery = listQuery
+          .order('created_at', { ascending: sortDir === 'asc' })
+          .order('id', { ascending: false });
+      } else {
+        listQuery = listQuery
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: false });
+      }
+
+      listQuery = listQuery.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
       if (searchQuery) {
         const filter = `name.ilike.%${searchQuery}%,sku.ilike.%${searchQuery}%`;
@@ -234,15 +288,36 @@ const AdminProducts = () => {
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE));
   const counts = countsData ?? defaultCounts;
 
+  // Click a sortable header. First click → desc. Second click → asc. Third → off.
+  const cycleSort = (key: 'price' | 'created_at') => {
+    if (sortKey !== key) {
+      setSortKey(key);
+      setSortDir('desc');
+      return;
+    }
+    if (sortDir === 'desc') {
+      setSortDir('asc');
+      return;
+    }
+    // sortDir === 'asc' → clear back to default
+    setSortKey('default');
+    setSortDir('desc');
+  };
+
+  const SortIcon = ({ active, dir }: { active: boolean; dir: SortDir }) => {
+    if (!active) return <ChevronsUpDown size={12} className="opacity-40" />;
+    return dir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />;
+  };
+
   const statusChangeOnMutate = async ({ id, oldStatus, newStatus }: StatusChangeVariables) => {
-    await queryClient.cancelQueries({ queryKey: ['admin-products', selectedStatus, page, searchQuery] });
+    await queryClient.cancelQueries({ queryKey: ['admin-products', selectedStatus, page, searchQuery, sortKey, sortDir] });
     await queryClient.cancelQueries({ queryKey: ['admin-product-counts'] });
 
-    const previousProducts = queryClient.getQueryData<{ products: Product[]; total: number }>(['admin-products', selectedStatus, page, searchQuery]);
+    const previousProducts = queryClient.getQueryData<{ products: Product[]; total: number }>(['admin-products', selectedStatus, page, searchQuery, sortKey, sortDir]);
     const previousCounts = queryClient.getQueryData<CountsMap>(['admin-product-counts']);
 
     if (previousProducts && oldStatus === selectedStatus) {
-      queryClient.setQueryData(['admin-products', selectedStatus, page, searchQuery], {
+      queryClient.setQueryData(['admin-products', selectedStatus, page, searchQuery, sortKey, sortDir], {
         ...previousProducts,
         products: previousProducts.products.filter((product) => product.id !== id),
         total: Math.max(0, previousProducts.total - 1),
@@ -262,7 +337,7 @@ const AdminProducts = () => {
 
   const statusChangeOnError = (err: Error, _variables: StatusChangeVariables, context: any) => {
     if (context?.previousProducts) {
-      queryClient.setQueryData(['admin-products', selectedStatus, page, searchQuery], context.previousProducts);
+      queryClient.setQueryData(['admin-products', selectedStatus, page, searchQuery, sortKey, sortDir], context.previousProducts);
     }
     if (context?.previousCounts) {
       queryClient.setQueryData(['admin-product-counts'], context.previousCounts);
@@ -288,11 +363,9 @@ const AdminProducts = () => {
     onSuccess: statusChangeOnSuccess,
   });
 
-  // Place-hold has its own mutation because hold data belongs on `product_holds`,
-  // NOT on `products`. The `on_product_hold_created` trigger automatically flips
-  // products.status to 'on_hold' after the insert, so do NOT also update products
-  // from here — that's what caused the earlier PGRST204 "customer_email column
-  // does not exist on products" bug.
+  // Place-hold has its own mutation because hold data belongs on product_holds,
+  // NOT on products. The on_product_hold_created trigger automatically flips
+  // products.status to 'on_hold' after the insert.
   const placeHoldMutation = useMutation({
     mutationFn: async ({ productId, holdData }: { productId: string; holdData: HoldFormData }) => {
       const { error } = await supabase.from('product_holds').insert({
@@ -308,19 +381,17 @@ const AdminProducts = () => {
       if (error) throw error;
     },
     onMutate: async ({ productId }) => {
-      // Optimistically remove from the current (available) tab and bump counts,
-      // mirroring the changeStatusMutation pattern so the UI feels snappy.
-      await queryClient.cancelQueries({ queryKey: ['admin-products', selectedStatus, page, searchQuery] });
+      await queryClient.cancelQueries({ queryKey: ['admin-products', selectedStatus, page, searchQuery, sortKey, sortDir] });
       await queryClient.cancelQueries({ queryKey: ['admin-product-counts'] });
 
-      const previousProducts = queryClient.getQueryData<{ products: Product[]; total: number }>(['admin-products', selectedStatus, page, searchQuery]);
+      const previousProducts = queryClient.getQueryData<{ products: Product[]; total: number }>(['admin-products', selectedStatus, page, searchQuery, sortKey, sortDir]);
       const previousCounts = queryClient.getQueryData<CountsMap>(['admin-product-counts']);
 
       const movingProduct = previousProducts?.products.find((p) => p.id === productId);
       const oldStatus = (movingProduct?.status as ProductStatusKey) ?? 'available';
 
       if (previousProducts && oldStatus === selectedStatus) {
-        queryClient.setQueryData(['admin-products', selectedStatus, page, searchQuery], {
+        queryClient.setQueryData(['admin-products', selectedStatus, page, searchQuery, sortKey, sortDir], {
           ...previousProducts,
           products: previousProducts.products.filter((p) => p.id !== productId),
           total: Math.max(0, previousProducts.total - 1),
@@ -339,7 +410,7 @@ const AdminProducts = () => {
     },
     onError: (err: Error, _variables, context: any) => {
       if (context?.previousProducts) {
-        queryClient.setQueryData(['admin-products', selectedStatus, page, searchQuery], context.previousProducts);
+        queryClient.setQueryData(['admin-products', selectedStatus, page, searchQuery, sortKey, sortDir], context.previousProducts);
       }
       if (context?.previousCounts) {
         queryClient.setQueryData(['admin-product-counts'], context.previousCounts);
@@ -347,7 +418,7 @@ const AdminProducts = () => {
       toast.error(err.message);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-products', selectedStatus, page, searchQuery] });
+      queryClient.invalidateQueries({ queryKey: ['admin-products', selectedStatus, page, searchQuery, sortKey, sortDir] });
       queryClient.invalidateQueries({ queryKey: ['admin-product-counts'] });
       queryClient.invalidateQueries({ queryKey: ['admin-holds'] });
       setHoldProduct(null);
@@ -377,8 +448,6 @@ const AdminProducts = () => {
     setLinksProduct(product);
   };
 
-  // Awaited save handler — fixes the previous bug where the Supabase call wasn't awaited
-  // so `error` was always undefined and the success path always fired.
   const saveLinks = async () => {
     if (!linksProduct) return;
     setIsSavingLinks(true);
@@ -394,7 +463,7 @@ const AdminProducts = () => {
       }
       toast.success('External links updated');
       setLinksProduct(null);
-      queryClient.invalidateQueries({ queryKey: ['admin-products', selectedStatus, page, searchQuery] });
+      queryClient.invalidateQueries({ queryKey: ['admin-products', selectedStatus, page, searchQuery, sortKey, sortDir] });
     } finally {
       setIsSavingLinks(false);
     }
@@ -462,9 +531,29 @@ const AdminProducts = () => {
                 <TableHead className="w-16">Image</TableHead>
                 <TableHead className="w-32">SKU</TableHead>
                 <TableHead>Title</TableHead>
-                <TableHead className="w-28">Status</TableHead>
-                <TableHead className="w-28">Price</TableHead>
-                <TableHead className="w-28">Added</TableHead>
+                <TableHead className="w-28">Cross-Listed</TableHead>
+                <TableHead className="w-28">
+                  <button
+                    type="button"
+                    onClick={() => cycleSort('price')}
+                    className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                    title="Sort by price"
+                  >
+                    Price
+                    <SortIcon active={sortKey === 'price'} dir={sortDir} />
+                  </button>
+                </TableHead>
+                <TableHead className="w-28">
+                  <button
+                    type="button"
+                    onClick={() => cycleSort('created_at')}
+                    className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                    title="Sort by date added"
+                  >
+                    Added
+                    <SortIcon active={sortKey === 'created_at'} dir={sortDir} />
+                  </button>
+                </TableHead>
                 <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
@@ -472,6 +561,9 @@ const AdminProducts = () => {
               {products.map((product) => {
                 const thumb = product.product_images?.sort((a, b) => a.sort_order - b.sort_order)?.[0];
                 const hasImages = !!thumb || !!product.featured_image_url;
+                const stale = isStaleListing(product);
+                const publishedAt = (product as any).published_at ?? product.created_at;
+                const daysListed = daysSince(publishedAt);
 
                 return (
                   <TableRow key={product.id}>
@@ -493,8 +585,16 @@ const AdminProducts = () => {
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{product.sku || '—'}</TableCell>
                     <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span>{product.name}</span>
+                        {stale && (
+                          <span
+                            title={`Listed ${daysListed} days ago`}
+                            className="inline-flex items-center text-amber-700 dark:text-amber-300"
+                          >
+                            <Clock size={14} />
+                          </span>
+                        )}
                         {!hasImages && (
                           <span className="text-[10px] font-semibold tracking-wider uppercase text-amber-700 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-300 px-1.5 py-0.5 rounded">
                             No images
@@ -503,16 +603,7 @@ const AdminProducts = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setMoveStatusProduct(product);
-                          setPendingStatus('available');
-                        }}
-                        className="inline-flex items-center rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold text-foreground transition-colors hover:border-primary hover:bg-primary/10"
-                      >
-                        <StatusBadge status={product.status as ProductStatusKey} />
-                      </button>
+                      <CrossListChips product={product} />
                     </TableCell>
                     <TableCell>{formatPrice(product)}</TableCell>
                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(product.created_at)}</TableCell>
@@ -535,7 +626,6 @@ const AdminProducts = () => {
                             </Link>
                           </DropdownMenuItem>
 
-                          {/* Quick action: upload/manage images without leaving this page */}
                           <DropdownMenuItem
                             onClick={() => setUploadProduct(product)}
                             className="flex items-center gap-2 cursor-pointer"
@@ -673,12 +763,6 @@ const AdminProducts = () => {
         isLoading={changeStatusMutation.isPending}
       />
 
-      {/*
-        Place-hold flow inserts into product_holds. A DB trigger
-        (on_product_hold_created -> update_product_status_on_hold) flips
-        products.status to 'on_hold' automatically, so we do NOT update the
-        products row from here.
-      */}
       <AdminPlaceHoldDialog
         open={!!holdProduct}
         onOpenChange={(open) => !open && setHoldProduct(null)}
@@ -690,7 +774,6 @@ const AdminProducts = () => {
         isLoading={placeHoldMutation.isPending}
       />
 
-      {/* Quick-action: upload/manage images modal — works for any status */}
       <QuickUploadImagesModal
         productId={uploadProduct?.id ?? null}
         productName={uploadProduct?.name ?? null}
