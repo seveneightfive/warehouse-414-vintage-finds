@@ -53,6 +53,51 @@ function consignorLabel(c: Consignor | null) {
   return c.consignor_code ? `${c.consignor_code} · ${name}` : name || "—";
 }
 
+// Format a Date as YYYY-MM-DD in *local* time (not UTC) so it matches the
+// <input type="date"> control and doesn't shift across timezones.
+function toLocalISODate(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+// Returns the next Wednesday (today if today is Wednesday) as a Date.
+function nextWednesdayDate(from = new Date()) {
+  const d = new Date(from);
+  d.setHours(0, 0, 0, 0);
+  const dayOfWeek = d.getDay(); // 0=Sun .. 3=Wed .. 6=Sat
+  const daysUntilWed = (3 - dayOfWeek + 7) % 7; // 0 if Wed, else 1..6
+  d.setDate(d.getDate() + daysUntilWed);
+  return d;
+}
+
+// Returns the next Wednesday not already used by an existing production week.
+function nextAvailableWednesday(taken: string[]) {
+  const takenSet = new Set(taken);
+  let candidate = nextWednesdayDate();
+  // Cap the search at ~2 years to avoid pathological loops.
+  for (let i = 0; i < 104; i++) {
+    const iso = toLocalISODate(candidate);
+    if (!takenSet.has(iso)) return iso;
+    candidate.setDate(candidate.getDate() + 7);
+  }
+  // Fallback — shouldn't happen, but return next Wednesday regardless.
+  return toLocalISODate(nextWednesdayDate());
+}
+
+// Build a friendly default title from a YYYY-MM-DD string.
+function defaultWeekTitle(iso: string) {
+  const [y, m, d] = iso.split("-").map(Number);
+  // Construct as local date by passing parts — avoids UTC parsing of plain ISO date.
+  const dt = new Date(y, m - 1, d);
+  return `Week of ${dt.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  })}`;
+}
+
 // ── Upload helper ──────────────────────────────────────────────────────────
 async function uploadIntakeImage(file: File): Promise<string | null> {
   const ext = file.name.split(".").pop();
@@ -528,18 +573,39 @@ function EditInventoryModal({
 // ── Create Production Week Modal ───────────────────────────────────────────
 function CreateWeekModal({
   selectedIds,
+  existingWeekDates,
   onClose,
   onSaved,
 }: {
   selectedIds: string[];
+  /** All current production_weeks.work_week_date values, used to skip taken Wednesdays. */
+  existingWeekDates: string[];
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [title, setTitle] = useState("");
-  const [weekDate, setWeekDate] = useState(new Date().toISOString().split("T")[0]);
+  // Compute the default date once, then derive a friendly default title from it.
+  const defaultDate = nextAvailableWednesday(existingWeekDates);
+  const [title, setTitle] = useState(defaultWeekTitle(defaultDate));
+  const [weekDate, setWeekDate] = useState(defaultDate);
   const [notes, setNotes] = useState("");
+  // Track whether the user has edited the title — if not, we update it when
+  // they change the date. Once they've touched it, we leave their text alone.
+  const [titleEdited, setTitleEdited] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isEmpty = selectedIds.length === 0;
+  const dateIsTaken = existingWeekDates.includes(weekDate);
+  const pickedDay = (() => {
+    const [y, m, d] = weekDate.split("-").map(Number);
+    return new Date(y, m - 1, d).getDay();
+  })();
+  const dateIsNotWed = !Number.isNaN(pickedDay) && pickedDay !== 3;
+
+  function handleDateChange(next: string) {
+    setWeekDate(next);
+    if (!titleEdited) setTitle(defaultWeekTitle(next));
+  }
 
   async function handleSave() {
     if (!title.trim()) { setError("Week title is required."); return; }
@@ -554,15 +620,18 @@ function CreateWeekModal({
 
     if (wErr || !week) { setError(wErr?.message || "Failed to create week."); setSaving(false); return; }
 
-    const rows = selectedIds.map((pid, i) => ({
-      production_week_id: week.id,
-      product_id: pid,
-      sort_order: i,
-    }));
+    if (selectedIds.length > 0) {
+      const rows = selectedIds.map((pid, i) => ({
+        production_week_id: week.id,
+        product_id: pid,
+        sort_order: i,
+      }));
 
-    const { error: jErr } = await supabase.from("production_week_products").insert(rows);
+      const { error: jErr } = await supabase.from("production_week_products").insert(rows);
+      if (jErr) { setError(jErr.message); setSaving(false); return; }
+    }
+
     setSaving(false);
-    if (jErr) { setError(jErr.message); return; }
     onSaved();
     onClose();
   }
@@ -576,20 +645,37 @@ function CreateWeekModal({
         </div>
         <div className="modal-body">
           {error && <div className="form-error">{error}</div>}
-          <p className="week-item-count">{selectedIds.length} item{selectedIds.length !== 1 ? "s" : ""} selected</p>
+          <p className="week-item-count">
+            {isEmpty
+              ? "Empty week — items can be added later"
+              : `${selectedIds.length} item${selectedIds.length !== 1 ? "s" : ""} selected`}
+          </p>
 
           <div className="form-grid">
             <div className="form-field full">
               <label>Week Title <span className="req">*</span></label>
               <input
                 value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                onChange={(e) => { setTitle(e.target.value); setTitleEdited(true); }}
                 placeholder="e.g. Spring Drop Wk 1"
               />
             </div>
-            <div className="form-field">
+            <div className="form-field full">
               <label>Week of</label>
-              <input type="date" value={weekDate} onChange={(e) => setWeekDate(e.target.value)} />
+              <input
+                type="date"
+                value={weekDate}
+                onChange={(e) => handleDateChange(e.target.value)}
+              />
+              <div className="field-help">
+                Production weeks typically begin on Wednesday. Pre-filled with the next open Wednesday.
+                {dateIsTaken && (
+                  <span className="field-help--warn"> A week already exists for this date.</span>
+                )}
+                {!dateIsTaken && dateIsNotWed && (
+                  <span className="field-help--warn"> Heads-up: this date isn't a Wednesday.</span>
+                )}
+              </div>
             </div>
             <div className="form-field full">
               <label>Notes</label>
@@ -801,6 +887,7 @@ export default function AdminInventory() {
     );
 
   const totalItemsInWeeks = weeks.reduce((sum, w) => sum + w.products.length, 0);
+  const existingWeekDates = weeks.map((w) => w.work_week_date).filter(Boolean);
 
   return (
     <>
@@ -812,8 +899,23 @@ export default function AdminInventory() {
         .inv-header { display: flex; align-items: center; justify-content: space-between; padding: 28px 32px 0; border-bottom: 2px solid #e5e2d9; padding-bottom: 20px; }
         .inv-header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin: 0; }
         .inv-meta { font-size: .75rem; color: #888; margin-top: 2px; }
+        .inv-header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         .btn-add-inventory { background: #111; color: #fff; border: none; padding: 10px 20px; font-family: inherit; font-size: .8rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; transition: background .15s; }
         .btn-add-inventory:hover { background: #333; }
+        .btn-new-week {
+          background: #fff;
+          color: #111;
+          border: 1px solid #111;
+          padding: 10px 20px;
+          font-family: inherit;
+          font-size: .8rem;
+          font-weight: 600;
+          letter-spacing: .08em;
+          text-transform: uppercase;
+          cursor: pointer;
+          transition: all .15s;
+        }
+        .btn-new-week:hover { background: #111; color: #fff; }
         
         /* ── Toolbar ── */
         .inv-toolbar { display: flex; align-items: center; gap: 12px; padding: 16px 32px; border-bottom: 1px solid #e5e2d9; flex-wrap: wrap; }
@@ -1000,6 +1102,8 @@ export default function AdminInventory() {
         .form-error { background: #ffeaea; border: 1px solid #ffbaba; color: #c00; padding: 8px 12px; font-size: .82rem; margin-bottom: 12px; }
         .form-info { background: #fdf8ee; border: 1px solid #f0e4c2; color: #6b5a1f; padding: 8px 12px; font-size: .82rem; margin-bottom: 12px; }
         .req { color: #e00; }
+        .field-help { font-size: .72rem; color: #888; margin-top: 2px; line-height: 1.4; }
+        .field-help--warn { color: #b07000; font-weight: 600; }
         
         /* ── Image upload ── */
         .image-upload-section { margin-top: 20px; }
@@ -1052,9 +1156,22 @@ export default function AdminInventory() {
                 : `${weeks.length} production week${weeks.length !== 1 ? "s" : ""} · ${totalItemsInWeeks} item${totalItemsInWeeks !== 1 ? "s" : ""} assigned`}
             </div>
           </div>
-          <button className="btn-add-inventory" onClick={() => setShowAddModal(true)}>
-            + Add Inventory
-          </button>
+          <div className="inv-header-actions">
+            <button
+              className="btn-new-week"
+              onClick={() => {
+                // Empty week: clear any selection so the dialog shows the
+                // "Empty week — items can be added later" hint instead of a count.
+                setSelected(new Set());
+                setShowWeekModal(true);
+              }}
+            >
+              + New Week
+            </button>
+            <button className="btn-add-inventory" onClick={() => setShowAddModal(true)}>
+              + Add Inventory
+            </button>
+          </div>
         </div>
 
         {/* Toolbar */}
@@ -1215,7 +1332,7 @@ export default function AdminInventory() {
             filteredWeeks.length === 0 ? (
               <div className="empty-state">
                 {weeks.length === 0
-                  ? "No production weeks yet. Select inventory items and click \"Group into Week\" to create one."
+                  ? "No production weeks yet. Click \"+ New Week\" up top to create an empty one, or select inventory items and click \"Group into Week\"."
                   : "No weeks match your search."}
               </div>
             ) : (
@@ -1302,6 +1419,7 @@ export default function AdminInventory() {
       {showWeekModal && (
         <CreateWeekModal
           selectedIds={Array.from(selected)}
+          existingWeekDates={existingWeekDates}
           onClose={() => setShowWeekModal(false)}
           onSaved={() => { setSelected(new Set()); loadData(); }}
         />
