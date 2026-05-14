@@ -233,7 +233,6 @@ onClick={() => navigate(`/admin/consignors/${c.id}`)}
               )}
             </TableBody>
           </Table>
-        </div>
       )}
 
       {/* Add / Edit Modal */}
