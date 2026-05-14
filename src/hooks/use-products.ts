@@ -21,8 +21,11 @@ const PRODUCT_DETAIL_SELECT = `
   product_colors(*, color:colors(*))
 `;
 
+// NOTE: storefront card queries select published_at so cursor-based pagination
+// can use it. We still keep created_at in case any downstream consumer reads
+// it for display.
 const PRODUCT_CARD_SELECT = `
-  id, name, slug, price, status, featured_image_url, created_at, sale_price,
+  id, name, slug, price, status, featured_image_url, created_at, published_at, sale_price,
   product_designers ( attribution_type, designer:designers(id, name, slug) ),
   product_makers    ( attribution_type, maker:makers(id, name, slug) ),
   product_categories( is_primary, category:categories(id, name, slug) ),
@@ -35,7 +38,7 @@ const PRODUCT_CARD_SELECT = `
 // matching product_categories row, and lets us filter by category_id /
 // subcategory_id at the database level instead of pre-querying ids.
 const PRODUCT_CARD_SELECT_WITH_CATEGORY_FILTER = `
-  id, name, slug, price, status, featured_image_url, created_at, sale_price,
+  id, name, slug, price, status, featured_image_url, created_at, published_at, sale_price,
   product_designers ( attribution_type, designer:designers(id, name, slug) ),
   product_makers    ( attribution_type, maker:makers(id, name, slug) ),
   product_categories!inner ( is_primary, category_id, subcategory_id, category:categories(id, name, slug) ),
@@ -45,7 +48,9 @@ const PRODUCT_CARD_SELECT_WITH_CATEGORY_FILTER = `
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Cursor = { created_at: string; id: string };
+// Cursor key for keyset pagination on the catalog. Uses published_at so the
+// sort order on the storefront matches the cursor's tiebreaker logic.
+type Cursor = { published_at: string; id: string };
 
 type ProductFilters = {
   designer_slug?: string;
@@ -91,8 +96,6 @@ async function resolveCategoryDescendants(filters: ProductFilters): Promise<{
   }
 
   if (filters.category_id) {
-    // L1 selected: any product_categories row with this category_id matches,
-    // regardless of which subcategory_id (if any) it has.
     return { subcategoryIds: null, categoryId: filters.category_id };
   }
 
@@ -118,17 +121,18 @@ export function useInfiniteProducts(filters?: ProductFilters) {
         categoryFilterL1 = resolved.categoryId;
       }
 
-      // Only switch to the inner-join select when a category filter is on,
-      // so products without any product_categories row aren't accidentally
-      // hidden in the unfiltered case.
       const selectClause = hasCategoryFilter
         ? PRODUCT_CARD_SELECT_WITH_CATEGORY_FILTER
         : PRODUCT_CARD_SELECT;
 
+      // Order by published_at (newest first) so backfilled / imported items
+      // appear in their historical position rather than at the top.
+      // nullsFirst: false keeps any product without a published_at value
+      // (e.g. a draft accidentally exposed) out of the top of the list.
       let query = supabase
         .from("products")
         .select(selectClause)
-        .order("created_at", { ascending: false })
+        .order("published_at", { ascending: false, nullsFirst: false })
         .order("id", { ascending: false })
         .limit(PAGE_SIZE);
 
@@ -138,14 +142,14 @@ export function useInfiniteProducts(filters?: ProductFilters) {
         query = query.in("status", ["available", "on_hold", "sold", "at_auction"]);
       }
 
+      // Keyset cursor pagination on (published_at, id). Returns rows strictly
+      // older than the last seen row to avoid duplicates or skips on the seam.
       if (pageParam) {
         query = query.or(
-          `created_at.lt.${pageParam.created_at},and(created_at.eq.${pageParam.created_at},id.lt.${pageParam.id})`,
+          `published_at.lt.${pageParam.published_at},and(published_at.eq.${pageParam.published_at},id.lt.${pageParam.id})`,
         );
       }
 
-      // Filter at the DB level via the joined product_categories table.
-      // PostgREST allows this on inner-joined relations directly.
       if (categoryFilterL1) {
         query = (query as any).eq("product_categories.category_id", categoryFilterL1);
       } else if (categoryFilterIds && categoryFilterIds.length > 0) {
@@ -170,8 +174,6 @@ export function useInfiniteProducts(filters?: ProductFilters) {
       const { data, error } = await query;
       if (error) throw error;
 
-      // Inner joins can produce duplicate product rows when multiple
-      // product_categories rows match. De-dupe by id, preserving order.
       const seen = new Set<string>();
       const unique: Product[] = [];
       for (const p of (data as unknown as Product[]) ?? []) {
@@ -185,8 +187,12 @@ export function useInfiniteProducts(filters?: ProductFilters) {
     initialPageParam: undefined as Cursor | undefined,
     getNextPageParam: (lastPage) => {
       if (lastPage.length < PAGE_SIZE) return undefined;
-      const last = lastPage[lastPage.length - 1];
-      return { created_at: last.created_at, id: last.id };
+      const last = lastPage[lastPage.length - 1] as any;
+      // Skip into the next page using the last row's published_at + id.
+      // If a row somehow has no published_at, we can't paginate past it
+      // safely — stop and rely on filter-side guards (nullsFirst: false).
+      if (!last?.published_at) return undefined;
+      return { published_at: last.published_at, id: last.id };
     },
   });
 }
@@ -207,7 +213,7 @@ export function useProducts(filters?: {
       let query = supabase
         .from("products")
         .select(PRODUCT_CARD_SELECT)
-        .order("created_at", { ascending: false });
+        .order("published_at", { ascending: false, nullsFirst: false });
 
       if (filters?.status) {
         query = query.eq("status", filters.status);
@@ -288,12 +294,12 @@ export function useFeaturedProducts() {
       const { data, error } = await supabase
         .from("products")
         .select(`
-          id, name, slug, price, status, featured_image_url, created_at, sale_price,
+          id, name, slug, price, status, featured_image_url, created_at, published_at, sale_price,
           product_designers ( attribution_type, designer:designers(id, name, slug) ),
           product_images(*)
         `)
         .eq("status", "available")
-        .order("created_at", { ascending: false })
+        .order("published_at", { ascending: false, nullsFirst: false })
         .limit(8);
       if (error) throw error;
       return data as unknown as Product[];
@@ -324,11 +330,12 @@ export function useSimilarProducts(
       if (ids.length === 0) {
         const { data, error } = await supabase
           .from("products")
-          .select(`id, name, slug, price, status, featured_image_url, created_at, sale_price,
+          .select(`id, name, slug, price, status, featured_image_url, created_at, published_at, sale_price,
             product_designers(attribution_type, designer:designers(id, name, slug)),
             product_images(image_url, sort_order)`)
           .neq("id", productId)
           .eq("status", "available")
+          .order("published_at", { ascending: false, nullsFirst: false })
           .limit(4);
         if (error) throw error;
         return data as unknown as Product[];
@@ -336,11 +343,12 @@ export function useSimilarProducts(
 
       const { data, error } = await supabase
         .from("products")
-        .select(`id, name, slug, price, status, featured_image_url, created_at, sale_price,
+        .select(`id, name, slug, price, status, featured_image_url, created_at, published_at, sale_price,
           product_designers(attribution_type, designer:designers(id, name, slug)),
           product_images(image_url, sort_order)`)
         .in("id", ids)
-        .eq("status", "available");
+        .eq("status", "available")
+        .order("published_at", { ascending: false, nullsFirst: false });
       if (error) throw error;
       return data as unknown as Product[];
     },
