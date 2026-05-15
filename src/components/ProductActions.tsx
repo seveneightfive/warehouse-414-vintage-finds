@@ -245,6 +245,28 @@ export default function ProductActions({ product, mode = 'actions' }: ProductAct
   const openAction = (action: ActionType) => { resetForm(); setActiveAction(action); setMenuOpen(false); };
   const closeModal = () => { setActiveAction(null); resetForm(); };
 
+  // ── Email helper ─────────────────────────────────────────────────────────────
+  // Sends a notification email to sales@warehouse414.com via the send-inquiry-email edge function.
+  // Failures are logged but do NOT block the user — their DB insert already succeeded.
+
+  const sendEmail = async (subject: string, messageBody: string) => {
+    try {
+      const { error: emailError } = await supabase.functions.invoke('send-inquiry-email', {
+        body: {
+          name,
+          email,
+          phone: phone || undefined,
+          message: messageBody,
+          subject: `${subject} — ${product.name}`,
+          source: 'inquiry_modal',
+        },
+      });
+      if (emailError) console.error('Email send failed:', emailError);
+    } catch (e) {
+      console.error('Email send threw:', e);
+    }
+  };
+
   // ── Submissions ──────────────────────────────────────────────────────────────
 
   const submitInquiry = async () => {
@@ -256,6 +278,12 @@ export default function ProductActions({ product, mode = 'actions' }: ProductAct
         customer_phone: phone || null, inquiry_type: 'question', message,
       });
       if (error) throw error;
+
+      await sendEmail(
+        'Question',
+        `SKU: ${product.sku || product.id}\n\nQuestion:\n${message}`
+      );
+
       setSuccess("Your question has been sent. We'll be in touch shortly.");
     } catch (e: any) { setError(e.message || 'Something went wrong.'); }
     finally { setLoading(false); }
@@ -271,6 +299,14 @@ export default function ProductActions({ product, mode = 'actions' }: ProductAct
         offer_amount: parseFloat(offerAmount), message: message || null,
       });
       if (error) throw error;
+
+      const offerNum = parseFloat(offerAmount);
+      const listed = product.price ? `Listed at: $${product.price.toLocaleString()}\n` : '';
+      await sendEmail(
+        'Offer',
+        `Offer Amount: $${offerNum.toLocaleString()}\n${listed}SKU: ${product.sku || product.id}\n\nMessage:\n${message || '(no additional message)'}`
+      );
+
       setSuccess("Your offer has been received. We'll respond within 1–2 business days.");
     } catch (e: any) { setError(e.message || 'Something went wrong.'); }
     finally { setLoading(false); }
@@ -286,6 +322,13 @@ export default function ProductActions({ product, mode = 'actions' }: ProductAct
         shipping_zip: zipCode, message: message || null,
       });
       if (error) throw error;
+
+      const listed = product.price ? `Listed at: $${product.price.toLocaleString()}\n` : '';
+      await sendEmail(
+        'Purchase Request',
+        `Shipping Zip: ${zipCode}\n${listed}SKU: ${product.sku || product.id}\n\nNotes:\n${message || '(none)'}`
+      );
+
       setSuccess("Thank you! We'll prepare a shipping quote and invoice for you shortly.");
     } catch (e: any) { setError(e.message || 'Something went wrong.'); }
     finally { setLoading(false); }
@@ -302,7 +345,14 @@ export default function ProductActions({ product, mode = 'actions' }: ProductAct
         customer_phone: phone || null, expires_at: expiresAt.toISOString(), notes: message || null,
       });
       if (error) throw error;
-      setSuccess(`This item has been placed on hold for you until ${expiresAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}.`);
+
+      const expiresStr = expiresAt.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      await sendEmail(
+        'Hold Placed',
+        `Hold expires: ${expiresStr}\nSKU: ${product.sku || product.id}\n\nNotes:\n${message || '(none)'}`
+      );
+
+      setSuccess(`This item has been placed on hold for you until ${expiresStr}.`);
     } catch (e: any) { setError(e.message || 'Something went wrong.'); }
     finally { setLoading(false); }
   };
@@ -365,6 +415,13 @@ export default function ProductActions({ product, mode = 'actions' }: ProductAct
       doc.text(`Generated ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`, pageW - margin, footerY + 5, { align: 'right' });
 
       doc.save(`${product.sku || product.id}-spec-sheet.pdf`);
+
+      // Notify sales of the lead (remove this block if you don't want spec-sheet notifications)
+      await sendEmail(
+        'Spec Sheet Download',
+        `Spec sheet downloaded.\nSKU: ${product.sku || product.id}\nPrice included on sheet: ${includePrice ? 'Yes' : 'No'}`
+      );
+
       setSuccess('Your spec sheet is downloading now.');
     } catch (e: any) { setError(e.message || 'Something went wrong.'); }
     finally { setLoading(false); }
@@ -412,61 +469,3 @@ export default function ProductActions({ product, mode = 'actions' }: ProductAct
   // ── Actions mode (default) ───────────────────────────────────────────────────
 
   const actionMenuItems = [
-    { action: 'inquiry' as ActionType, label: 'Ask a Question', icon: '?', desc: 'Get more details about this piece' },
-    ...(!isSold ? [
-      { action: 'offer' as ActionType, label: 'Make an Offer', icon: '$', desc: 'Submit your best offer' },
-      { action: 'purchase' as ActionType, label: 'Purchase', icon: '→', desc: 'Begin the buying process' },
-      { action: 'hold' as ActionType, label: 'Place on Hold', icon: '⏱', desc: 'Reserve for up to 5 days' },
-    ] : []),
-  ];
-
-  return (
-    <>
-      <div className="relative" ref={menuRef}>
-        <button
-          onClick={() => setMenuOpen(prev => !prev)}
-          className="flex items-center gap-2.5 px-5 py-2.5 bg-primary text-primary-foreground
-            font-display text-[11px] tracking-[0.2em] uppercase rounded-sm
-            hover:bg-primary/90 transition-colors duration-200 select-none"
-        >
-          <span>Inquire / Purchase</span>
-          <span className="text-xs" style={{ display: 'inline-block', transition: 'transform 0.2s', transform: menuOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-            ▾
-          </span>
-        </button>
-
-        {/* Dropdown opens UPWARD above the sticky bar */}
-        {menuOpen && (
-          <div className="absolute right-0 bottom-full mb-1.5 w-64 bg-card border border-border
-            rounded-sm shadow-xl z-50 overflow-hidden">
-            {actionMenuItems.map((item, i) => (
-              <button
-                key={item.action}
-                onClick={() => openAction(item.action)}
-                className={`w-full flex items-start gap-3 px-4 py-3 text-left
-                  hover:bg-muted transition-colors duration-100
-                  ${i < actionMenuItems.length - 1 ? 'border-b border-border/50' : ''}`}
-              >
-                <span className="w-6 h-6 flex items-center justify-center text-primary
-                  font-display text-xs border border-primary/30 rounded-sm shrink-0 mt-0.5">
-                  {item.icon}
-                </span>
-                <div>
-                  <div className="text-[11px] font-display tracking-[0.12em] uppercase text-foreground">
-                    {item.label}
-                  </div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5 font-display">
-                    {item.desc}
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Modal via portal — renders into document.body, z-index 9999, above everything */}
-      {activeAction && activeAction !== 'specsheet' && current && createPortal(<Modal {...modalProps} />, document.body)}
-    </>
-  );
-}
