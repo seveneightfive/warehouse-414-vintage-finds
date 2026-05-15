@@ -413,8 +413,8 @@ export default function ProductActions({ product, mode = 'actions' }: ProductAct
 
   const actionMenuItems = [
     { action: 'inquiry' as ActionType, label: 'Ask a Question', icon: '?', desc: 'Get more details about this piece' },
-    { action: 'offer' as ActionType, label: 'Make an Offer', icon: '$', desc: 'Submit your best offer' },
     ...(!isSold ? [
+      { action: 'offer' as ActionType, label: 'Make an Offer', icon: '$', desc: 'Submit your best offer' },
       { action: 'purchase' as ActionType, label: 'Purchase', icon: '→', desc: 'Begin the buying process' },
       { action: 'hold' as ActionType, label: 'Place on Hold', icon: '⏱', desc: 'Reserve for up to 5 days' },
     ] : []),
