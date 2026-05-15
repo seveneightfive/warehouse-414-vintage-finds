@@ -9,16 +9,24 @@ const Contact = () => {
   const [form, setForm] = useState({ name: '', email: '', message: '' });
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    // For now just show a toast - can integrate with email service later
-    setTimeout(() => {
-      toast.success('Message sent! We\'ll be in touch.');
-      setForm({ name: '', email: '', message: '' });
-      setLoading(false);
-    }, 500);
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  try {
+    // Optional: also save to a contact_messages table
+    const { error } = await supabase.functions.invoke('send-contact-email', {
+      body: JSON.stringify(form),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (error) throw error;
+    toast.success("Message sent! We'll be in touch.");
+    setForm({ name: '', email: '', message: '' });
+  } catch (err: unknown) {
+    toast.error(err instanceof Error ? err.message : 'Something went wrong');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="container mx-auto px-4 py-16 max-w-xl">
