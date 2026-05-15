@@ -51,16 +51,15 @@ export default function InquiryDialog({ type, productId, productTitle, triggerCl
       if (error) throw error;
 
       const emailPayload = {
-        product_id: productId,
-        product_title: productTitle,
-        type,
-        inquiry_type: record.inquiry_type ?? (type === 'hold' ? 'hold' : type === 'offer' ? 'offer' : 'purchase'),
-        customer_name: form.name,
-        customer_email: form.email,
-        customer_phone: form.phone || null,
-        message: record.message || null,
-        offer_amount: record.offer_amount || null,
-      };
+  name: form.name,
+  email: form.email,
+  phone: form.phone || undefined,
+  message: form.message || `${cfg.title} for ${productTitle}`,
+  subject: `${cfg.title} — ${productTitle}`,
+  source: 'inquiry_modal',
+};
+
+await supabase.functions.invoke('send-inquiry-email', { body: emailPayload });
 
       const { error: emailError } = await supabase.functions.invoke('send-inquiry-email', {
         body: JSON.stringify(emailPayload),
