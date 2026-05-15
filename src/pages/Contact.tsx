@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const Contact = () => {
@@ -10,23 +11,27 @@ const Contact = () => {
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  try {
-    // Optional: also save to a contact_messages table
-    const { error } = await supabase.functions.invoke('send-contact-email', {
-      body: JSON.stringify(form),
-      headers: { 'Content-Type': 'application/json' },
-    });
-    if (error) throw error;
-    toast.success("Message sent! We'll be in touch.");
-    setForm({ name: '', email: '', message: '' });
-  } catch (err: unknown) {
-    toast.error(err instanceof Error ? err.message : 'Something went wrong');
-  } finally {
-    setLoading(false);
-  }
-};
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { error } = await supabase.functions.invoke('send-inquiry-email', {
+        body: {
+          name: form.name,
+          email: form.email,
+          message: form.message,
+          subject: 'Contact Form Message',
+          source: 'contact_page',
+        },
+      });
+      if (error) throw error;
+      toast.success("Message sent! We'll be in touch.");
+      setForm({ name: '', email: '', message: '' });
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-16 max-w-xl">
