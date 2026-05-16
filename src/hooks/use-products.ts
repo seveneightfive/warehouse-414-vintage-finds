@@ -167,7 +167,10 @@ export function useInfiniteProducts(filters?: ProductFilters) {
       }
 
       if (filters?.country_id) query = query.eq("country_id", filters.country_id);
-      if (filters?.search) query = query.ilike("name", `%${filters.search}%`);
+      if (filters?.search) {
+  const term = filters.search.replace(/[%,]/g, "");
+  query = query.or(`name.ilike.%${term}%,sku.ilike.%${term}%`);
+}
       if (filters?.year_min) query = query.gte("year_created", filters.year_min);
       if (filters?.year_max) query = query.lte("year_created", filters.year_max);
 
@@ -261,8 +264,10 @@ export function useProducts(filters?: {
         query = query.in("id", ids);
       }
       if (filters?.country_id) query = query.eq("country_id", filters.country_id);
-      if (filters?.search) query = query.ilike("name", `%${filters.search}%`);
-
+      if (filters?.search) {
+  const term = filters.search.replace(/[%,]/g, "");
+  query = query.or(`name.ilike.%${term}%,sku.ilike.%${term}%`);
+}
       const { data, error } = await query;
       if (error) throw error;
       return data as unknown as Product[];
