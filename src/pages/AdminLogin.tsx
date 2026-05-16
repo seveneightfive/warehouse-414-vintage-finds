@@ -32,7 +32,7 @@ const AdminLogin = () => {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: 'https://shop-warehouse414.vercel.app/admin' },
+        options: { emailRedirectTo: 'https://www.warehouse414.com/admin' },
       });
       if (error) throw error;
       setSent(true);
