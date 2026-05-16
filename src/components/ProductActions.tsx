@@ -469,3 +469,61 @@ export default function ProductActions({ product, mode = 'actions' }: ProductAct
   // ── Actions mode (default) ───────────────────────────────────────────────────
 
   const actionMenuItems = [
+    { action: 'inquiry' as ActionType, label: 'Ask a Question', icon: '?', desc: 'Get more details about this piece' },
+    ...(!isSold ? [
+      { action: 'offer' as ActionType, label: 'Make an Offer', icon: '$', desc: 'Submit your best offer' },
+      { action: 'purchase' as ActionType, label: 'Purchase', icon: '→', desc: 'Begin the buying process' },
+      { action: 'hold' as ActionType, label: 'Place on Hold', icon: '⏱', desc: 'Reserve for up to 5 days' },
+    ] : []),
+  ];
+
+  return (
+    <>
+      <div className="relative" ref={menuRef}>
+        <button
+          onClick={() => setMenuOpen(prev => !prev)}
+          className="flex items-center gap-2.5 px-5 py-2.5 bg-primary text-primary-foreground
+            font-display text-[11px] tracking-[0.2em] uppercase rounded-sm
+            hover:bg-primary/90 transition-colors duration-200 select-none"
+        >
+          <span>Inquire / Purchase</span>
+          <span className="text-xs" style={{ display: 'inline-block', transition: 'transform 0.2s', transform: menuOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+            ▾
+          </span>
+        </button>
+
+        {/* Dropdown opens UPWARD above the sticky bar */}
+        {menuOpen && (
+          <div className="absolute right-0 bottom-full mb-1.5 w-64 bg-card border border-border
+            rounded-sm shadow-xl z-50 overflow-hidden">
+            {actionMenuItems.map((item, i) => (
+              <button
+                key={item.action}
+                onClick={() => openAction(item.action)}
+                className={`w-full flex items-start gap-3 px-4 py-3 text-left
+                  hover:bg-muted transition-colors duration-100
+                  ${i < actionMenuItems.length - 1 ? 'border-b border-border/50' : ''}`}
+              >
+                <span className="w-6 h-6 flex items-center justify-center text-primary
+                  font-display text-xs border border-primary/30 rounded-sm shrink-0 mt-0.5">
+                  {item.icon}
+                </span>
+                <div>
+                  <div className="text-[11px] font-display tracking-[0.12em] uppercase text-foreground">
+                    {item.label}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5 font-display">
+                    {item.desc}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Modal via portal — renders into document.body, z-index 9999, above everything */}
+      {activeAction && activeAction !== 'specsheet' && current && createPortal(<Modal {...modalProps} />, document.body)}
+    </>
+  );
+}
