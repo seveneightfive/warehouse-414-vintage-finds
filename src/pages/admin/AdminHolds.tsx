@@ -60,20 +60,32 @@ const AdminHolds = () => {
 
   const releaseMutation = useMutation({
   mutationFn: async ({ productId, holdId }: { productId: string; holdId: string }) => {
-    // Delete the hold first so any re-sync trigger sees no active hold
-    const { error: hErr } = await supabase
+    if (!productId || !holdId) {
+      throw new Error(`Missing IDs: productId=${productId}, holdId=${holdId}`);
+    }
+
+    const { data: deletedHolds, error: hErr } = await supabase
       .from('product_holds')
       .delete()
-      .eq('id', holdId);
+      .eq('id', holdId)
+      .select();
     if (hErr) throw hErr;
+    if (!deletedHolds?.length) throw new Error('Hold row not deleted (RLS or missing row)');
 
-    const { error: pErr } = await supabase
+    const { data: updatedProducts, error: pErr } = await supabase
       .from('products')
       .update({ status: 'available' })
-      .eq('id', productId);
+      .eq('id', productId)
+      .select();
     if (pErr) throw pErr;
+    if (!updatedProducts?.length) throw new Error('Product status not updated (RLS or missing row)');
   },
-  // ...
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['admin-holds'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    toast.success('Hold released');
+  },
+  onError: (err: Error) => toast.error(err.message),
 });
   
   const extendMutation = useMutation({
@@ -237,7 +249,7 @@ const AdminHolds = () => {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => releaseMutation.mutate(p.id)}
+                          onClick={() => releaseMutation.mutate({ productId: p.id, holdId: p.hold.id })
                           disabled={releaseMutation.isPending}
                           title="Release Hold"
                         >
