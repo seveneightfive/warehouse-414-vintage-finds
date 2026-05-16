@@ -59,18 +59,23 @@ const AdminHolds = () => {
   });
 
   const releaseMutation = useMutation({
-    mutationFn: async (productId: string) => {
-      const { error } = await supabase.from('products').update({ status: 'available' }).eq('id', productId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-holds'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-      toast.success('Hold released');
-    },
-    onError: () => toast.error('Failed to release hold'),
-  });
+  mutationFn: async ({ productId, holdId }: { productId: string; holdId: string }) => {
+    // Delete the hold first so any re-sync trigger sees no active hold
+    const { error: hErr } = await supabase
+      .from('product_holds')
+      .delete()
+      .eq('id', holdId);
+    if (hErr) throw hErr;
 
+    const { error: pErr } = await supabase
+      .from('products')
+      .update({ status: 'available' })
+      .eq('id', productId);
+    if (pErr) throw pErr;
+  },
+  // ...
+});
+  
   const extendMutation = useMutation({
     mutationFn: async ({ holdId, newExpiresAt, newDurationHours }: { holdId: string; newExpiresAt: string; newDurationHours: number }) => {
       const { error } = await supabase
