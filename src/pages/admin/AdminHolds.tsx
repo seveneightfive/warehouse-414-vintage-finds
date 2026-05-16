@@ -247,12 +247,20 @@ const AdminHolds = () => {
                           </Button>
                         )}
                         <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => releaseMutation.mutate({ productId: p.id, holdId: p.hold.id })
-                          disabled={releaseMutation.isPending}
-                          title="Release Hold"
-                        >
+  size="sm"
+  variant="ghost"
+  onClick={() => {
+    if (!p.hold?.id) {
+      toast.error('No hold ID found on this product');
+      return;
+    }
+    if (confirm('Release this hold?')) {
+      releaseMutation.mutate({ productId: p.id, holdId: p.hold.id });
+    }
+  }}
+  disabled={releaseMutation.isPending}
+  title="Release Hold"
+>
                           <Unlock size={14} className="mr-1" /> Release
                         </Button>
                       </>
