@@ -126,9 +126,6 @@ const ProductDetail = () => {
     product.line && { label: 'LINE', value: product.line },
     categoryLabel && { label: 'CATEGORY', value: categoryLabel },
     product.style && { label: 'STYLE', value: product.style.name },
-    product.artwork_artist && { label: 'ARTIST', value: product.artwork_artist },
-    product.artwork_title && { label: 'TITLE', value: product.artwork_title },
-    product.artwork_medium && { label: 'MEDIUM', value: product.artwork_medium },
   ].filter(Boolean) as { label: string; value: string }[];
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -391,6 +388,30 @@ const ProductDetail = () => {
                   </div>
                 </div>
               )}
+
+              {hasArtwork && (
+  <div className="py-4 border-b border-border">
+    <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-3">ARTWORK</p>
+    <div className="space-y-1.5">
+      {product.artwork_artist && (
+        <p className="text-base text-foreground">
+          <span className="text-muted-foreground">Artist: </span>{product.artwork_artist}
+        </p>
+      )}
+      {product.artwork_title && (
+        <p className="text-base text-foreground">
+          <span className="text-muted-foreground">Title: </span>
+          <span className="italic">{product.artwork_title}</span>
+        </p>
+      )}
+      {product.artwork_medium && (
+        <p className="text-base text-foreground">
+          <span className="text-muted-foreground">Medium: </span>{product.artwork_medium}
+        </p>
+      )}
+    </div>
+  </div>
+)}
 
               <div className="space-y-0">
                 {detailRows.map((row, i) => (
