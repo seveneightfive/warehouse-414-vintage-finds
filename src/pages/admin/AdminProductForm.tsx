@@ -81,6 +81,9 @@ const schema = z.object({
   materials: z.string().nullable().optional(),
   condition: z.string().nullable().optional(),
   year_created: z.string().nullable().optional(),
+  artwork_artist: z.string().nullable().optional(),
+  artwork_title:  z.string().nullable().optional(),
+  artwork_medium: z.string().nullable().optional(),
   period_designed: z.string().nullable().optional(),
   period_created: z.string().nullable().optional(),
   tags: z.string().nullable().optional(),
@@ -752,6 +755,38 @@ const AdminProductForm = () => {
               )} />
             </div>
           </section>
+
+          {/* ── ARTWORK DETAILS ── */}
+<section className="pb-8 space-y-4">
+  <SectionHeading>Artwork Details</SectionHeading>
+  <p className="text-xs text-muted-foreground">
+    Only fill these in for artwork pieces (paintings, prints, sculptures, etc.).
+  </p>
+
+  <FormField control={form.control} name="artwork_artist" render={({ field }) => (
+    <FormItem>
+      <FormLabel><FieldLabel>Artist</FieldLabel></FormLabel>
+      <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
+      <FormMessage />
+    </FormItem>
+  )} />
+
+  <FormField control={form.control} name="artwork_title" render={({ field }) => (
+    <FormItem>
+      <FormLabel><FieldLabel>Title of Artwork</FieldLabel></FormLabel>
+      <FormControl><Input {...field} value={field.value ?? ''} placeholder='e.g. "Untitled No. 7"' /></FormControl>
+      <FormMessage />
+    </FormItem>
+  )} />
+
+  <FormField control={form.control} name="artwork_medium" render={({ field }) => (
+    <FormItem>
+      <FormLabel><FieldLabel>Medium</FieldLabel></FormLabel>
+      <FormControl><Input {...field} value={field.value ?? ''} placeholder="e.g. Oil on canvas, Lithograph on paper" /></FormControl>
+      <FormMessage />
+    </FormItem>
+  )} />
+</section>
 
           {/* ── DIMENSIONS ── */}
           <section className="pb-8 space-y-4">
