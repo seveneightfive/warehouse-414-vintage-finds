@@ -104,6 +104,7 @@ const ProductDetail = () => {
   }
 
   const hasDimensions = product.product_dimensions || product.box_dimensions;
+  const hasArtwork = product.artwork_artist || product.artwork_title || product.artwork_medium;
 
   // ── Detail rows (bottom table) ─────────────────────────────────────────────
   // Categories: show all, primary first
@@ -125,6 +126,9 @@ const ProductDetail = () => {
     product.line && { label: 'LINE', value: product.line },
     categoryLabel && { label: 'CATEGORY', value: categoryLabel },
     product.style && { label: 'STYLE', value: product.style.name },
+    product.artwork_artist && { label: 'ARTIST', value: product.artwork_artist },
+    product.artwork_title && { label: 'TITLE', value: product.artwork_title },
+    product.artwork_medium && { label: 'MEDIUM', value: product.artwork_medium },
   ].filter(Boolean) as { label: string; value: string }[];
 
   // ── Render ─────────────────────────────────────────────────────────────────
