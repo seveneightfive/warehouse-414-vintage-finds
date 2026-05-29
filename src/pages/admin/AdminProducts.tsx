@@ -70,7 +70,7 @@ type HoldFormData = {
 };
 
 // Added 'sold_at' as a sortable key
-type SortKey = 'default' | 'price' | 'created_at' | 'sold_at';
+type SortKey = 'default' | 'price' | 'created_at' | 'sale_date';
 type SortDir = 'asc' | 'desc';
 
 type StatusTab = {
@@ -231,7 +231,7 @@ const AdminProducts = () => {
   // When leaving, reset to the standard default.
   useEffect(() => {
     if (selectedStatus === 'sold') {
-      setSortKey('sold_at');
+      setSortKey('sale_date');
       setSortDir('desc');
     } else {
       setSortKey('default');
@@ -271,9 +271,9 @@ const AdminProducts = () => {
         listQuery = listQuery
           .order('created_at', { ascending: sortDir === 'asc' })
           .order('id', { ascending: false });
-      } else if (sortKey === 'sold_at') {
+      } else if (sortKey === 'sale_date') {
         listQuery = listQuery
-          .order('sold_at', { ascending: sortDir === 'asc', nullsFirst: false })
+          .order('sale_date', { ascending: sortDir === 'asc', nullsFirst: false })
           .order('id', { ascending: false });
       } else {
         listQuery = listQuery
@@ -299,7 +299,7 @@ const AdminProducts = () => {
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE));
   const counts = countsData ?? defaultCounts;
 
-  const cycleSort = (key: 'price' | 'created_at' | 'sold_at') => {
+  const cycleSort = (key: 'price' | 'created_at' | 'sale_date') => {
     if (sortKey !== key) {
       setSortKey(key);
       setSortDir('desc');
@@ -310,9 +310,9 @@ const AdminProducts = () => {
       return;
     }
     // Third click: revert. For sold tab, go back to sold_at desc rather than 'default'.
-    if (selectedStatus === 'sold' && key !== 'sold_at') {
-      setSortKey('sold_at');
-    } else if (selectedStatus === 'sold' && key === 'sold_at') {
+    if (selectedStatus === 'sold' && key !== 'sale_date') {
+      setSortKey('sale_date');
+    } else if (selectedStatus === 'sold' && key === 'sale_date') {
       setSortDir('desc'); // can't clear the primary sort on sold tab — just flip back
     } else {
       setSortKey('default');
