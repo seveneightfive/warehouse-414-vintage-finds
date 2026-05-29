@@ -46,7 +46,6 @@ import QuickUploadImagesModal from '@/components/QuickUploadImagesModal';
 
 const PAGE_SIZE = 25;
 
-// 360 days in milliseconds — threshold for the "old listing" indicator.
 const STALE_LISTING_MS = 360 * 24 * 60 * 60 * 1000;
 
 type ProductStatusKey = 'available' | 'draft' | 'at_auction' | 'sold' | 'on_hold' | 'inventory' | 'deactivated';
@@ -70,8 +69,8 @@ type HoldFormData = {
   platform: string;
 };
 
-// Sortable columns and direction. `default` reverts to created_at desc.
-type SortKey = 'default' | 'price' | 'created_at';
+// Added 'sold_at' as a sortable key
+type SortKey = 'default' | 'price' | 'created_at' | 'sold_at';
 type SortDir = 'asc' | 'desc';
 
 type StatusTab = {
@@ -131,8 +130,6 @@ const formatDate = (dateString?: string | null) => {
   });
 };
 
-// "Has this product been live for 360+ days?" Uses published_at, falling
-// back to created_at when products predate the column's existence.
 const isStaleListing = (product: Product) => {
   const ref = (product as any).published_at ?? product.created_at;
   if (!ref) return false;
@@ -144,7 +141,6 @@ const daysSince = (dateString?: string | null) => {
   return Math.floor((Date.now() - new Date(dateString).getTime()) / (1000 * 60 * 60 * 24));
 };
 
-// Tiny monochrome chips for cross-listing presence. Dimmed when not listed.
 const CrossListChips = ({ product }: { product: Product }) => {
   const platforms: { label: string; key: 'firstdibs_url' | 'chairish_url' | 'ebay_url'; title: string }[] = [
     { label: '1D', key: 'firstdibs_url', title: '1stDibs' },
@@ -211,11 +207,9 @@ const AdminProducts = () => {
   const [linksState, setLinksState] = useState({ firstdibs_url: '', chairish_url: '', ebay_url: '' });
   const [isSavingLinks, setIsSavingLinks] = useState(false);
 
-  // Sort state — defaults to newest-first by created_at.
   const [sortKey, setSortKey] = useState<SortKey>('default');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
-  // Quick-action: upload images modal — available for any product, any status.
   const [uploadProduct, setUploadProduct] = useState<Product | null>(null);
 
   useEffect(() => {
@@ -233,9 +227,24 @@ const AdminProducts = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlStatus]);
 
+  // When switching to the sold tab, default to sold_at desc.
+  // When leaving, reset to the standard default.
+  useEffect(() => {
+    if (selectedStatus === 'sold') {
+      setSortKey('sold_at');
+      setSortDir('desc');
+    } else {
+      setSortKey('default');
+      setSortDir('desc');
+    }
+    setPage(0);
+  }, [selectedStatus]);
+
+  // Reset page on sort changes (keep the selectedStatus effect above as the
+  // source of truth for page reset on tab switches).
   useEffect(() => {
     setPage(0);
-  }, [selectedStatus, sortKey, sortDir]);
+  }, [sortKey, sortDir]);
 
   const { data: countsData } = useQuery({
     queryKey: ['admin-product-counts'],
@@ -254,8 +263,6 @@ const AdminProducts = () => {
         .select('*, product_images(image_url, sort_order)')
         .eq('status', selectedStatus);
 
-      // Apply ordering. Default is newest-first by created_at, with id as
-      // a stable tiebreaker so pagination doesn't flicker.
       if (sortKey === 'price') {
         listQuery = listQuery
           .order('price', { ascending: sortDir === 'asc', nullsFirst: false })
@@ -263,6 +270,10 @@ const AdminProducts = () => {
       } else if (sortKey === 'created_at') {
         listQuery = listQuery
           .order('created_at', { ascending: sortDir === 'asc' })
+          .order('id', { ascending: false });
+      } else if (sortKey === 'sold_at') {
+        listQuery = listQuery
+          .order('sold_at', { ascending: sortDir === 'asc', nullsFirst: false })
           .order('id', { ascending: false });
       } else {
         listQuery = listQuery
@@ -288,8 +299,7 @@ const AdminProducts = () => {
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE));
   const counts = countsData ?? defaultCounts;
 
-  // Click a sortable header. First click → desc. Second click → asc. Third → off.
-  const cycleSort = (key: 'price' | 'created_at') => {
+  const cycleSort = (key: 'price' | 'created_at' | 'sold_at') => {
     if (sortKey !== key) {
       setSortKey(key);
       setSortDir('desc');
@@ -299,8 +309,14 @@ const AdminProducts = () => {
       setSortDir('asc');
       return;
     }
-    // sortDir === 'asc' → clear back to default
-    setSortKey('default');
+    // Third click: revert. For sold tab, go back to sold_at desc rather than 'default'.
+    if (selectedStatus === 'sold' && key !== 'sold_at') {
+      setSortKey('sold_at');
+    } else if (selectedStatus === 'sold' && key === 'sold_at') {
+      setSortDir('desc'); // can't clear the primary sort on sold tab — just flip back
+    } else {
+      setSortKey('default');
+    }
     setSortDir('desc');
   };
 
@@ -363,9 +379,6 @@ const AdminProducts = () => {
     onSuccess: statusChangeOnSuccess,
   });
 
-  // Place-hold has its own mutation because hold data belongs on product_holds,
-  // NOT on products. The on_product_hold_created trigger automatically flips
-  // products.status to 'on_hold' after the insert.
   const placeHoldMutation = useMutation({
     mutationFn: async ({ productId, holdData }: { productId: string; holdData: HoldFormData }) => {
       const { error } = await supabase.from('product_holds').insert({
@@ -554,6 +567,20 @@ const AdminProducts = () => {
                     <SortIcon active={sortKey === 'created_at'} dir={sortDir} />
                   </button>
                 </TableHead>
+                {/* Sold On column — only visible on the sold tab */}
+                {selectedStatus === 'sold' && (
+                  <TableHead className="w-28">
+                    <button
+                      type="button"
+                      onClick={() => cycleSort('sold_at')}
+                      className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                      title="Sort by date sold"
+                    >
+                      Sold On
+                      <SortIcon active={sortKey === 'sold_at'} dir={sortDir} />
+                    </button>
+                  </TableHead>
+                )}
                 <TableHead className="w-12"></TableHead>
               </TableRow>
             </TableHeader>
@@ -607,6 +634,12 @@ const AdminProducts = () => {
                     </TableCell>
                     <TableCell>{formatPrice(product)}</TableCell>
                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(product.created_at)}</TableCell>
+                    {/* Sold On cell — only rendered on the sold tab */}
+                    {selectedStatus === 'sold' && (
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                        {formatDate((product as any).sold_at)}
+                      </TableCell>
+                    )}
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
