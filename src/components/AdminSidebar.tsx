@@ -11,7 +11,7 @@ import { useAuth } from '@/hooks/use-auth';
 const AdminSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth(); 
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [expandProducts, setExpandProducts] = useState(
@@ -21,7 +21,7 @@ const AdminSidebar = () => {
   const displayName = user?.user_metadata?.full_name
     || user?.user_metadata?.name
     || (user?.email ? user.email.split('@')[0] : null);
-  
+
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
@@ -109,7 +109,6 @@ const AdminSidebar = () => {
               {expandProducts ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
             </button>
 
-            {/* Product sub-pages */}
             {expandProducts && (
               <div className="ml-2 space-y-1 border-l border-border/50 pl-3">
                 <Link
@@ -141,36 +140,6 @@ const AdminSidebar = () => {
                   `}
                 >
                   Add Product
-                </Link>
-                <Link
-                  to="/admin/products"
-                  onClick={() => setIsOpen(false)}
-                  className={`
-                    flex items-center gap-2 px-3 py-2 rounded text-xs tracking-wide
-                    transition-colors font-display
-                    ${
-                      false
-                        ? 'hidden'
-                        : 'hidden'
-                    }
-                  `}
-                >
-                  
-                </Link>
-                <Link
-                  to="/admin/products"
-                  onClick={() => setIsOpen(false)}
-                  className={`
-                    flex items-center gap-2 px-3 py-2 rounded text-xs tracking-wide
-                    transition-colors font-display
-                    ${
-                      false
-                        ? 'hidden'
-                        : 'hidden'
-                    }
-                  `}
-                >
-                  
                 </Link>
               </div>
             )}
@@ -230,7 +199,7 @@ const AdminSidebar = () => {
             Consignors
           </Link>
 
-          {/* Inquiries & Offers */}
+          {/* Inquiries */}
           <Link
             to="/admin/inquiries"
             onClick={() => setIsOpen(false)}
@@ -248,6 +217,7 @@ const AdminSidebar = () => {
             Inquiries
           </Link>
 
+          {/* Offers */}
           <Link
             to="/admin/offers"
             onClick={() => setIsOpen(false)}
@@ -268,6 +238,7 @@ const AdminSidebar = () => {
           {/* Taxonomy */}
           <div className="pt-4 mt-4 border-t border-border">
             <p className="text-xs text-muted-foreground tracking-widest uppercase px-4 mb-2">Taxonomy</p>
+
             <Link
               to="/admin/categories"
               onClick={() => setIsOpen(false)}
@@ -373,35 +344,55 @@ const AdminSidebar = () => {
         </nav>
 
         {/* Footer */}
-{/* Footer */}
-<div className="px-4 py-4 border-t border-border space-y-3">
-  {/* Signed-in user indicator */}
-  {user ? (
-    <div className="flex items-center gap-2 px-4 py-2 rounded-md bg-muted/60">
-      <UserCircle2 size={16} className="text-primary shrink-0" />
-      <div className="min-w-0">
-        <p className="text-xs font-display tracking-wide text-foreground truncate">
-          {displayName}
-        </p>
-        <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
-      </div>
-    </div>
-  ) : (
-    <div className="flex items-center gap-2 px-4 py-2 rounded-md bg-destructive/10">
-      <UserCircle2 size={16} className="text-destructive shrink-0" />
-      <p className="text-xs font-display tracking-wide text-destructive">Not signed in</p>
-    </div>
-  )}
+        <div className="px-4 py-4 border-t border-border space-y-3">
+          {/* Signed-in user indicator */}
+          {user ? (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-md bg-muted/60">
+              <UserCircle2 size={16} className="text-primary shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs font-display tracking-wide text-foreground truncate">
+                  {displayName}
+                </p>
+                <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 px-4 py-2 rounded-md bg-destructive/10">
+              <UserCircle2 size={16} className="text-destructive shrink-0" />
+              <p className="text-xs font-display tracking-wide text-destructive">Not signed in</p>
+            </div>
+          )}
 
-  <button
-    onClick={handleLogout}
-    disabled={isLoggingOut}
-    className="..."  // keep your existing classes
-  >
-    <LogOut size={18} />
-    {isLoggingOut ? 'Logging out…' : 'Log Out'}
-  </button>
-  {/* ...rest of footer unchanged... */}
-</div>
-      
+          <button
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            className="
+              w-full flex items-center gap-3 px-4 py-2.5 rounded-md
+              font-display text-sm tracking-wide transition-colors
+              text-muted-foreground hover:text-foreground hover:bg-muted
+              disabled:opacity-50 disabled:cursor-not-allowed
+            "
+          >
+            <LogOut size={18} />
+            {isLoggingOut ? 'Logging out…' : 'Log Out'}
+          </button>
+
+          <div className="hidden lg:block text-xs text-muted-foreground text-center">
+            <p>Warehouse 414</p>
+            <p>v1.0</p>
+          </div>
+        </div>
+      </aside>
+
+      {/* Mobile overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-20 bg-black/50 lg:hidden"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+    </>
+  );
+};
+
 export default AdminSidebar;
