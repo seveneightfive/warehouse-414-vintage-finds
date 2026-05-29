@@ -212,13 +212,6 @@ const AdminProducts = () => {
 
   const [uploadProduct, setUploadProduct] = useState<Product | null>(null);
 
-  useEffect(() => {
-    const current = searchParams.get('status');
-    if (current !== selectedStatus) {
-      setSearchParams({ status: selectedStatus }, { replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedStatus]);
 
   useEffect(() => {
     if (urlStatus && VALID_STATUSES.includes(urlStatus) && urlStatus !== selectedStatus) {
@@ -230,22 +223,24 @@ const AdminProducts = () => {
   // When switching to the sold tab, default to sold_at desc.
   // When leaving, reset to the standard default.
   useEffect(() => {
-    if (selectedStatus === 'sold') {
-      setSortKey('sale_date');
-      setSortDir('desc');
-    } else {
-      setSortKey('default');
-      setSortDir('desc');
-    }
-    setPage(0);
-  }, [selectedStatus]);
+  // Reset sort based on which tab we're on
+  if (selectedStatus === 'sold') {
+    setSortKey('sale_date');
+  } else {
+    setSortKey('default');
+  }
+  setSortDir('desc');
+  setPage(0);
 
-  // Reset page on sort changes (keep the selectedStatus effect above as the
-  // source of truth for page reset on tab switches).
-  useEffect(() => {
-    setPage(0);
-  }, [sortKey, sortDir]);
+  // Sync URL
+  const current = searchParams.get('status');
+  if (current !== selectedStatus) {
+    setSearchParams({ status: selectedStatus }, { replace: true });
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [selectedStatus]);
 
+  
   const { data: countsData } = useQuery({
     queryKey: ['admin-product-counts'],
     staleTime: 1000 * 60,
