@@ -572,12 +572,12 @@ const AdminProducts = () => {
                   <TableHead className="w-28">
                     <button
                       type="button"
-                      onClick={() => cycleSort('sold_at')}
+                      onClick={() => cycleSort('sale_date')}
                       className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
                       title="Sort by date sold"
                     >
                       Sold On
-                      <SortIcon active={sortKey === 'sold_at'} dir={sortDir} />
+                      <SortIcon active={sortKey === 'sale_date'} dir={sortDir} />
                     </button>
                   </TableHead>
                 )}
@@ -637,7 +637,7 @@ const AdminProducts = () => {
                     {/* Sold On cell — only rendered on the sold tab */}
                     {selectedStatus === 'sold' && (
                       <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                        {formatDate((product as any).sold_at)}
+                        {formatDate((product as any).sale_date)}
                       </TableCell>
                     )}
                     <TableCell>
