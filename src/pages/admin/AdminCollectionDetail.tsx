@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,17 +30,29 @@ const AdminCollectionDetail = () => {
   const [searching, setSearching] = useState(false);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
 
-  const { data: curatedSet } = useQuery({
+  // Keep a ref to current products so searchProducts closure is never stale
+  const productsRef = useRef<CuratedSetProductRow[]>([]);
+
+  const { data: curatedSet, isError: setError, error: setErr } = useQuery({
     queryKey: ['admin-curated-set', id],
     enabled: !!id,
     queryFn: async () => {
-      const { data, error } = await supabase.from('curated_sets').select('*').eq('id', id!).single();
+      const { data, error } = await supabase
+        .from('curated_sets')
+        .select('*')
+        .eq('id', id!)
+        .single();
       if (error) throw error;
       return data;
     },
   });
 
-  const { data: products, isLoading } = useQuery<CuratedSetProductRow[]>({
+  const {
+    data: products,
+    isLoading,
+    isError: productsError,
+    error: productsErr,
+  } = useQuery<CuratedSetProductRow[]>({
     queryKey: ['admin-curated-set-products', id],
     enabled: !!id,
     queryFn: async () => {
@@ -50,7 +62,9 @@ const AdminCollectionDetail = () => {
         .eq('curated_set_id', id!)
         .order('display_order', { ascending: true, nullsFirst: false });
       if (error) throw error;
-      return (data ?? []) as unknown as CuratedSetProductRow[];
+      const rows = (data ?? []) as unknown as CuratedSetProductRow[];
+      productsRef.current = rows;
+      return rows;
     },
   });
 
@@ -63,12 +77,12 @@ const AdminCollectionDetail = () => {
       qc.invalidateQueries({ queryKey: ['admin-curated-set-products', id] });
       toast.success('Removed from set');
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err) => toast.error((err as Error).message),
   });
 
   const addMutation = useMutation({
     mutationFn: async (productId: string) => {
-      const nextOrder = (products?.length ?? 0);
+      const nextOrder = productsRef.current.length;
       const { error } = await supabase.from('curated_set_products').insert({
         curated_set_id: id!,
         product_id: productId,
@@ -82,22 +96,33 @@ const AdminCollectionDetail = () => {
       setSearchQuery('');
       toast.success('Product added to set');
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err) => toast.error((err as Error).message),
   });
 
+  // Uses ref so it never has a stale closure over `products`
   const searchProducts = useCallback(async (q: string) => {
     setSearchQuery(q);
-    if (q.length < 2) { setSearchResults([]); return; }
+    if (q.length < 2) {
+      setSearchResults([]);
+      return;
+    }
     setSearching(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('products')
       .select('id, name, sku, featured_image_url')
       .or(`name.ilike.%${q}%,sku.ilike.%${q}%`)
       .limit(10);
-    const existingIds = new Set(products?.map(p => p.product_id) ?? []);
-    setSearchResults((data ?? []).filter(p => !existingIds.has(p.id)));
+
+    if (error) {
+      toast.error('Search failed: ' + error.message);
+      setSearching(false);
+      return;
+    }
+
+    const existingIds = new Set(productsRef.current.map((p) => p.product_id));
+    setSearchResults((data ?? []).filter((p) => !existingIds.has(p.id)));
     setSearching(false);
-  }, [products]);
+  }, []); // stable — reads from ref, not state
 
   const handleDragStart = (idx: number) => setDragIdx(idx);
   const handleDrop = async (targetIdx: number) => {
@@ -108,11 +133,13 @@ const AdminCollectionDetail = () => {
     setDragIdx(null);
 
     qc.setQueryData(['admin-curated-set-products', id], reordered);
+    productsRef.current = reordered;
 
-    const updates = reordered.map((cp, i) =>
-      supabase.from('curated_set_products').update({ display_order: i }).eq('id', cp.id)
+    await Promise.all(
+      reordered.map((cp, i) =>
+        supabase.from('curated_set_products').update({ display_order: i }).eq('id', cp.id)
+      )
     );
-    await Promise.all(updates);
     qc.invalidateQueries({ queryKey: ['admin-curated-set-products', id] });
   };
 
@@ -120,7 +147,9 @@ const AdminCollectionDetail = () => {
     <div>
       <div className="flex items-center gap-3 mb-6">
         <Link to="/admin/curated-sets">
-          <Button variant="ghost" size="icon"><ArrowLeft size={18} /></Button>
+          <Button variant="ghost" size="icon">
+            <ArrowLeft size={18} />
+          </Button>
         </Link>
         <div>
           <h1 className="font-display text-2xl tracking-wide text-foreground">
@@ -128,6 +157,11 @@ const AdminCollectionDetail = () => {
           </h1>
           {curatedSet?.description && (
             <p className="text-sm text-muted-foreground mt-1">{curatedSet.description}</p>
+          )}
+          {setError && (
+            <p className="text-sm text-destructive mt-1">
+              Failed to load set: {(setErr as Error)?.message}
+            </p>
           )}
         </div>
       </div>
@@ -164,6 +198,9 @@ const AdminCollectionDetail = () => {
           </div>
         )}
         {searching && <p className="text-xs text-muted-foreground mt-1">Searching...</p>}
+        {!searching && searchQuery.length >= 2 && searchResults.length === 0 && (
+          <p className="text-xs text-muted-foreground mt-1">No products found.</p>
+        )}
       </div>
 
       <h2 className="font-display text-lg tracking-wide text-foreground mb-3">
@@ -172,6 +209,10 @@ const AdminCollectionDetail = () => {
 
       {isLoading ? (
         <p className="text-muted-foreground">Loading...</p>
+      ) : productsError ? (
+        <p className="text-destructive text-sm">
+          Failed to load products: {(productsErr as Error)?.message}
+        </p>
       ) : !products?.length ? (
         <p className="text-muted-foreground text-sm">No products in this curated set yet.</p>
       ) : (
@@ -201,18 +242,31 @@ const AdminCollectionDetail = () => {
                 </TableCell>
                 <TableCell>
                   {cp.product?.featured_image_url ? (
-                    <img src={cp.product.featured_image_url} alt="" className="w-10 h-10 object-cover rounded" />
+                    <img
+                      src={cp.product.featured_image_url}
+                      alt=""
+                      className="w-10 h-10 object-cover rounded"
+                    />
                   ) : (
                     <div className="w-10 h-10 bg-muted rounded" />
                   )}
                 </TableCell>
-                <TableCell className="text-xs text-muted-foreground">{cp.product?.sku || '—'}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">
+                  {cp.product?.sku || '—'}
+                </TableCell>
                 <TableCell className="font-medium text-foreground">{cp.product?.name}</TableCell>
-                <TableCell className="text-xs text-muted-foreground capitalize">{cp.product?.status}</TableCell>
+                <TableCell className="text-xs text-muted-foreground capitalize">
+                  {cp.product?.status}
+                </TableCell>
                 <TableCell>
-                  <Button variant="ghost" size="icon" onClick={() => {
-                    if (confirm('Remove from curated set? The product will not be deleted.')) removeMutation.mutate(cp.id);
-                  }}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      if (confirm('Remove from curated set? The product will not be deleted.'))
+                        removeMutation.mutate(cp.id);
+                    }}
+                  >
                     <X size={14} />
                   </Button>
                 </TableCell>
