@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
 
     // Update the collection's cover_image
     const { error: updateErr } = await supabase
-      .from("collections")
+      .from("curated_sets")
       .update({ cover_image: cdnUrl })
       .eq("id", collectionId);
 
