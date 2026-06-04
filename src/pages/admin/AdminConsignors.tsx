@@ -174,9 +174,6 @@ const AdminConsignors = () => {
                 <TableHead>Code</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Phone</TableHead>
-                <TableHead>Payment Type</TableHead>
-                <TableHead>Payment Address</TableHead>
-                <TableHead>Notes</TableHead>
                 <TableHead>Products</TableHead>
                 <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
@@ -191,9 +188,6 @@ const AdminConsignors = () => {
                     <TableCell className="font-mono text-xs">{c.consignor_code}</TableCell>
                     <TableCell className="text-sm">{c.email || '—'}</TableCell>
                     <TableCell className="text-sm">{c.phone || '—'}</TableCell>
-                    <TableCell className="text-sm">{c.payment_type || '—'}</TableCell>
-                    <TableCell className="text-sm max-w-[150px] truncate">{c.payment_address || '—'}</TableCell>
-                    <TableCell className="text-sm max-w-[200px] truncate">{c.notes || '—'}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <Badge variant="secondary" className="text-[10px]">
@@ -226,7 +220,7 @@ onClick={() => navigate(`/admin/consignors/${c.id}`)}
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                     No consignors found
                   </TableCell>
                 </TableRow>
