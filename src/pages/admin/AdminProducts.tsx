@@ -272,11 +272,11 @@ const AdminProducts = () => {
           .order('sale_date', { ascending: sortDir === 'asc', nullsFirst: false })
           .order('id', { ascending: false });
       } else {
-        listQuery = listQuery
-          .order('created_at', { ascending: false })
-          .order('id', { ascending: false });
-      }
-
+  listQuery = listQuery
+    .order('published_at', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false });
+}
       listQuery = listQuery.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
       if (searchQuery) {
