@@ -86,6 +86,7 @@ const schema = z.object({
   artwork_medium: z.string().nullable().optional(),
   period_designed: z.string().nullable().optional(),
   period_created: z.string().nullable().optional(),
+  published_at: z.string().nullable().optional(),
   tags: z.string().nullable().optional(),
   firstdibs_url: z.string().url().nullable().optional().or(z.literal('')),
   chairish_url: z.string().url().nullable().optional().or(z.literal('')),
@@ -523,6 +524,45 @@ const AdminProductForm = () => {
                   <FormMessage />
                 </FormItem>
               )} />
+              <FormField control={form.control} name="published_at" render={({ field }) => (
+  <FormItem>
+    <FormLabel><FieldLabel>Published At</FieldLabel></FormLabel>
+    <div className="flex items-center gap-2">
+      <FormControl>
+        <Input
+          type="datetime-local"
+          {...field}
+          value={field.value ? field.value.slice(0, 16) : ''}
+          onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value).toISOString() : null)}
+        />
+      </FormControl>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="shrink-0 whitespace-nowrap"
+        onClick={() => field.onChange(new Date().toISOString())}
+      >
+        Set to today
+      </Button>
+      {field.value && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="shrink-0 text-muted-foreground"
+          onClick={() => field.onChange(null)}
+        >
+          <X size={14} />
+        </Button>
+      )}
+    </div>
+    <p className="text-xs text-muted-foreground">
+      Controls sort order on the public site. Leave blank to use the created date.
+    </p>
+    <FormMessage />
+  </FormItem>
+)} />
               <FormField control={form.control} name="status" render={({ field }) => (
                 <FormItem>
                   <FormLabel><FieldLabel>Status</FieldLabel></FormLabel>
