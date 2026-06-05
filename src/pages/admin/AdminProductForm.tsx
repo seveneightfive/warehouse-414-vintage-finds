@@ -86,7 +86,6 @@ const schema = z.object({
   artwork_medium: z.string().nullable().optional(),
   period_designed: z.string().nullable().optional(),
   period_created: z.string().nullable().optional(),
-  published_at: z.string().nullable().optional(),
   tags: z.string().nullable().optional(),
   firstdibs_url: z.string().url().nullable().optional().or(z.literal('')),
   chairish_url: z.string().url().nullable().optional().or(z.literal('')),
@@ -94,6 +93,7 @@ const schema = z.object({
   chairish_auction_url: z.string().url().nullable().optional().or(z.literal('')),
   sold_on:              z.string().nullable().optional(),
   notes:                z.string().nullable().optional(),
+  published_at:         z.string().nullable().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -286,6 +286,8 @@ const AdminProductForm = () => {
     values.sale_price   = (product as any).sale_price ?? undefined;
     values.consignor_id = (product as any).consignor_id ?? undefined;
     values.line         = (product as any).line ?? undefined;
+    // published_at: keep as-is (ISO string or null); don't coerce to ''
+    values.published_at = (product as any).published_at ?? null;
     const rawTags = (product as any).tags;
     values.tags = Array.isArray(rawTags) ? (rawTags as string[]).join(', ') : '';
     form.reset(values as FormValues);
@@ -524,45 +526,6 @@ const AdminProductForm = () => {
                   <FormMessage />
                 </FormItem>
               )} />
-              <FormField control={form.control} name="published_at" render={({ field }) => (
-  <FormItem>
-    <FormLabel><FieldLabel>Published At</FieldLabel></FormLabel>
-    <div className="flex items-center gap-2">
-      <FormControl>
-        <Input
-          type="datetime-local"
-          {...field}
-          value={field.value ? field.value.slice(0, 16) : ''}
-          onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value).toISOString() : null)}
-        />
-      </FormControl>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="shrink-0 whitespace-nowrap"
-        onClick={() => field.onChange(new Date().toISOString())}
-      >
-        Set to today
-      </Button>
-      {field.value && (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="shrink-0 text-muted-foreground"
-          onClick={() => field.onChange(null)}
-        >
-          <X size={14} />
-        </Button>
-      )}
-    </div>
-    <p className="text-xs text-muted-foreground">
-      Controls sort order on the public site. Leave blank to use the created date.
-    </p>
-    <FormMessage />
-  </FormItem>
-)} />
               <FormField control={form.control} name="status" render={({ field }) => (
                 <FormItem>
                   <FormLabel><FieldLabel>Status</FieldLabel></FormLabel>
@@ -621,6 +584,47 @@ const AdminProductForm = () => {
                 </FormItem>
               )} />
             )}
+
+            {/* Published At */}
+            <FormField control={form.control} name="published_at" render={({ field }) => (
+              <FormItem>
+                <FormLabel><FieldLabel>Published At</FieldLabel></FormLabel>
+                <div className="flex items-center gap-2">
+                  <FormControl>
+                    <Input
+                      type="datetime-local"
+                      {...field}
+                      value={field.value ? field.value.slice(0, 16) : ''}
+                      onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value).toISOString() : null)}
+                    />
+                  </FormControl>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 whitespace-nowrap"
+                    onClick={() => field.onChange(new Date().toISOString())}
+                  >
+                    Set to today
+                  </Button>
+                  {field.value && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0 text-muted-foreground"
+                      onClick={() => field.onChange(null)}
+                    >
+                      <X size={14} />
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Controls sort order on the public site. Leave blank to use the created date.
+                </p>
+                <FormMessage />
+              </FormItem>
+            )} />
 
             {/* Consignor */}
             <FormField control={form.control} name="consignor_id" render={({ field }) => (
@@ -797,36 +801,36 @@ const AdminProductForm = () => {
           </section>
 
           {/* ── ARTWORK DETAILS ── */}
-<section className="pb-8 space-y-4">
-  <SectionHeading>Artwork Details</SectionHeading>
-  <p className="text-xs text-muted-foreground">
-    Only fill these in for artwork pieces (paintings, prints, sculptures, etc.).
-  </p>
+          <section className="pb-8 space-y-4">
+            <SectionHeading>Artwork Details</SectionHeading>
+            <p className="text-xs text-muted-foreground">
+              Only fill these in for artwork pieces (paintings, prints, sculptures, etc.).
+            </p>
 
-  <FormField control={form.control} name="artwork_artist" render={({ field }) => (
-    <FormItem>
-      <FormLabel><FieldLabel>Artist</FieldLabel></FormLabel>
-      <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
-      <FormMessage />
-    </FormItem>
-  )} />
+            <FormField control={form.control} name="artwork_artist" render={({ field }) => (
+              <FormItem>
+                <FormLabel><FieldLabel>Artist</FieldLabel></FormLabel>
+                <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
 
-  <FormField control={form.control} name="artwork_title" render={({ field }) => (
-    <FormItem>
-      <FormLabel><FieldLabel>Title of Artwork</FieldLabel></FormLabel>
-      <FormControl><Input {...field} value={field.value ?? ''} placeholder='e.g. "Untitled No. 7"' /></FormControl>
-      <FormMessage />
-    </FormItem>
-  )} />
+            <FormField control={form.control} name="artwork_title" render={({ field }) => (
+              <FormItem>
+                <FormLabel><FieldLabel>Title of Artwork</FieldLabel></FormLabel>
+                <FormControl><Input {...field} value={field.value ?? ''} placeholder='e.g. "Untitled No. 7"' /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
 
-  <FormField control={form.control} name="artwork_medium" render={({ field }) => (
-    <FormItem>
-      <FormLabel><FieldLabel>Medium</FieldLabel></FormLabel>
-      <FormControl><Input {...field} value={field.value ?? ''} placeholder="e.g. Oil on canvas, Lithograph on paper" /></FormControl>
-      <FormMessage />
-    </FormItem>
-  )} />
-</section>
+            <FormField control={form.control} name="artwork_medium" render={({ field }) => (
+              <FormItem>
+                <FormLabel><FieldLabel>Medium</FieldLabel></FormLabel>
+                <FormControl><Input {...field} value={field.value ?? ''} placeholder="e.g. Oil on canvas, Lithograph on paper" /></FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+          </section>
 
           {/* ── DIMENSIONS ── */}
           <section className="pb-8 space-y-4">
