@@ -263,9 +263,10 @@ const AdminProducts = () => {
           .order('price', { ascending: sortDir === 'asc', nullsFirst: false })
           .order('id', { ascending: false });
       } else if (sortKey === 'created_at') {
-        listQuery = listQuery
-          .order('created_at', { ascending: sortDir === 'asc' })
-          .order('id', { ascending: false });
+  listQuery = listQuery
+    .order('published_at', { ascending: sortDir === 'asc', nullsFirst: false })
+    .order('created_at', { ascending: sortDir === 'asc' })
+    .order('id', { ascending: false });
       } else if (sortKey === 'sale_date') {
         listQuery = listQuery
           .order('sale_date', { ascending: sortDir === 'asc', nullsFirst: false })
@@ -556,9 +557,9 @@ const AdminProducts = () => {
                     type="button"
                     onClick={() => cycleSort('created_at')}
                     className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-                    title="Sort by date added"
+                    title="Sort by date published"
                   >
-                    Added
+                    Published
                     <SortIcon active={sortKey === 'created_at'} dir={sortDir} />
                   </button>
                 </TableHead>
@@ -628,7 +629,9 @@ const AdminProducts = () => {
                       <CrossListChips product={product} />
                     </TableCell>
                     <TableCell>{formatPrice(product)}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(product.created_at)}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+  {formatDate((product as any).published_at ?? product.created_at)}
+</TableCell>
                     {/* Sold On cell — only rendered on the sold tab */}
                     {selectedStatus === 'sold' && (
                       <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
