@@ -17,7 +17,8 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     sitemap({
-      hostname: 'https://www.warehouse414.com'
+      hostname: 'https://www.warehouse414.com',
+      generateRobotsTxt: false
     })
   ].filter(Boolean),
   resolve: {
