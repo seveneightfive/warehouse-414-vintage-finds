@@ -1,12 +1,82 @@
 import jsPDF from "jspdf";
 import QRCode from "qrcode";
-import type { Product } from "@/types/database";
+
+// ─── Types ──────────────────────────────────────────────────────────────────
+// Mirrors the array-shaped relations actually used by ProductDetail.tsx
+// (product_designers / product_makers / product_styles_periods are join-table
+// arrays, not singular nested objects).
+
+interface DesignerRef { designer?: { name?: string } | null }
+interface MakerRef { maker?: { name?: string } | null }
+interface StylePeriodRef { styles_periods?: { name?: string } | null }
+
+export interface SpecSheetProduct {
+  id: string;
+  slug?: string;
+  name: string;
+  sku?: string;
+  price?: number;
+  short_description?: string;
+  long_description?: string;
+  product_dimensions?: string;
+  box_dimensions?: string;
+  materials?: string;
+  featured_image_url?: string;
+  year_created?: string;
+  condition?: string;
+  country?: { name?: string } | null;
+  product_designers?: DesignerRef[];
+  product_makers?: MakerRef[];
+  product_styles_periods?: StylePeriodRef[];
+  status?: string;
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+async function loadImageAsBase64(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url, { mode: "cors" });
+    if (!response.ok) {
+      console.warn("[spec-sheet] image fetch !ok:", url, response.status);
+      return null;
+    }
+    const blob = await response.blob();
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => {
+        console.warn("[spec-sheet] FileReader error:", url);
+        resolve(null);
+      };
+      reader.readAsDataURL(blob);
+    });
+  } catch (err) {
+    console.warn("[spec-sheet] image fetch threw:", url, err);
+    return null;
+  }
+}
+
+function getImageDimensions(dataUrl: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = () => reject(new Error("image decode failed"));
+    img.src = dataUrl;
+  });
+}
+
+/** Joins join-table refs the same way ProductDetail.tsx displays them ("A & B"). */
+function joinNames(names: (string | undefined | null)[]): string {
+  return names.filter(Boolean).join(" & ");
+}
+
+// ─── Main generator ────────────────────────────────────────────────────────
 
 export async function generateSpecSheet(
-  product: Product,
+  product: SpecSheetProduct,
   siteUrl: string,
   includePrice: boolean = true
-) {
+): Promise<void> {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
@@ -19,16 +89,16 @@ export async function generateSpecSheet(
   const medGray = [130, 130, 130] as const;
   const lineGray = [200, 200, 200] as const;
 
-  // Normalize site URL (no trailing slash)
   const normalizedSite = siteUrl.replace(/\/$/, "");
 
   // ── HEADER ROW: Logo left, QR code right ──
   const headerH = 22;
   const qrSize = 22;
 
-  // QR Code (top right) — encodes the public product URL
   try {
-    const productUrl = `${normalizedSite}/product/${product.slug}`;
+    const productUrl = product.slug
+      ? `${normalizedSite}/product/${product.slug}`
+      : normalizedSite;
     const qrDataUrl = await QRCode.toDataURL(productUrl, {
       width: 300,
       margin: 0,
@@ -45,7 +115,6 @@ export async function generateSpecSheet(
     console.error("[spec-sheet] QR generation failed:", err);
   }
 
-  // Logo (top left)
   const logoUrl = `${normalizedSite}/images/logo-545.jpg`;
   let logoDrawn = false;
   const logoData = await loadImageAsBase64(logoUrl);
@@ -95,11 +164,13 @@ export async function generateSpecSheet(
   doc.text(titleLines, margin, y);
   y += titleLines.length * 6 + 2;
 
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  doc.setTextColor(...medGray);
-  doc.text(`SKU: ${product.sku}`, margin, y);
-  y += 6;
+  if (product.sku) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...medGray);
+    doc.text(`SKU: ${product.sku}`, margin, y);
+    y += 6;
+  }
 
   // ── PRICE ──
   if (includePrice && product.price) {
@@ -157,21 +228,14 @@ export async function generateSpecSheet(
     }
     const xOffset = (imgColW - drawW) / 2;
     try {
-      doc.addImage(
-        featuredImg.data,
-        featuredImg.format,
-        imgColX + xOffset,
-        y,
-        drawW,
-        drawH
-      );
+      doc.addImage(featuredImg.data, featuredImg.format, imgColX + xOffset, y, drawW, drawH);
       imgH = drawH;
     } catch (err) {
       console.error("[spec-sheet] addImage(featured) failed:", err);
     }
   }
 
-  // Meta column (left): Materials, Dimensions, Shipping
+  // Meta column (left): Materials, Dimensions, Shipping, Year, Condition
   let metaY = twoColStartY;
   const writeMetaLabel = (label: string) => {
     doc.setFont("helvetica", "bold");
@@ -205,9 +269,9 @@ export async function generateSpecSheet(
     metaY += 8;
   }
 
-  if ((product as any).box_dimensions) {
+  if (product.box_dimensions) {
     writeMetaLabel("SHIPPING / CRATED DIMENSIONS");
-    writeMetaValue((product as any).box_dimensions);
+    writeMetaValue(product.box_dimensions);
   }
 
   if (product.year_created) {
@@ -225,12 +289,19 @@ export async function generateSpecSheet(
   doc.line(margin, y, pageW - margin, y);
   y += 6;
 
-  // ── ATTRIBUTION DETAILS ──
+  // ── ATTRIBUTION DETAILS (designer / maker / style-period / country) ──
+  const designerName = joinNames(
+    (product.product_designers ?? []).map((pd) => pd.designer?.name)
+  );
+  const makerName = joinNames((product.product_makers ?? []).map((pm) => pm.maker?.name));
+  const stylePeriodName = joinNames(
+    (product.product_styles_periods ?? []).map((psp) => psp.styles_periods?.name)
+  );
+
   const details: [string, string][] = [];
-  if (product.designer?.name) details.push(["Designer", product.designer.name]);
-  if (product.maker?.name) details.push(["Maker", product.maker.name]);
-  if (product.style?.name) details.push(["Style", product.style.name]);
-  if (product.period?.name) details.push(["Period", product.period.name]);
+  if (designerName) details.push(["Designer", designerName]);
+  if (makerName) details.push(["Maker", makerName]);
+  if (stylePeriodName) details.push(["Style / Period", stylePeriodName]);
   if (product.country?.name) details.push(["Country of Origin", product.country.name]);
 
   if (details.length > 0) {
@@ -250,15 +321,14 @@ export async function generateSpecSheet(
       }
       y += 12;
     }
-  }
-
-  // ── DESCRIPTION ──
-  const desc = product.short_description;
-  if (desc) {
     doc.setDrawColor(...lineGray);
     doc.line(margin, y, pageW - margin, y);
     y += 6;
+  }
 
+  // ── DESCRIPTION ──
+  const desc = product.short_description || product.long_description;
+  if (desc) {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7);
     doc.setTextColor(...medGray);
@@ -284,49 +354,11 @@ export async function generateSpecSheet(
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7);
   doc.setTextColor(...medGray);
-  doc.text(
-    `warehouse414.com  ·  sales@warehouse414.com  ·  785.232.8008`,
-    margin,
-    footerY
-  );
+  doc.text(`warehouse414.com  ·  sales@warehouse414.com  ·  785.232.8008`, margin, footerY);
   doc.text(`Generated ${new Date().toLocaleDateString()}`, pageW - margin, footerY, {
     align: "right",
   });
 
-  const filename = `W414-${product.name.replace(/[^a-zA-Z0-9]/g, "-").substring(0, 40)}.pdf`;
+  const filename = `W414-${(product.sku || product.name).replace(/[^a-zA-Z0-9]/g, "-").substring(0, 40)}.pdf`;
   doc.save(filename);
-}
-
-async function loadImageAsBase64(url: string): Promise<string | null> {
-  try {
-    const response = await fetch(url, { mode: "cors" });
-    if (!response.ok) {
-      console.warn("[spec-sheet] image fetch !ok:", url, response.status);
-      return null;
-    }
-    const blob = await response.blob();
-    return await new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => {
-        console.warn("[spec-sheet] FileReader error:", url);
-        resolve(null);
-      };
-      reader.readAsDataURL(blob);
-    });
-  } catch (err) {
-    console.warn("[spec-sheet] image fetch threw:", url, err);
-    return null;
-  }
-}
-
-async function getImageDimensions(
-  dataUrl: string
-): Promise<{ width: number; height: number }> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
-    img.onerror = () => reject(new Error("image decode failed"));
-    img.src = dataUrl;
-  });
 }
