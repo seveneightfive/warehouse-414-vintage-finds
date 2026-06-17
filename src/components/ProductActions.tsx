@@ -1,14 +1,19 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '@/integrations/supabase/client';
-import jsPDF from 'jspdf';
+import { generateSpecSheet, type SpecSheetProduct } from '@/lib/generateSpecSheet';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type ActionType = 'inquiry' | 'offer' | 'purchase' | 'hold' | 'specsheet' | null;
 
+interface DesignerRef { designer?: { name?: string } | null }
+interface MakerRef { maker?: { name?: string } | null }
+interface StylePeriodRef { styles_periods?: { name?: string } | null }
+
 interface Product {
   id: string;
+  slug?: string;
   name: string;
   sku?: string;
   price?: number;
@@ -18,6 +23,12 @@ interface Product {
   box_dimensions?: string;
   materials?: string;
   featured_image_url?: string;
+  year_created?: string;
+  condition?: string;
+  country?: { name?: string } | null;
+  product_designers?: DesignerRef[];
+  product_makers?: MakerRef[];
+  product_styles_periods?: StylePeriodRef[];
   status: string;
 }
 
@@ -246,7 +257,7 @@ export default function ProductActions({ product, mode = 'actions' }: ProductAct
   const closeModal = () => { setActiveAction(null); resetForm(); };
 
   // ── Email helper ─────────────────────────────────────────────────────────────
-  // Sends a notification email to sales@warehouse414.com via the send-inquiry-email edge function.
+  // Sends a notification email via the send-inquiry-email edge function.
   // Failures are logged but do NOT block the user — their DB insert already succeeded.
 
   const sendEmail = async (subject: string, messageBody: string) => {
@@ -357,6 +368,8 @@ export default function ProductActions({ product, mode = 'actions' }: ProductAct
     finally { setLoading(false); }
   };
 
+  // Builds the full branded spec sheet (logo, QR code, featured image,
+  // attribution table) via the shared generateSpecSheet helper.
   const submitSpecSheet = async () => {
     if (!name || !email) return;
     setLoading(true);
@@ -366,55 +379,11 @@ export default function ProductActions({ product, mode = 'actions' }: ProductAct
       });
       if (dbError) throw dbError;
 
-      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
-      const pageW = 215.9, margin = 20, contentW = pageW - margin * 2;
-      let y = margin;
-
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(40, 30, 20);
-      doc.text('WAREHOUSE 414', margin, y); y += 7;
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(120, 100, 80);
-      doc.text('HIGH STYLE FASHIONABLE VINTAGE FURNISHINGS & ART', margin, y); y += 4;
-      doc.setDrawColor(180, 150, 100); doc.setLineWidth(0.5);
-      doc.line(margin, y, pageW - margin, y); y += 10;
-
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(40, 30, 20);
-      const nameLines = doc.splitTextToSize(product.name, contentW);
-      doc.text(nameLines, margin, y); y += nameLines.length * 7 + 4;
-
-      if (product.sku) {
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(140, 120, 90);
-        doc.text(`SKU: ${product.sku}`, margin, y); y += 6;
-      }
-      if (includePrice && product.price) {
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(160, 120, 50);
-        doc.text(`$${product.price.toLocaleString()}`, margin, y); y += 9;
-      }
-
-      doc.setDrawColor(220, 200, 170); doc.setLineWidth(0.3);
-      doc.line(margin, y, pageW - margin, y); y += 8;
-
-      const addSection = (title: string, content: string) => {
-        if (!content) return;
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(100, 80, 55);
-        doc.text(title.toUpperCase(), margin, y); y += 5;
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(50, 40, 30);
-        const lines = doc.splitTextToSize(content, contentW);
-        doc.text(lines, margin, y); y += lines.length * 5.5 + 7;
-      };
-
-      addSection('Description', product.short_description || product.long_description || '');
-      addSection('Materials', product.materials || '');
-      addSection('Dimensions', product.product_dimensions || '');
-      addSection('Shipping / Crated Dimensions', product.box_dimensions || '');
-
-      const footerY = 279 - 15;
-      doc.setDrawColor(180, 150, 100); doc.setLineWidth(0.5);
-      doc.line(margin, footerY, pageW - margin, footerY);
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(150, 130, 100);
-      doc.text('warehouse414.com  ·  chris@warehouse414.com  ·  785.232.8008', margin, footerY + 5);
-      doc.text(`Generated ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`, pageW - margin, footerY + 5, { align: 'right' });
-
-      doc.save(`${product.sku || product.id}-spec-sheet.pdf`);
+      await generateSpecSheet(
+        product as SpecSheetProduct,
+        window.location.origin,
+        includePrice
+      );
 
       // Notify sales of the lead (remove this block if you don't want spec-sheet notifications)
       await sendEmail(
