@@ -30,6 +30,16 @@ import CollectionDetail from "./pages/CollectionDetail";
 import AdminSidebar from "./components/AdminSidebar";
 import ProtectedAdminRoute from "@/components/ProtectedAdminRoute";
 import NotFound from "./pages/NotFound";
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
 
 const queryClient = new QueryClient();
 
@@ -60,6 +70,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ScrollToTop />
           <Routes>
             {/* Public */}
             <Route element={<Layout />}>
