@@ -70,7 +70,7 @@ type HoldFormData = {
 };
 
 // Added 'sold_at' as a sortable key
-type SortKey = 'default' | 'price' | 'created_at' | 'sale_date';
+type SortKey = 'default' | 'price' | 'created_at' | 'sale_date' | 'sku';
 type SortDir = 'asc' | 'desc';
 
 type StatusTab = {
@@ -276,6 +276,10 @@ const AdminProducts = () => {
     .order('published_at', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false })
     .order('id', { ascending: false });
+  } else if (sortKey === 'sku') {
+  listQuery = listQuery
+    .order('sku', { ascending: sortDir === 'asc', nullsFirst: false })
+    .order('id', { ascending: false });
 }
       listQuery = listQuery.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
@@ -295,7 +299,7 @@ const AdminProducts = () => {
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE));
   const counts = countsData ?? defaultCounts;
 
-  const cycleSort = (key: 'price' | 'created_at' | 'sale_date') => {
+  const cycleSort = (key: 'price' | 'created_at' | 'sale_date' | 'sku') => {
     if (sortKey !== key) {
       setSortKey(key);
       setSortDir('desc');
@@ -538,7 +542,17 @@ const AdminProducts = () => {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-16">Image</TableHead>
-                <TableHead className="w-32">SKU</TableHead>
+                <TableHead className="w-32">
+  <button
+    type="button"
+    onClick={() => cycleSort('sku')}
+    className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+    title="Sort by SKU"
+  >
+    SKU
+    <SortIcon active={sortKey === 'sku'} dir={sortDir} />
+  </button>
+</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead className="w-28">Cross-Listed</TableHead>
                 <TableHead className="w-28">
