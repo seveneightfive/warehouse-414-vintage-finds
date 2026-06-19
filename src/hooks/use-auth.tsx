@@ -33,26 +33,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
         const currentUser = session?.user ?? null;
         setUser(currentUser);
+
         if (currentUser) {
-          await checkAdmin(currentUser.id);
+          // Defer any further Supabase calls out of the auth callback
+          // to avoid a deadlock between the auth state lock and this query.
+          setTimeout(() => {
+            checkAdmin(currentUser.id);
+          }, 0);
         } else {
           setIsAdmin(false);
         }
         setLoading(false);
       }
     );
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      if (currentUser) {
-        checkAdmin(currentUser.id);
-      }
-      setLoading(false);
-    });
 
     return () => subscription.unsubscribe();
   }, []);
