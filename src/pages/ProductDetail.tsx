@@ -121,6 +121,7 @@ const ProductDetail = () => {
     product.materials && { label: 'MATERIALS', value: product.materials },
     product.condition && { label: 'CONDITION', value: product.condition },
     product.year_created && { label: 'YEAR', value: `c. ${product.year_created}` },
+    product.period_designed && { label: 'PERIOD DESIGNED', value: product.period_designed },
     product.period && { label: 'PERIOD', value: product.period.name },
     product.country && { label: 'COUNTRY', value: product.country.name },
     product.line && { label: 'LINE', value: product.line },
@@ -301,7 +302,7 @@ const ProductDetail = () => {
 
             {product.short_description && (
               <div
-                className="text-base leading-relaxed text-foreground mt-4 prose prose-sm max-w-none md:pr-10"
+                className="text-base leading-relaxed text-foreground mt-4 prose prose-sm max-w-none md:pr-10 prose-p:mb-4"
                 dangerouslySetInnerHTML={{ __html: product.short_description }}
               />
             )}
@@ -317,7 +318,7 @@ const ProductDetail = () => {
               about this piece
             </h2>
             <div
-              className="text-lg leading-[1.9] text-foreground prose max-w-none"
+              className="text-lg leading-[1.9] text-foreground prose max-w-none prose-p:mb-4"
               dangerouslySetInnerHTML={{ __html: product.long_description || product.short_description || '' }}
             />
           </div>
