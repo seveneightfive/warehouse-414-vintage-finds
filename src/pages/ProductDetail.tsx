@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { useParams, Link } from 'react-router-dom';
 import { useState, useRef, useCallback } from 'react';
 import { useProduct, useSimilarProducts, useProducts } from '@/hooks/use-products';
