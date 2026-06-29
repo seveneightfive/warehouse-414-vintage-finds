@@ -566,7 +566,7 @@ const AdminProducts = () => {
                     <SortIcon active={sortKey === 'price'} dir={sortDir} />
                   </button>
                 </TableHead>
-                <TableHead className="w-28">
+               <TableHead className="w-28">
                   <button
                     type="button"
                     onClick={() => cycleSort('created_at')}
@@ -577,6 +577,7 @@ const AdminProducts = () => {
                     <SortIcon active={sortKey === 'created_at'} dir={sortDir} />
                   </button>
                 </TableHead>
+                <TableHead className="w-20">Views</TableHead>
                 {/* Sold On column — only visible on the sold tab */}
                 {selectedStatus === 'sold' && (
                   <TableHead className="w-28">
@@ -645,6 +646,14 @@ const AdminProducts = () => {
                     <TableCell>{formatPrice(product)}</TableCell>
                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
   {formatDate((product as any).published_at ?? product.created_at)}
+</TableCell>
+                    <TableCell className="text-xs text-center">
+  <span className={(product as any).view_count > 50 
+    ? 'text-foreground font-semibold' 
+    : 'text-muted-foreground'
+  }>
+    {(product as any).view_count ?? 0}
+  </span>
 </TableCell>
                     {/* Sold On cell — only rendered on the sold tab */}
                     {selectedStatus === 'sold' && (
