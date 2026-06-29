@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 import { useParams, Link } from 'react-router-dom';
 import { useState, useRef, useCallback } from 'react';
 import { useProduct, useSimilarProducts, useProducts } from '@/hooks/use-products';
@@ -30,6 +32,16 @@ const formatDescription = (text: string) => {
 const ProductDetail = () => {
   const { slug } = useParams();
   const { data: product, isLoading } = useProduct(slug);
+
+  // ─── Product Count ────────────────────────────────────────────────────────────────
+
+useEffect(() => {
+  if (!slug) return;
+  const key = `viewed_${slug}`;
+  if (sessionStorage.getItem(key)) return; // already counted this session
+  sessionStorage.setItem(key, '1');
+  supabase.rpc('increment_view_count', { product_slug: slug });
+}, [slug]);
 
   // Collect all category IDs this product belongs to (for similar products)
   const categoryIds = product?.product_categories?.map(
