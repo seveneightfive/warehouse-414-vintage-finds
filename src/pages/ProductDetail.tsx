@@ -144,6 +144,7 @@ useEffect(() => {
     product.condition && { label: 'CONDITION', value: product.condition },
     product.year_created && { label: 'YEAR', value: `c. ${product.year_created}` },
     product.period_designed && { label: 'PERIOD DESIGNED', value: product.period_designed },
+    product.period_created && { label: 'PERIOD CREATED', value: product.period_created },
     product.period && { label: 'PERIOD', value: product.period.name },
     product.country && { label: 'COUNTRY', value: product.country.name },
     product.line && { label: 'LINE', value: product.line },
@@ -365,90 +366,123 @@ useEffect(() => {
       )}
 
       {/* Product Details */}
-      {detailRows.length > 0 && (
-        <section className="container mx-auto px-5 py-12 border-t border-border">
-          <div className="grid md:grid-cols-2 gap-6 md:gap-16">
-            <div className="hidden md:block">
-              {product.featured_image_url && (
-                <img
-                  src={product.featured_image_url}
-                  alt={product.name}
-                  className="w-full h-auto object-cover rounded-sm"
-                />
-              )}
-            </div>
-            <div>
-              <h2 className="bg-foreground text-background font-display text-sm tracking-[0.2em] px-4 py-2 inline-block mb-8">
-                product details
-              </h2>
+{(detailRows.length > 0 || hasDimensions || hasArtwork) && (
+  <section className="container mx-auto px-5 py-12 border-t border-border">
+    <div className="grid md:grid-cols-2 gap-6 md:gap-16">
 
-              {hasDimensions && (
-                <div className="py-4 border-b border-border">
-                  <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-3">DIMENSIONS</p>
-                  <div className="flex flex-col md:flex-row gap-4 md:gap-0">
-                    {product.product_dimensions && (
-                      <div className={product.box_dimensions ? 'flex-1 md:pr-6' : ''}>
-                        <p className="font-display text-[10px] tracking-[0.15em] text-muted-foreground mb-1.5">PRODUCT</p>
-                        {product.product_dimensions.split('\n').map((line: string, i: number) => (
-                          <p key={i} className="text-base text-foreground leading-relaxed">{line}</p>
-                        ))}
-                      </div>
-                    )}
-                    {product.product_dimensions && product.box_dimensions && (
-                      <>
-                        <div className="hidden md:block w-px bg-border/50" />
-                        <div className="md:hidden h-px bg-border/50" />
-                      </>
-                    )}
-                    {product.box_dimensions && (
-                      <div className={product.product_dimensions ? 'flex-1 md:pl-6' : ''}>
-                        <p className="font-display text-[10px] tracking-[0.15em] text-muted-foreground mb-1.5">BOXED / CRATED</p>
-                        {product.box_dimensions.split('\n').map((line: string, i: number) => (
-                          <p key={i} className="text-base text-foreground leading-relaxed">{line}</p>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+      {/* Left col — image + SKU/condition (desktop only) */}
+      <div className="hidden md:block space-y-4">
+        {product.featured_image_url && (
+          <img src={product.featured_image_url} alt={product.name} className="w-full h-auto object-cover rounded-sm" />
+        )}
+        {(product.sku || product.condition) && (
+          <div className="space-y-3 pt-2">
+            {product.sku && (
+              <div>
+                <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-1">SKU</p>
+                <p className="text-sm text-foreground">{product.sku}</p>
+              </div>
+            )}
+            {product.condition && (
+              <div>
+                <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-1">CONDITION</p>
+                <p className="text-sm text-foreground leading-relaxed">{product.condition}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Right col — all details */}
+      <div>
+        <h2 className="bg-foreground text-background font-display text-sm tracking-[0.2em] px-4 py-2 inline-block mb-8">
+          product details
+        </h2>
+
+        {/* Mobile only: SKU + condition above dimensions */}
+        <div className="md:hidden space-y-3 mb-6">
+          {product.sku && (
+            <div>
+              <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-1">SKU</p>
+              <p className="text-sm text-foreground">{product.sku}</p>
+            </div>
+          )}
+          {product.condition && (
+            <div>
+              <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-1">CONDITION</p>
+              <p className="text-sm text-foreground leading-relaxed">{product.condition}</p>
+            </div>
+          )}
+        </div>
+
+        {hasDimensions && (
+          <div className="py-4 border-b border-border">
+            <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-3">DIMENSIONS</p>
+            <div className="flex flex-col md:flex-row gap-4 md:gap-0">
+              {product.product_dimensions && (
+                <div className={product.box_dimensions ? 'flex-1 md:pr-6' : ''}>
+                  <p className="font-display text-[10px] tracking-[0.15em] text-muted-foreground mb-1.5">PRODUCT</p>
+                  {product.product_dimensions.split('\n').map((line: string, i: number) => (
+                    <p key={i} className="text-base text-foreground leading-relaxed">{line}</p>
+                  ))}
                 </div>
               )}
-
-              {hasArtwork && (
-  <div className="py-4 border-b border-border">
-    <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-3">ARTWORK</p>
-    <div className="space-y-1.5">
-      {product.artwork_artist && (
-        <p className="text-base text-foreground">
-          <span className="text-muted-foreground">Artist: </span>{product.artwork_artist}
-        </p>
-      )}
-      {product.artwork_title && (
-        <p className="text-base text-foreground">
-          <span className="text-muted-foreground">Title: </span>
-          <span className="italic">{product.artwork_title}</span>
-        </p>
-      )}
-      {product.artwork_medium && (
-        <p className="text-base text-foreground">
-          <span className="text-muted-foreground">Medium: </span>{product.artwork_medium}
-        </p>
-      )}
-    </div>
-  </div>
-)}
-
-              <div className="space-y-0">
-                {detailRows.map((row, i) => (
-                  <div key={i} className="py-4 border-b border-border">
-                    <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-1">{row.label}</p>
-                    <p className="text-lg text-foreground whitespace-pre-line">{row.value}</p>
-                  </div>
-                ))}
-              </div>
+              {product.product_dimensions && product.box_dimensions && (
+                <>
+                  <div className="hidden md:block w-px bg-border/50" />
+                  <div className="md:hidden h-px bg-border/50" />
+                </>
+              )}
+              {product.box_dimensions && (
+                <div className={product.product_dimensions ? 'flex-1 md:pl-6' : ''}>
+                  <p className="font-display text-[10px] tracking-[0.15em] text-muted-foreground mb-1.5">BOXED / CRATED</p>
+                  {product.box_dimensions.split('\n').map((line: string, i: number) => (
+                    <p key={i} className="text-base text-foreground leading-relaxed">{line}</p>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-        </section>
-      )}
+        )}
 
+        {hasArtwork && (
+          <div className="py-4 border-b border-border">
+            <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-3">ARTWORK</p>
+            <div className="space-y-1.5">
+              {product.artwork_artist && (
+                <p className="text-base text-foreground">
+                  <span className="text-muted-foreground">Artist: </span>{product.artwork_artist}
+                </p>
+              )}
+              {product.artwork_title && (
+                <p className="text-base text-foreground">
+                  <span className="text-muted-foreground">Title: </span>
+                  <span className="italic">{product.artwork_title}</span>
+                </p>
+              )}
+              {product.artwork_medium && (
+                <p className="text-base text-foreground">
+                  <span className="text-muted-foreground">Medium: </span>{product.artwork_medium}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-0">
+          {detailRows.map((row, i) => (
+            <div key={i} className="py-4 border-b border-border">
+              <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-1">{row.label}</p>
+              <p className="text-lg text-foreground whitespace-pre-line">{row.value}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+    </div>
+  </section>
+)}
+      
       {/* Also Listed On */}
       {(product.firstdibs_url || product.ebay_url || product.chairish_url) && (
         <section className="container mx-auto px-5 py-10 border-t border-border">
