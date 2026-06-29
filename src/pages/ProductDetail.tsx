@@ -15,6 +15,16 @@ const Attribution = ({ type }: { type?: string | null }) =>
     <span className="italic text-muted-foreground mr-1">{type}</span>
   ) : null;
 
+const formatDescription = (text: string) => {
+  if (!text) return '';
+  if (/<[a-z][\s\S]*>/i.test(text)) return text;
+  return text
+    .split(/\n\n+/)
+    .filter(s => s.trim())
+    .map(p => `<p>${p.replace(/\n/g, '<br />')}</p>`)
+    .join('');
+};
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const ProductDetail = () => {
@@ -303,7 +313,7 @@ const ProductDetail = () => {
             {product.short_description && (
               <div
                 className="text-base leading-relaxed text-foreground mt-4 prose prose-sm max-w-none md:pr-10 prose-p:mb-4"
-                dangerouslySetInnerHTML={{ __html: product.short_description }}
+                dangerouslySetInnerHTML={{ __html: formatDescription(product.short_description) }}
               />
             )}
           </div>
@@ -319,7 +329,7 @@ const ProductDetail = () => {
             </h2>
             <div
               className="text-lg leading-[1.9] text-foreground prose max-w-none prose-p:mb-4"
-              dangerouslySetInnerHTML={{ __html: product.long_description || product.short_description || '' }}
+              dangerouslySetInnerHTML={{ __html: formatDescription(product.long_description || product.short_description || '') }}
             />
           </div>
         </section>
