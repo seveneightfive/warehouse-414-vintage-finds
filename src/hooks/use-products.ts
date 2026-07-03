@@ -315,24 +315,96 @@ export function useFeaturedProducts() {
 export function useSimilarProducts(
   productId: string | undefined,
   categoryIds: string[] | undefined,
+  options?: {
+    materials?: string;
+    stylePeriodIds?: string[];
+    countryId?: string;
+    periodCreated?: string;
+  }
 ) {
   return useQuery({
-    queryKey: ["products", "similar", productId, categoryIds],
+    queryKey: ["products", "similar", productId, categoryIds, options],
     queryFn: async () => {
       if (!productId) return [];
 
-      let ids: string[] = [];
+      // ── Gather candidate product IDs from each signal ──────────────────────
 
+      const candidateScores = new Map<string, number>();
+
+      const addScore = (ids: string[], points: number) => {
+        for (const id of ids) {
+          if (id === productId) continue;
+          candidateScores.set(id, (candidateScores.get(id) ?? 0) + points);
+        }
+      };
+
+      // Category match — highest signal (3 pts)
       if (categoryIds && categoryIds.length > 0) {
         const { data: pcs } = await supabase
           .from("product_categories")
           .select("product_id")
           .in("category_id", categoryIds)
           .neq("product_id", productId);
-        ids = [...new Set((pcs ?? []).map((r) => r.product_id))].slice(0, 4);
+        addScore((pcs ?? []).map((r) => r.product_id), 3);
       }
 
-      if (ids.length === 0) {
+      // Style/period match (2 pts)
+      if (options?.stylePeriodIds && options.stylePeriodIds.length > 0) {
+        const { data: psps } = await supabase
+          .from("product_styles_periods")
+          .select("product_id")
+          .in("styles_period_id", options.stylePeriodIds)
+          .neq("product_id", productId);
+        addScore((psps ?? []).map((r) => r.product_id), 2);
+      }
+
+      // Country of origin match (1 pt)
+      if (options?.countryId) {
+        const { data: pcos } = await supabase
+          .from("products")
+          .select("id")
+          .eq("country_id", options.countryId)
+          .eq("status", "available")
+          .neq("id", productId);
+        addScore((pcos ?? []).map((r) => r.id), 1);
+      }
+
+      // Materials match — ilike on each material word (1 pt each)
+      if (options?.materials) {
+        const words = options.materials
+          .split(/[,\s]+/)
+          .map(w => w.trim())
+          .filter(w => w.length > 3); // skip short words like "and", "or"
+        for (const word of words.slice(0, 3)) { // cap at 3 words to avoid too many queries
+          const { data: pms } = await supabase
+            .from("products")
+            .select("id")
+            .ilike("materials", `%${word}%`)
+            .eq("status", "available")
+            .neq("id", productId);
+          addScore((pms ?? []).map((r) => r.id), 1);
+        }
+      }
+
+      // Period created match (1 pt)
+      if (options?.periodCreated) {
+        const { data: ppc } = await supabase
+          .from("products")
+          .select("id")
+          .eq("period_created", options.periodCreated)
+          .eq("status", "available")
+          .neq("id", productId);
+        addScore((ppc ?? []).map((r) => r.id), 1);
+      }
+
+      // ── Sort by score, take top 8 candidates ───────────────────────────────
+      const topIds = [...candidateScores.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([id]) => id);
+
+      // ── Fallback: just show recent available products ──────────────────────
+      if (topIds.length === 0) {
         const { data, error } = await supabase
           .from("products")
           .select(`id, name, slug, price, status, featured_image_url, created_at, published_at, sale_price,
@@ -351,11 +423,16 @@ export function useSimilarProducts(
         .select(`id, name, slug, price, status, featured_image_url, created_at, published_at, sale_price,
           product_designers(attribution_type, designer:designers(id, name, slug)),
           product_images(image_url, sort_order)`)
-        .in("id", ids)
-        .eq("status", "available")
-        .order("published_at", { ascending: false, nullsFirst: false });
+        .in("id", topIds)
+        .eq("status", "available");
       if (error) throw error;
-      return data as unknown as Product[];
+
+      // Re-sort by score since Supabase .in() doesn't preserve order
+      const scored = (data as unknown as Product[]).sort((a, b) =>
+        (candidateScores.get(b.id) ?? 0) - (candidateScores.get(a.id) ?? 0)
+      );
+
+      return scored.slice(0, 4);
     },
     enabled: !!productId,
   });
