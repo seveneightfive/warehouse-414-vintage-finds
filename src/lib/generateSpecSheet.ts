@@ -2,9 +2,6 @@ import jsPDF from "jspdf";
 import QRCode from "qrcode";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
-// Mirrors the array-shaped relations actually used by ProductDetail.tsx
-// (product_designers / product_makers / product_styles_periods are join-table
-// arrays, not singular nested objects).
 
 interface DesignerRef { designer?: { name?: string } | null }
 interface MakerRef { maker?: { name?: string } | null }
@@ -65,7 +62,6 @@ function getImageDimensions(dataUrl: string): Promise<{ width: number; height: n
   });
 }
 
-/** Joins join-table refs the same way ProductDetail.tsx displays them ("A & B"). */
 function joinNames(names: (string | undefined | null)[]): string {
   return names.filter(Boolean).join(" & ");
 }
@@ -75,7 +71,8 @@ function joinNames(names: (string | undefined | null)[]): string {
 export async function generateSpecSheet(
   product: SpecSheetProduct,
   siteUrl: string,
-  includePrice: boolean = true
+  includePrice: boolean = true,
+  includeDescription: boolean = true
 ): Promise<void> {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
   const pageW = doc.internal.pageSize.getWidth();
@@ -235,7 +232,7 @@ export async function generateSpecSheet(
     }
   }
 
-  // Meta column (left): Materials, Dimensions, Shipping, Year, Condition
+  // Meta column (left)
   let metaY = twoColStartY;
   const writeMetaLabel = (label: string) => {
     doc.setFont("helvetica", "bold");
@@ -289,7 +286,7 @@ export async function generateSpecSheet(
   doc.line(margin, y, pageW - margin, y);
   y += 6;
 
-  // ── ATTRIBUTION DETAILS (designer / maker / style-period / country) ──
+  // ── ATTRIBUTION DETAILS ──
   const designerName = joinNames(
     (product.product_designers ?? []).map((pd) => pd.designer?.name)
   );
@@ -326,24 +323,26 @@ export async function generateSpecSheet(
     y += 6;
   }
 
-  // ── DESCRIPTION ──
-  const desc = product.short_description || product.long_description;
-  if (desc) {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(7);
-    doc.setTextColor(...medGray);
-    doc.text("DESCRIPTION", margin, y);
-    y += 5;
+  // ── DESCRIPTION (long first, short as fallback, only if includeDescription) ──
+  if (includeDescription) {
+    const desc = product.long_description || product.short_description;
+    if (desc) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7);
+      doc.setTextColor(...medGray);
+      doc.text("DESCRIPTION", margin, y);
+      y += 5;
 
-    const plainDesc = desc
-      .replace(/<[^>]*>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(...darkGray);
-    const descLines = doc.splitTextToSize(plainDesc, contentW);
-    doc.text(descLines, margin, y);
+      const plainDesc = desc
+        .replace(/<[^>]*>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(...darkGray);
+      const descLines = doc.splitTextToSize(plainDesc, contentW);
+      doc.text(descLines, margin, y);
+    }
   }
 
   // ── FOOTER ──
