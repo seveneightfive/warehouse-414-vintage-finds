@@ -323,49 +323,55 @@ export async function generateSpecSheet(
     y += 6;
   }
 
-  // ── DESCRIPTION (long first, short as fallback, only if includeDescription) ──
-if (includeDescription) {
-  const desc = product.long_description || product.short_description;
-  if (desc) {
-    const plainDesc = desc
-      .replace(/<[^>]*>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    const descLines = doc.splitTextToSize(plainDesc, contentW);
-    const lineHeight = 4.5;
-    const labelHeight = 10; // label + spacing
-
-    // Check if we need a new page
-    const spaceNeeded = labelHeight + descLines.length * lineHeight;
-    const spaceLeft = pageH - 18 - 10 - y; // 18 = footer margin, 10 = buffer
-
-    if (spaceNeeded > spaceLeft) {
+ // ── PAGE 2: Full description (only if includeDescription) ──
+  if (includeDescription) {
+    const desc = product.long_description || product.short_description;
+    if (desc) {
       doc.addPage();
-      y = margin;
-    }
+      let p2y = margin;
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(7);
-    doc.setTextColor(...medGray);
-    doc.text("DESCRIPTION", margin, y);
-    y += 5;
+      // Page 2 header — just the product name as a reminder
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(...black);
+      const p2TitleLines = doc.splitTextToSize(product.name, contentW);
+      doc.text(p2TitleLines, margin, p2y);
+      p2y += p2TitleLines.length * 5 + 4;
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(...darkGray);
+      doc.setDrawColor(...lineGray);
+      doc.line(margin, p2y, pageW - margin, p2y);
+      p2y += 8;
 
-    // Render line by line, adding pages as needed
-    for (const line of descLines) {
-      if (y > pageH - 24) { // 24 = footer buffer
-        doc.addPage();
-        y = margin;
+      // Description label
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7);
+      doc.setTextColor(...medGray);
+      doc.text("DESCRIPTION", margin, p2y);
+      p2y += 6;
+
+      // Description body
+      const plainDesc = desc
+        .replace(/<[^>]*>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      const lineHeight = 4.8;
+      const descLines = doc.splitTextToSize(plainDesc, contentW);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(...darkGray);
+
+      for (const line of descLines) {
+        if (p2y > pageH - 24) {
+          doc.addPage();
+          p2y = margin;
+        }
+        doc.text(line, margin, p2y);
+        p2y += lineHeight;
       }
-      doc.text(line, margin, y);
-      y += lineHeight;
     }
   }
-}
 
   // ── FOOTER (on every page) ──
   const totalPages = (doc.internal as any).getNumberOfPages();
