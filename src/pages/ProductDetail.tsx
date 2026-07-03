@@ -139,9 +139,7 @@ useEffect(() => {
     .join(', ');
 
   const detailRows = [
-    product.sku && { label: 'SKU', value: product.sku },
     product.materials && { label: 'MATERIALS', value: product.materials },
-    product.condition && { label: 'CONDITION', value: product.condition },
     product.year_created && { label: 'YEAR', value: `c. ${product.year_created}` },
     product.period_designed && { label: 'PERIOD DESIGNED', value: product.period_designed },
     product.period_created && { label: 'PERIOD CREATED', value: product.period_created },
