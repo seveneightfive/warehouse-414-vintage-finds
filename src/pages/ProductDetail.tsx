@@ -69,8 +69,17 @@ useEffect(() => {
   const designerProducts = designerProductsRaw?.filter((p) => p.id !== product?.id);
   const makerProducts    = makerProductsRaw?.filter((p) => p.id !== product?.id);
 
-  const { data: similar } = useSimilarProducts(product?.id, categoryIds);
+const stylePeriodIds = product?.product_styles_periods?.map(
+  (psp: any) => psp.styles_periods?.id
+).filter(Boolean) ?? [];
 
+const { data: similar } = useSimilarProducts(product?.id, categoryIds, {
+  materials: product?.materials,
+  stylePeriodIds,
+  countryId: product?.country?.id,
+  periodCreated: (product as any)?.period_created,
+});
+  
   const [selectedImage, setSelectedImage] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
