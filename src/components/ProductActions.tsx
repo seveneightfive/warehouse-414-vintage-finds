@@ -421,9 +421,9 @@ export default function ProductActions({ product, mode = 'actions' }: ProductAct
       <>
         <button
           onClick={() => openAction('specsheet')}
-          className="flex items-center gap-2 px-3 py-2 border border-border rounded-sm
-            font-display text-[11px] tracking-[0.15em] uppercase text-muted-foreground
-            hover:text-foreground hover:border-foreground transition-colors duration-200 shrink-0"
+          className="flex items-center gap-2 px-3 py-2 bg-foreground text-background rounded-sm
+  font-display text-[11px] tracking-[0.15em] uppercase
+  hover:opacity-80 transition-opacity duration-200 shrink-0"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
             <path d="M6 1v7M3 5l3 3 3-3M1 10h10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
