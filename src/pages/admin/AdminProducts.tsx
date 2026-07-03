@@ -284,10 +284,13 @@ const AdminProducts = () => {
       listQuery = listQuery.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
       if (searchQuery) {
-        const filter = `name.ilike.%${searchQuery}%,sku.ilike.%${searchQuery}%`;
-        countQuery = countQuery.or(filter);
-        listQuery = listQuery.or(filter);
-      }
+  const words = searchQuery.trim().split(/\s+/).filter(Boolean);
+  for (const word of words) {
+    const filter = `name.ilike.%${word}%,sku.ilike.%${word}%`;
+    countQuery = countQuery.or(filter);
+    listQuery = listQuery.or(filter);
+  }
+}
 
       const [{ count }, { data: products, error }] = await Promise.all([countQuery, listQuery]);
       if (error) throw error;
