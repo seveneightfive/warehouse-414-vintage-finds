@@ -76,12 +76,33 @@ const TextAreaField = ({ label, value, onChange, placeholder, required, rows = 3
   </div>
 );
 
+// ─── Toggle component ─────────────────────────────────────────────────────────
+
+const Toggle = ({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; label: string }) => (
+  <div className="flex items-center gap-3 py-1">
+    <button
+      type="button"
+      onClick={() => onChange(!value)}
+      className={`relative w-9 h-5 rounded-full transition-colors duration-200 focus:outline-none
+        ${value ? 'bg-primary' : 'bg-muted-foreground/30'}`}
+    >
+      <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow
+        transition-transform duration-200 ${value ? 'translate-x-4' : 'translate-x-0'}`} />
+    </button>
+    <span className="text-[11px] tracking-[0.1em] uppercase font-display text-foreground">
+      {label}
+    </span>
+  </div>
+);
+
 // ─── Modal rendered via portal to escape sticky bar stacking context ──────────
 
 function Modal({ current, activeAction, closeModal, success, error, loading,
   name, setName, email, setEmail, phone, setPhone, message, setMessage,
   offerAmount, setOfferAmount, zipCode, setZipCode,
-  includePrice, setIncludePrice, product }: any) {
+  includePrice, setIncludePrice,
+  includeDescription, setIncludeDescription,
+  product }: any) {
   return (
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
@@ -163,16 +184,17 @@ function Modal({ current, activeAction, closeModal, success, error, loading,
               )}
 
               {activeAction === 'specsheet' && (
-                <div className="flex items-center gap-3 py-1">
-                  <button type="button" onClick={() => setIncludePrice((p: boolean) => !p)}
-                    className={`relative w-9 h-5 rounded-full transition-colors duration-200 focus:outline-none
-                      ${includePrice ? 'bg-primary' : 'bg-muted-foreground/30'}`}>
-                    <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow
-                      transition-transform duration-200 ${includePrice ? 'translate-x-4' : 'translate-x-0'}`} />
-                  </button>
-                  <span className="text-[11px] tracking-[0.1em] uppercase font-display text-foreground">
-                    Include price on spec sheet
-                  </span>
+                <div className="space-y-1 border border-border rounded-sm px-4 py-3">
+                  <Toggle
+                    value={includePrice}
+                    onChange={setIncludePrice}
+                    label="Include price on spec sheet"
+                  />
+                  <Toggle
+                    value={includeDescription}
+                    onChange={setIncludeDescription}
+                    label="Include full description on spec sheet"
+                  />
                 </div>
               )}
 
@@ -230,6 +252,7 @@ export default function ProductActions({ product, mode = 'actions' }: ProductAct
   const [offerAmount, setOfferAmount] = useState('');
   const [zipCode, setZipCode] = useState('');
   const [includePrice, setIncludePrice] = useState(true);
+  const [includeDescription, setIncludeDescription] = useState(true);
 
   const isSold = product.status === 'sold';
 
@@ -251,14 +274,13 @@ export default function ProductActions({ product, mode = 'actions' }: ProductAct
   const resetForm = () => {
     setName(''); setEmail(''); setPhone(''); setMessage('');
     setOfferAmount(''); setZipCode(''); setSuccess(null); setError(null);
+    setIncludeDescription(true);
   };
 
   const openAction = (action: ActionType) => { resetForm(); setActiveAction(action); setMenuOpen(false); };
   const closeModal = () => { setActiveAction(null); resetForm(); };
 
-  // ── Email helper ─────────────────────────────────────────────────────────────
-  // Sends a notification email via the send-inquiry-email edge function.
-  // Failures are logged but do NOT block the user — their DB insert already succeeded.
+  // ── Email helper ──────────────────────────────────────────────────────────────
 
   const sendEmail = async (subject: string, messageBody: string) => {
     try {
@@ -278,7 +300,7 @@ export default function ProductActions({ product, mode = 'actions' }: ProductAct
     }
   };
 
-  // ── Submissions ──────────────────────────────────────────────────────────────
+  // ── Submissions ───────────────────────────────────────────────────────────────
 
   const submitInquiry = async () => {
     if (!name || !email || !message) return;
@@ -368,8 +390,6 @@ export default function ProductActions({ product, mode = 'actions' }: ProductAct
     finally { setLoading(false); }
   };
 
-  // Builds the full branded spec sheet (logo, QR code, featured image,
-  // attribution table) via the shared generateSpecSheet helper.
   const submitSpecSheet = async () => {
     if (!name || !email) return;
     setLoading(true);
@@ -382,13 +402,13 @@ export default function ProductActions({ product, mode = 'actions' }: ProductAct
       await generateSpecSheet(
         product as SpecSheetProduct,
         window.location.origin,
-        includePrice
+        includePrice,
+        includeDescription
       );
 
-      // Notify sales of the lead (remove this block if you don't want spec-sheet notifications)
       await sendEmail(
         'Spec Sheet Download',
-        `Spec sheet downloaded.\nSKU: ${product.sku || product.id}\nPrice included on sheet: ${includePrice ? 'Yes' : 'No'}`
+        `Spec sheet downloaded.\nSKU: ${product.sku || product.id}\nPrice included: ${includePrice ? 'Yes' : 'No'}\nDescription included: ${includeDescription ? 'Yes' : 'No'}`
       );
 
       setSuccess('Your spec sheet is downloading now.');
@@ -396,7 +416,7 @@ export default function ProductActions({ product, mode = 'actions' }: ProductAct
     finally { setLoading(false); }
   };
 
-  // ── Modal config ─────────────────────────────────────────────────────────────
+  // ── Modal config ──────────────────────────────────────────────────────────────
 
   const modalConfig: Record<string, { title: string; subtitle: string; onSubmit: () => void; submitLabel: string }> = {
     inquiry: { title: 'Ask a Question', subtitle: product.name, onSubmit: submitInquiry, submitLabel: 'Send Question' },
@@ -411,10 +431,13 @@ export default function ProductActions({ product, mode = 'actions' }: ProductAct
   const modalProps = {
     current, activeAction, closeModal, success, error, loading,
     name, setName, email, setEmail, phone, setPhone, message, setMessage,
-    offerAmount, setOfferAmount, zipCode, setZipCode, includePrice, setIncludePrice, product,
+    offerAmount, setOfferAmount, zipCode, setZipCode,
+    includePrice, setIncludePrice,
+    includeDescription, setIncludeDescription,
+    product,
   };
 
-  // ── Spec Sheet mode ──────────────────────────────────────────────────────────
+  // ── Spec Sheet mode ───────────────────────────────────────────────────────────
 
   if (mode === 'specsheet') {
     return (
@@ -422,8 +445,8 @@ export default function ProductActions({ product, mode = 'actions' }: ProductAct
         <button
           onClick={() => openAction('specsheet')}
           className="flex items-center gap-2 px-3 py-2 bg-foreground text-background rounded-sm
-  font-display text-[11px] tracking-[0.15em] uppercase
-  hover:opacity-80 transition-opacity duration-200 shrink-0"
+            font-display text-[11px] tracking-[0.15em] uppercase
+            hover:opacity-80 transition-opacity duration-200 shrink-0"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
             <path d="M6 1v7M3 5l3 3 3-3M1 10h10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
@@ -435,7 +458,7 @@ export default function ProductActions({ product, mode = 'actions' }: ProductAct
     );
   }
 
-  // ── Actions mode (default) ───────────────────────────────────────────────────
+  // ── Actions mode (default) ────────────────────────────────────────────────────
 
   const actionMenuItems = [
     { action: 'inquiry' as ActionType, label: 'Ask a Question', icon: '?', desc: 'Get more details about this piece' },
