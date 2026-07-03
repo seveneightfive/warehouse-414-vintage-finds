@@ -125,21 +125,21 @@ const AdminLayout = () => {
                 <Menu size={20} />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-56 p-0">
-              <div className="p-4 border-b border-border">
-                <Link to="/" onClick={() => setSheetOpen(false)} className="font-display text-sm tracking-[0.2em] uppercase text-foreground">
-                  W414 Admin
-                </Link>
-              </div>
-              <nav className="p-2 space-y-0.5 overflow-y-auto">
-                <NavLinks onNavigate={() => setSheetOpen(false)} />
-              </nav>
-              <div className="p-3 border-t border-border">
-                <Button variant="ghost" size="sm" onClick={() => { setSheetOpen(false); signOut(); }} className="w-full justify-start text-muted-foreground">
-                  <LogOut size={16} className="mr-2" /> Sign Out
-                </Button>
-              </div>
-            </SheetContent>
+            <SheetContent side="left" className="w-72 max-w-[85vw] p-0 z-50 flex flex-col">
+  <div className="p-4 border-b border-border shrink-0">
+    <Link to="/" onClick={() => setSheetOpen(false)} className="font-display text-sm tracking-[0.2em] uppercase text-foreground">
+      W414 Admin
+    </Link>
+  </div>
+  <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
+    <NavLinks onNavigate={() => setSheetOpen(false)} />
+  </nav>
+  <div className="p-3 border-t border-border shrink-0">
+    <Button variant="ghost" size="sm" onClick={() => { setSheetOpen(false); signOut(); }} className="w-full justify-start text-muted-foreground">
+      <LogOut size={16} className="mr-2" /> Sign Out
+    </Button>
+  </div>
+</SheetContent>
           </Sheet>
           <span className="font-display text-sm tracking-[0.2em] uppercase text-foreground">W414 Admin</span>
         </header>
