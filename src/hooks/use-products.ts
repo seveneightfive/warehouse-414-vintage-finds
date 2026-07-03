@@ -353,7 +353,7 @@ export function useSimilarProducts(
         const { data: psps } = await supabase
           .from("product_styles_periods")
           .select("product_id")
-          .in("styles_period_id", options.stylePeriodIds)
+          .in("style_period_id", options.stylePeriodIds)
           .neq("product_id", productId);
         addScore((psps ?? []).map((r) => r.product_id), 2);
       }
