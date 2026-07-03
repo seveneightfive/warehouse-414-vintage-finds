@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { X } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import {
   LayoutDashboard, Package, Users, Palette, LogOut, Globe,
   Clock, Layers, ShoppingBag, MessageSquare, HandCoins, Menu,
@@ -125,11 +126,16 @@ const AdminLayout = () => {
                 <Menu size={20} />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-72 max-w-[85vw] p-0 z-50 flex flex-col">
-  <div className="p-4 border-b border-border shrink-0">
+            <SheetContent side="left" className="w-64 max-w-[80vw] p-0 flex flex-col">
+  <div className="p-4 border-b border-border shrink-0 flex items-center justify-between">
     <Link to="/" onClick={() => setSheetOpen(false)} className="font-display text-sm tracking-[0.2em] uppercase text-foreground">
       W414 Admin
     </Link>
+    <SheetClose asChild>
+      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+        <X size={16} />
+      </Button>
+    </SheetClose>
   </div>
   <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
     <NavLinks onNavigate={() => setSheetOpen(false)} />
@@ -140,7 +146,6 @@ const AdminLayout = () => {
     </Button>
   </div>
 </SheetContent>
-          </Sheet>
           <span className="font-display text-sm tracking-[0.2em] uppercase text-foreground">W414 Admin</span>
         </header>
 
