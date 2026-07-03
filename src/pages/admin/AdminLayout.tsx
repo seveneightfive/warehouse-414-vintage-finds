@@ -2,11 +2,9 @@ import { useState } from 'react';
 import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 import {
   LayoutDashboard, Package, Users, Palette, LogOut, Globe,
-  Clock, Layers, ShoppingBag, MessageSquare, HandCoins, Menu,
+  Clock, Layers, ShoppingBag, MessageSquare, HandCoins, Menu, X,
   UserCheck, FolderOpen, Archive,
 } from 'lucide-react';
 
@@ -16,23 +14,18 @@ const INVENTORY_STATUSES = new Set(['inventory', 'draft', 'deactivated']);
 const AdminLayout = () => {
   const { user, isAdmin, loading, signOut } = useAuth();
   const location = useLocation();
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   if (loading) return <div className="flex items-center justify-center min-h-screen text-muted-foreground">Loading...</div>;
   if (!user || !isAdmin) return <Navigate to="/admin/login" replace />;
 
-  // Parse the current status param so we can correctly highlight Products vs Inventory
   const searchParams = new URLSearchParams(location.search);
   const currentStatus = searchParams.get('status');
 
-  // "Products" is active when on /admin/products with NO status param,
-  // or with a products-group status (available, on_hold, at_auction, sold)
   const isProductsActive =
     location.pathname === '/admin/products' &&
     (currentStatus === null || !INVENTORY_STATUSES.has(currentStatus));
 
-  // "Inventory" is active when on /admin/products with an inventory-group status,
-  // or on the /admin/inventory redirect route
   const isInventoryActive =
     (location.pathname === '/admin/products' && currentStatus !== null && INVENTORY_STATUSES.has(currentStatus)) ||
     location.pathname === '/admin/inventory';
@@ -41,29 +34,23 @@ const AdminLayout = () => {
     exact ? location.pathname === path : location.pathname.startsWith(path);
 
   const linkClass = (active: boolean) =>
-    `flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+    `flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition-colors ${
       active
-        ? 'bg-primary text-primary-foreground'
+        ? 'bg-primary text-primary-foreground font-medium'
         : 'text-muted-foreground hover:text-foreground hover:bg-muted'
     }`;
 
   const NavLinks = ({ onNavigate }: { onNavigate?: () => void }) => (
-    <>
-      {/* Dashboard */}
+    <div className="space-y-0.5">
       <Link to="/admin" onClick={onNavigate} className={linkClass(isActive('/admin', true))}>
         <LayoutDashboard size={16} /> Dashboard
       </Link>
-
-      {/* Products — goes to /admin/products (defaults to available tab) */}
       <Link to="/admin/products" onClick={onNavigate} className={linkClass(isProductsActive)}>
         <Package size={16} /> Products
       </Link>
-
-      {/* Inventory — goes to /admin/inventory which redirects to ?status=inventory */}
       <Link to="/admin/inventory" onClick={onNavigate} className={linkClass(isInventoryActive)}>
         <Archive size={16} /> Inventory
       </Link>
-
       <Link to="/admin/holds" onClick={onNavigate} className={linkClass(isActive('/admin/holds'))}>
         <Clock size={16} /> Holds
       </Link>
@@ -94,64 +81,96 @@ const AdminLayout = () => {
       <Link to="/admin/countries" onClick={onNavigate} className={linkClass(isActive('/admin/countries'))}>
         <Globe size={16} /> Countries
       </Link>
-    </>
+    </div>
   );
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-56 shrink-0 border-r border-border bg-card flex-col sticky top-0 h-screen">
-        <div className="p-4 border-b border-border">
-          <Link to="/" className="font-display text-sm tracking-[0.2em] uppercase text-foreground">
-            W414 Admin
-          </Link>
-        </div>
-        <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
-          <NavLinks />
-        </nav>
-        <div className="p-3 border-t border-border">
-          <Button variant="ghost" size="sm" onClick={signOut} className="w-full justify-start text-muted-foreground">
-            <LogOut size={16} className="mr-2" /> Sign Out
-          </Button>
-        </div>
-      </aside>
+    <div className="min-h-screen bg-background">
 
-      {/* Content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Mobile header */}
-        <header className="md:hidden flex items-center gap-3 px-4 h-12 border-b border-border bg-card sticky top-0 z-30">
-          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="shrink-0">
-                <Menu size={20} />
+      {/* ── Mobile nav overlay ── */}
+      {mobileNavOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setMobileNavOpen(false)}
+          />
+          {/* Drawer */}
+          <div className="absolute left-0 top-0 bottom-0 w-72 max-w-[85vw] bg-card flex flex-col shadow-xl">
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 h-14 border-b border-border shrink-0">
+              <Link
+                to="/"
+                onClick={() => setMobileNavOpen(false)}
+                className="font-display text-sm tracking-[0.2em] uppercase text-foreground"
+              >
+                W414 Admin
+              </Link>
+              <button
+                type="button"
+                onClick={() => setMobileNavOpen(false)}
+                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            {/* Nav links */}
+            <nav className="flex-1 overflow-y-auto p-3">
+              <NavLinks onNavigate={() => setMobileNavOpen(false)} />
+            </nav>
+            {/* Sign out */}
+            <div className="p-3 border-t border-border shrink-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setMobileNavOpen(false); signOut(); }}
+                className="w-full justify-start text-muted-foreground"
+              >
+                <LogOut size={16} className="mr-2" /> Sign Out
               </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-64 max-w-[80vw] p-0 flex flex-col">
-  <div className="p-4 border-b border-border shrink-0 flex items-center justify-between">
-    <Link to="/" onClick={() => setSheetOpen(false)} className="font-display text-sm tracking-[0.2em] uppercase text-foreground">
-      W414 Admin
-    </Link>
-    <SheetClose asChild>
-      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
-        <X size={16} />
-      </Button>
-    </SheetClose>
-  </div>
-  <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
-    <NavLinks onNavigate={() => setSheetOpen(false)} />
-  </nav>
-  <div className="p-3 border-t border-border shrink-0">
-    <Button variant="ghost" size="sm" onClick={() => { setSheetOpen(false); signOut(); }} className="w-full justify-start text-muted-foreground">
-      <LogOut size={16} className="mr-2" /> Sign Out
-    </Button>
-  </div>
-</SheetContent>
-          <span className="font-display text-sm tracking-[0.2em] uppercase text-foreground">W414 Admin</span>
-        </header>
+            </div>
+          </div>
+        </div>
+      )}
 
-        <main className="flex-1 p-4 md:p-6 overflow-x-auto">
-          <Outlet />
-        </main>
+      <div className="flex min-h-screen">
+        {/* ── Desktop sidebar ── */}
+        <aside className="hidden md:flex w-56 shrink-0 border-r border-border bg-card flex-col sticky top-0 h-screen">
+          <div className="p-4 border-b border-border">
+            <Link to="/" className="font-display text-sm tracking-[0.2em] uppercase text-foreground">
+              W414 Admin
+            </Link>
+          </div>
+          <nav className="flex-1 p-2 overflow-y-auto">
+            <NavLinks />
+          </nav>
+          <div className="p-3 border-t border-border">
+            <Button variant="ghost" size="sm" onClick={signOut} className="w-full justify-start text-muted-foreground">
+              <LogOut size={16} className="mr-2" /> Sign Out
+            </Button>
+          </div>
+        </aside>
+
+        {/* ── Main content ── */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Mobile header */}
+          <header className="md:hidden flex items-center gap-3 px-4 h-14 border-b border-border bg-card sticky top-0 z-40">
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen(true)}
+              className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              <Menu size={22} />
+            </button>
+            <span className="font-display text-sm tracking-[0.2em] uppercase text-foreground">
+              W414 Admin
+            </span>
+          </header>
+
+          <main className="flex-1 p-4 md:p-6 overflow-x-auto">
+            <Outlet />
+          </main>
+        </div>
       </div>
     </div>
   );
