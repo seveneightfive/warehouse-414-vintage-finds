@@ -295,26 +295,23 @@ const { data: similar } = useSimilarProducts(product?.id, categoryIds, {
             )}
 
             {/* ── Styles / Periods (multiple) ── */}
-            {product.product_styles_periods && product.product_styles_periods.length > 0 && (
-              <div className="mb-2">
-                <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-0.5">
-                  {product.product_styles_periods.length === 1 ? 'style / period' : 'styles / periods'}
-                </p>
-                <div className="flex flex-wrap gap-x-2 gap-y-0.5">
-                  {product.product_styles_periods.map((psp: any, i: number) => (
-                    <span key={psp.styles_periods?.id ?? i} className="text-base text-foreground flex items-center gap-1">
-                      <Attribution type={psp.attribution_type} />
-                      {psp.styles_periods ? (
-                        <span>{psp.styles_periods.name}</span>
-                      ) : null}
-                      {i < product.product_styles_periods.length - 1 && (
-                        <span className="text-muted-foreground">&</span>
-                      )}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
+{product.product_styles_periods && product.product_styles_periods.length > 0 && (
+  <div className="mb-2">
+    <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-0.5">
+      {product.product_styles_periods.length === 1 ? 'style / period' : 'styles / periods'}
+    </p>
+    <div className="flex flex-col gap-0.5">
+      {product.product_styles_periods.map((psp: any, i: number) => (
+        <span key={psp.styles_periods?.id ?? i} className="text-base text-foreground flex items-center gap-1">
+          <Attribution type={psp.attribution_type} />
+          {psp.styles_periods ? (
+            <span>{psp.styles_periods.name}</span>
+          ) : null}
+        </span>
+      ))}
+    </div>
+  </div>
+)}
 
             {/* ── Price ── */}
             {product.price && product.status !== 'at_auction' && (
