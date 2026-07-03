@@ -69,7 +69,6 @@ type HoldFormData = {
   platform: string;
 };
 
-// Added 'sold_at' as a sortable key
 type SortKey = 'default' | 'price' | 'created_at' | 'sale_date' | 'sku';
 type SortDir = 'asc' | 'desc';
 
@@ -212,7 +211,6 @@ const AdminProducts = () => {
 
   const [uploadProduct, setUploadProduct] = useState<Product | null>(null);
 
-
   useEffect(() => {
     if (urlStatus && VALID_STATUSES.includes(urlStatus) && urlStatus !== selectedStatus) {
       setSelectedStatus(urlStatus);
@@ -220,27 +218,22 @@ const AdminProducts = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlStatus]);
 
-  // When switching to the sold tab, default to sold_at desc.
-  // When leaving, reset to the standard default.
   useEffect(() => {
-  // Reset sort based on which tab we're on
-  if (selectedStatus === 'sold') {
-    setSortKey('sale_date');
-  } else {
-    setSortKey('default');
-  }
-  setSortDir('desc');
-  setPage(0);
+    if (selectedStatus === 'sold') {
+      setSortKey('sale_date');
+    } else {
+      setSortKey('default');
+    }
+    setSortDir('desc');
+    setPage(0);
 
-  // Sync URL
-  const current = searchParams.get('status');
-  if (current !== selectedStatus) {
-    setSearchParams({ status: selectedStatus }, { replace: true });
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [selectedStatus]);
+    const current = searchParams.get('status');
+    if (current !== selectedStatus) {
+      setSearchParams({ status: selectedStatus }, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStatus]);
 
-  
   const { data: countsData } = useQuery({
     queryKey: ['admin-product-counts'],
     staleTime: 1000 * 60,
@@ -263,10 +256,10 @@ const AdminProducts = () => {
           .order('price', { ascending: sortDir === 'asc', nullsFirst: false })
           .order('id', { ascending: false });
       } else if (sortKey === 'created_at') {
-  listQuery = listQuery
-    .order('published_at', { ascending: sortDir === 'asc', nullsFirst: false })
-    .order('created_at', { ascending: sortDir === 'asc' })
-    .order('id', { ascending: false });
+        listQuery = listQuery
+          .order('published_at', { ascending: sortDir === 'asc', nullsFirst: false })
+          .order('created_at', { ascending: sortDir === 'asc' })
+          .order('id', { ascending: false });
       } else if (sortKey === 'sale_date') {
         listQuery = listQuery
           .order('sale_date', { ascending: sortDir === 'asc', nullsFirst: false })
@@ -284,13 +277,13 @@ const AdminProducts = () => {
       listQuery = listQuery.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
       if (searchQuery) {
-  const words = searchQuery.trim().split(/\s+/).filter(Boolean);
-  for (const word of words) {
-    const filter = `name.ilike.%${word}%,sku.ilike.%${word}%`;
-    countQuery = countQuery.or(filter);
-    listQuery = listQuery.or(filter);
-  }
-}
+        const words = searchQuery.trim().split(/\s+/).filter(Boolean);
+        for (const word of words) {
+          const filter = `name.ilike.%${word}%,sku.ilike.%${word}%`;
+          countQuery = countQuery.or(filter);
+          listQuery = listQuery.or(filter);
+        }
+      }
 
       const [{ count }, { data: products, error }] = await Promise.all([countQuery, listQuery]);
       if (error) throw error;
@@ -312,11 +305,10 @@ const AdminProducts = () => {
       setSortDir('asc');
       return;
     }
-    // Third click: revert. For sold tab, go back to sold_at desc rather than 'default'.
     if (selectedStatus === 'sold' && key !== 'sale_date') {
       setSortKey('sale_date');
     } else if (selectedStatus === 'sold' && key === 'sale_date') {
-      setSortDir('desc'); // can't clear the primary sort on sold tab — just flip back
+      setSortDir('desc');
     } else {
       setSortKey('default');
     }
@@ -494,18 +486,19 @@ const AdminProducts = () => {
           <h1 className="font-display text-2xl tracking-wide text-foreground">Products</h1>
           <p className="text-sm text-muted-foreground mt-1">One unified product table with live status filters</p>
         </div>
-        <Link to="/admin/products/new">
+        <Link to="/admin/products/new" className="hidden md:inline-flex">
           <Button className="text-xs tracking-[0.1em] uppercase">Add Product</Button>
         </Link>
       </div>
 
-      <div className="mb-6 flex flex-wrap items-center gap-3">
+      {/* Status tabs — scrollable on mobile */}
+      <div className="mb-6 flex items-center gap-3 overflow-x-auto pb-1 -mx-5 px-5 md:flex-wrap md:overflow-visible md:mx-0 md:px-0">
         {STATUS_TABS.map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setSelectedStatus(tab.id)}
-            className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+            className={`inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
               selectedStatus === tab.id
                 ? 'border-primary bg-primary text-primary-foreground'
                 : 'border-border bg-background text-muted-foreground hover:border-primary hover:text-foreground'
@@ -541,251 +534,362 @@ const AdminProducts = () => {
         <p className="text-muted-foreground">Loading products…</p>
       ) : (
         <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-16">Image</TableHead>
-                <TableHead className="w-32">
-  <button
-    type="button"
-    onClick={() => cycleSort('sku')}
-    className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-    title="Sort by SKU"
-  >
-    SKU
-    <SortIcon active={sortKey === 'sku'} dir={sortDir} />
-  </button>
-</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead className="w-28">Cross-Listed</TableHead>
-                <TableHead className="w-28">
-                  <button
-                    type="button"
-                    onClick={() => cycleSort('price')}
-                    className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-                    title="Sort by price"
-                  >
-                    Price
-                    <SortIcon active={sortKey === 'price'} dir={sortDir} />
-                  </button>
-                </TableHead>
-               <TableHead className="w-28">
-                  <button
-                    type="button"
-                    onClick={() => cycleSort('created_at')}
-                    className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-                    title="Sort by date published"
-                  >
-                    Published
-                    <SortIcon active={sortKey === 'created_at'} dir={sortDir} />
-                  </button>
-                </TableHead>
-                <TableHead className="w-20">Views</TableHead>
-                {/* Sold On column — only visible on the sold tab */}
-                {selectedStatus === 'sold' && (
+          {/* ── Mobile card list ── */}
+          <div className="md:hidden space-y-3">
+            {products.map((product) => {
+              const thumb = product.product_images?.sort((a, b) => a.sort_order - b.sort_order)?.[0];
+              const stale = isStaleListing(product);
+              const publishedAt = (product as any).published_at ?? product.created_at;
+              const daysListed = daysSince(publishedAt);
+
+              return (
+                <div key={product.id} className="border border-border rounded-sm p-3 flex gap-3 bg-card">
+                  {/* Thumbnail */}
+                  <div className="shrink-0">
+                    {thumb ? (
+                      <img src={thumb.image_url} alt={product.name} className="w-16 h-16 rounded-sm object-cover" />
+                    ) : product.featured_image_url ? (
+                      <img src={product.featured_image_url} alt={product.name} className="w-16 h-16 rounded-sm object-cover" />
+                    ) : (
+                      <div className="w-16 h-16 rounded-sm bg-muted flex items-center justify-center text-muted-foreground">
+                        <ImagePlus size={16} />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm text-foreground leading-snug line-clamp-2">{product.name}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{product.sku || '—'}</p>
+                      </div>
+                      <p className="font-display text-sm text-foreground shrink-0">{formatPrice(product)}</p>
+                    </div>
+
+                    {stale && (
+                      <p className="text-xs text-amber-700 dark:text-amber-300 mt-1 flex items-center gap-1">
+                        <Clock size={11} /> Listed {daysListed} days ago
+                      </p>
+                    )}
+
+                    {selectedStatus === 'sold' && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Sold {formatDate((product as any).sale_date)}
+                      </p>
+                    )}
+
+                    {/* Quick actions */}
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                      <Link
+                        to={`/product/${product.slug}`}
+                        className="text-xs text-muted-foreground border border-border rounded px-2 py-1 hover:text-foreground transition-colors"
+                      >
+                        View
+                      </Link>
+                      <Link
+                        to={`/admin/products/${product.id}`}
+                        className="text-xs text-muted-foreground border border-border rounded px-2 py-1 hover:text-foreground transition-colors"
+                      >
+                        Edit
+                      </Link>
+                      {selectedStatus === 'available' && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setHoldProduct(product)}
+                            className="text-xs text-muted-foreground border border-border rounded px-2 py-1 hover:text-foreground transition-colors"
+                          >
+                            Hold
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSoldProduct(product)}
+                            className="text-xs text-muted-foreground border border-border rounded px-2 py-1 hover:text-foreground transition-colors"
+                          >
+                            Sold
+                          </button>
+                        </>
+                      )}
+                      {selectedStatus === 'on_hold' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm('Release hold and move back to Available?')) {
+                              changeStatusMutation.mutate({ id: product.id, oldStatus: product.status as ProductStatusKey, newStatus: 'available' });
+                            }
+                          }}
+                          className="text-xs text-muted-foreground border border-border rounded px-2 py-1 hover:text-foreground transition-colors"
+                        >
+                          Release Hold
+                        </button>
+                      )}
+                      {selectedStatus === 'at_auction' && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm('Release from auction and move back to Available?')) {
+                              changeStatusMutation.mutate({ id: product.id, oldStatus: product.status as ProductStatusKey, newStatus: 'available', extraData: { chairish_auction_url: null } });
+                            }
+                          }}
+                          className="text-xs text-muted-foreground border border-border rounded px-2 py-1 hover:text-foreground transition-colors"
+                        >
+                          Release
+                        </button>
+                      )}
+                      {/* Move to… dropdown on mobile */}
+                      <button
+                        type="button"
+                        onClick={() => { setMoveStatusProduct(product); setPendingStatus('available'); }}
+                        className="text-xs text-muted-foreground border border-border rounded px-2 py-1 hover:text-foreground transition-colors"
+                      >
+                        Move to…
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ── Desktop table ── */}
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-16">Image</TableHead>
+                  <TableHead className="w-32">
+                    <button
+                      type="button"
+                      onClick={() => cycleSort('sku')}
+                      className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                      title="Sort by SKU"
+                    >
+                      SKU
+                      <SortIcon active={sortKey === 'sku'} dir={sortDir} />
+                    </button>
+                  </TableHead>
+                  <TableHead>Title</TableHead>
+                  <TableHead className="w-28">Cross-Listed</TableHead>
                   <TableHead className="w-28">
                     <button
                       type="button"
-                      onClick={() => cycleSort('sale_date')}
+                      onClick={() => cycleSort('price')}
                       className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-                      title="Sort by date sold"
+                      title="Sort by price"
                     >
-                      Sold On
-                      <SortIcon active={sortKey === 'sale_date'} dir={sortDir} />
+                      Price
+                      <SortIcon active={sortKey === 'price'} dir={sortDir} />
                     </button>
                   </TableHead>
-                )}
-                <TableHead className="w-12"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products.map((product) => {
-                const thumb = product.product_images?.sort((a, b) => a.sort_order - b.sort_order)?.[0];
-                const hasImages = !!thumb || !!product.featured_image_url;
-                const stale = isStaleListing(product);
-                const publishedAt = (product as any).published_at ?? product.created_at;
-                const daysListed = daysSince(publishedAt);
+                  <TableHead className="w-28">
+                    <button
+                      type="button"
+                      onClick={() => cycleSort('created_at')}
+                      className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                      title="Sort by date published"
+                    >
+                      Published
+                      <SortIcon active={sortKey === 'created_at'} dir={sortDir} />
+                    </button>
+                  </TableHead>
+                  <TableHead className="w-20">Views</TableHead>
+                  {selectedStatus === 'sold' && (
+                    <TableHead className="w-28">
+                      <button
+                        type="button"
+                        onClick={() => cycleSort('sale_date')}
+                        className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                        title="Sort by date sold"
+                      >
+                        Sold On
+                        <SortIcon active={sortKey === 'sale_date'} dir={sortDir} />
+                      </button>
+                    </TableHead>
+                  )}
+                  <TableHead className="w-12"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {products.map((product) => {
+                  const thumb = product.product_images?.sort((a, b) => a.sort_order - b.sort_order)?.[0];
+                  const hasImages = !!thumb || !!product.featured_image_url;
+                  const stale = isStaleListing(product);
+                  const publishedAt = (product as any).published_at ?? product.created_at;
+                  const daysListed = daysSince(publishedAt);
 
-                return (
-                  <TableRow key={product.id}>
-                    <TableCell>
-                      {thumb ? (
-                        <img src={thumb.image_url} alt={product.name} className="w-12 h-12 rounded-sm object-cover" />
-                      ) : product.featured_image_url ? (
-                        <img src={product.featured_image_url} alt={product.name} className="w-12 h-12 rounded-sm object-cover" />
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setUploadProduct(product)}
-                          title="Upload images"
-                          className="w-12 h-12 rounded-sm bg-muted hover:bg-muted/70 flex items-center justify-center text-muted-foreground transition-colors"
-                        >
-                          <ImagePlus size={16} />
-                        </button>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{product.sku || '—'}</TableCell>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span>{product.name}</span>
-                        {stale && (
-                          <span
-                            title={`Listed ${daysListed} days ago`}
-                            className="inline-flex items-center text-amber-700 dark:text-amber-300"
-                          >
-                            <Clock size={14} />
-                          </span>
-                        )}
-                        {!hasImages && (
-                          <span className="text-[10px] font-semibold tracking-wider uppercase text-amber-700 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-300 px-1.5 py-0.5 rounded">
-                            No images
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <CrossListChips product={product} />
-                    </TableCell>
-                    <TableCell>{formatPrice(product)}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-  {formatDate((product as any).published_at ?? product.created_at)}
-</TableCell>
-                    <TableCell className="text-xs text-center">
-  <span className={(product as any).view_count > 50 
-    ? 'text-foreground font-semibold' 
-    : 'text-muted-foreground'
-  }>
-    {(product as any).view_count ?? 0}
-  </span>
-</TableCell>
-                    {/* Sold On cell — only rendered on the sold tab */}
-                    {selectedStatus === 'sold' && (
-                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                        {formatDate((product as any).sale_date)}
-                      </TableCell>
-                    )}
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical size={15} />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-52 bg-card border border-border">
-                          <DropdownMenuItem asChild>
-                            <Link to={`/product/${product.slug}`} className="flex items-center gap-2 cursor-pointer">
-                              <Eye size={13} /> View on Site
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link to={`/admin/products/${product.id}`} className="flex items-center gap-2 cursor-pointer">
-                              <Pencil size={13} /> Edit Product
-                            </Link>
-                          </DropdownMenuItem>
-
-                          <DropdownMenuItem
+                  return (
+                    <TableRow key={product.id}>
+                      <TableCell>
+                        {thumb ? (
+                          <img src={thumb.image_url} alt={product.name} className="w-12 h-12 rounded-sm object-cover" />
+                        ) : product.featured_image_url ? (
+                          <img src={product.featured_image_url} alt={product.name} className="w-12 h-12 rounded-sm object-cover" />
+                        ) : (
+                          <button
+                            type="button"
                             onClick={() => setUploadProduct(product)}
-                            className="flex items-center gap-2 cursor-pointer"
+                            title="Upload images"
+                            className="w-12 h-12 rounded-sm bg-muted hover:bg-muted/70 flex items-center justify-center text-muted-foreground transition-colors"
                           >
-                            <ImagePlus size={13} /> Manage Images
-                          </DropdownMenuItem>
-
-                          <DropdownMenuSeparator />
-
-                          {selectedStatus === 'available' && (
-                            <>
-                              <DropdownMenuItem onClick={() => setHoldProduct(product)} className="flex items-center gap-2 cursor-pointer">
-                                <Clock size={13} /> Place Hold
+                            <ImagePlus size={16} />
+                          </button>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{product.sku || '—'}</TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span>{product.name}</span>
+                          {stale && (
+                            <span
+                              title={`Listed ${daysListed} days ago`}
+                              className="inline-flex items-center text-amber-700 dark:text-amber-300"
+                            >
+                              <Clock size={14} />
+                            </span>
+                          )}
+                          {!hasImages && (
+                            <span className="text-[10px] font-semibold tracking-wider uppercase text-amber-700 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-300 px-1.5 py-0.5 rounded">
+                              No images
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <CrossListChips product={product} />
+                      </TableCell>
+                      <TableCell>{formatPrice(product)}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                        {formatDate((product as any).published_at ?? product.created_at)}
+                      </TableCell>
+                      <TableCell className="text-xs text-center">
+                        <span className={(product as any).view_count > 50
+                          ? 'text-foreground font-semibold'
+                          : 'text-muted-foreground'
+                        }>
+                          {(product as any).view_count ?? 0}
+                        </span>
+                      </TableCell>
+                      {selectedStatus === 'sold' && (
+                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                          {formatDate((product as any).sale_date)}
+                        </TableCell>
+                      )}
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreVertical size={15} />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-52 bg-card border border-border">
+                            <DropdownMenuItem asChild>
+                              <Link to={`/product/${product.slug}`} className="flex items-center gap-2 cursor-pointer">
+                                <Eye size={13} /> View on Site
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                              <Link to={`/admin/products/${product.id}`} className="flex items-center gap-2 cursor-pointer">
+                                <Pencil size={13} /> Edit Product
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setUploadProduct(product)}
+                              className="flex items-center gap-2 cursor-pointer"
+                            >
+                              <ImagePlus size={13} /> Manage Images
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            {selectedStatus === 'available' && (
+                              <>
+                                <DropdownMenuItem onClick={() => setHoldProduct(product)} className="flex items-center gap-2 cursor-pointer">
+                                  <Clock size={13} /> Place Hold
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setSoldProduct(product)} className="flex items-center gap-2 cursor-pointer">
+                                  <CircleDollarSign size={13} /> Mark as Sold
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                              </>
+                            )}
+                            {selectedStatus === 'at_auction' && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  if (confirm('Release this item from auction and move it back to Available?')) {
+                                    changeStatusMutation.mutate({ id: product.id, oldStatus: product.status as ProductStatusKey, newStatus: 'available', extraData: { chairish_auction_url: null } });
+                                  }
+                                }}
+                                className="flex items-center gap-2 cursor-pointer"
+                              >
+                                <ArrowLeft size={13} /> Release from Auction
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => setSoldProduct(product)} className="flex items-center gap-2 cursor-pointer">
-                                <CircleDollarSign size={13} /> Mark as Sold
+                            )}
+                            {selectedStatus === 'sold' && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  if (confirm('Move this item back to Available?')) {
+                                    changeStatusMutation.mutate({ id: product.id, oldStatus: product.status as ProductStatusKey, newStatus: 'available' });
+                                  }
+                                }}
+                                className="flex items-center gap-2 cursor-pointer"
+                              >
+                                <ArrowLeft size={13} /> Move to Available
                               </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                            </>
-                          )}
-
-                          {selectedStatus === 'at_auction' && (
+                            )}
+                            {selectedStatus === 'deactivated' && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  if (confirm('Reactivate this product and move it back to Available?')) {
+                                    changeStatusMutation.mutate({ id: product.id, oldStatus: product.status as ProductStatusKey, newStatus: 'available' });
+                                  }
+                                }}
+                                className="flex items-center gap-2 cursor-pointer"
+                              >
+                                <ArrowLeft size={13} /> Reactivate
+                              </DropdownMenuItem>
+                            )}
+                            {selectedStatus === 'inventory' && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  if (confirm('Promote this inventory item to Available?')) {
+                                    changeStatusMutation.mutate({ id: product.id, oldStatus: product.status as ProductStatusKey, newStatus: 'available' });
+                                  }
+                                }}
+                                className="flex items-center gap-2 cursor-pointer"
+                              >
+                                <ArrowLeft size={13} /> Move to Available
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => {
-                                if (confirm('Release this item from auction and move it back to Available?')) {
-                                  changeStatusMutation.mutate({ id: product.id, oldStatus: product.status as ProductStatusKey, newStatus: 'available', extraData: { chairish_auction_url: null } });
-                                }
+                                setMoveStatusProduct(product);
+                                setPendingStatus('available');
                               }}
                               className="flex items-center gap-2 cursor-pointer"
                             >
-                              <ArrowLeft size={13} /> Release from Auction
+                              <Tag size={13} /> Move to…
                             </DropdownMenuItem>
-                          )}
-
-                          {selectedStatus === 'sold' && (
+                            <DropdownMenuItem onClick={() => openLinksDialog(product)} className="flex items-center gap-2 cursor-pointer">
+                              <LinkIcon size={13} /> Update External Links
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem
                               onClick={() => {
-                                if (confirm('Move this item back to Available?')) {
-                                  changeStatusMutation.mutate({ id: product.id, oldStatus: product.status as ProductStatusKey, newStatus: 'available' });
-                                }
+                                if (confirm('Delete this product?')) deleteMutation.mutate(product.id);
                               }}
-                              className="flex items-center gap-2 cursor-pointer"
+                              className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
                             >
-                              <ArrowLeft size={13} /> Move to Available
+                              <Trash2 size={13} /> Delete
                             </DropdownMenuItem>
-                          )}
-
-                          {selectedStatus === 'deactivated' && (
-                            <DropdownMenuItem
-                              onClick={() => {
-                                if (confirm('Reactivate this product and move it back to Available?')) {
-                                  changeStatusMutation.mutate({ id: product.id, oldStatus: product.status as ProductStatusKey, newStatus: 'available' });
-                                }
-                              }}
-                              className="flex items-center gap-2 cursor-pointer"
-                            >
-                              <ArrowLeft size={13} /> Reactivate
-                            </DropdownMenuItem>
-                          )}
-
-                          {selectedStatus === 'inventory' && (
-                            <DropdownMenuItem
-                              onClick={() => {
-                                if (confirm('Promote this inventory item to Available?')) {
-                                  changeStatusMutation.mutate({ id: product.id, oldStatus: product.status as ProductStatusKey, newStatus: 'available' });
-                                }
-                              }}
-                              className="flex items-center gap-2 cursor-pointer"
-                            >
-                              <ArrowLeft size={13} /> Move to Available
-                            </DropdownMenuItem>
-                          )}
-
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setMoveStatusProduct(product);
-                              setPendingStatus('available');
-                            }}
-                            className="flex items-center gap-2 cursor-pointer"
-                          >
-                            <Tag size={13} /> Move to…
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openLinksDialog(product)} className="flex items-center gap-2 cursor-pointer">
-                            <LinkIcon size={13} /> Update External Links
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => {
-                              if (confirm('Delete this product?')) deleteMutation.mutate(product.id);
-                            }}
-                            className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
-                          >
-                            <Trash2 size={13} /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
 
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-4">
