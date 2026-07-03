@@ -324,39 +324,62 @@ export async function generateSpecSheet(
   }
 
   // ── DESCRIPTION (long first, short as fallback, only if includeDescription) ──
-  if (includeDescription) {
-    const desc = product.long_description || product.short_description;
-    if (desc) {
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(7);
-      doc.setTextColor(...medGray);
-      doc.text("DESCRIPTION", margin, y);
-      y += 5;
+if (includeDescription) {
+  const desc = product.long_description || product.short_description;
+  if (desc) {
+    const plainDesc = desc
+      .replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
 
-      const plainDesc = desc
-        .replace(/<[^>]*>/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
-      doc.setTextColor(...darkGray);
-      const descLines = doc.splitTextToSize(plainDesc, contentW);
-      doc.text(descLines, margin, y);
+    const descLines = doc.splitTextToSize(plainDesc, contentW);
+    const lineHeight = 4.5;
+    const labelHeight = 10; // label + spacing
+
+    // Check if we need a new page
+    const spaceNeeded = labelHeight + descLines.length * lineHeight;
+    const spaceLeft = pageH - 18 - 10 - y; // 18 = footer margin, 10 = buffer
+
+    if (spaceNeeded > spaceLeft) {
+      doc.addPage();
+      y = margin;
+    }
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.setTextColor(...medGray);
+    doc.text("DESCRIPTION", margin, y);
+    y += 5;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...darkGray);
+
+    // Render line by line, adding pages as needed
+    for (const line of descLines) {
+      if (y > pageH - 24) { // 24 = footer buffer
+        doc.addPage();
+        y = margin;
+      }
+      doc.text(line, margin, y);
+      y += lineHeight;
     }
   }
+}
 
-  // ── FOOTER ──
-  const footerY = pageH - 18;
-  doc.setDrawColor(...lineGray);
-  doc.line(margin, footerY - 4, pageW - margin, footerY - 4);
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(7);
-  doc.setTextColor(...medGray);
-  doc.text(`warehouse414.com  ·  sales@warehouse414.com  ·  785.232.8008`, margin, footerY);
-  doc.text(`Generated ${new Date().toLocaleDateString()}`, pageW - margin, footerY, {
-    align: "right",
-  });
+  // ── FOOTER (on every page) ──
+  const totalPages = (doc.internal as any).getNumberOfPages();
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p);
+    const footerY = pageH - 18;
+    doc.setDrawColor(...lineGray);
+    doc.line(margin, footerY - 4, pageW - margin, footerY - 4);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(...medGray);
+    doc.text(`warehouse414.com  ·  sales@warehouse414.com  ·  785.232.8008`, margin, footerY);
+    doc.text(`Generated ${new Date().toLocaleDateString()}  ·  Page ${p} of ${totalPages}`, pageW - margin, footerY, { align: "right" });
+  }
 
   const filename = `W414-${(product.sku || product.name).replace(/[^a-zA-Z0-9]/g, "-").substring(0, 40)}.pdf`;
   doc.save(filename);
