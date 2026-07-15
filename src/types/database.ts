@@ -27,7 +27,7 @@ export type Product = {
   price: number | null;
   sale_price: number | null;
   sold_price: number | null;
-  status: 'available' | 'on_hold' | 'sold' | 'inventory' | 'at_auction';
+  status: 'available' | 'on_hold' | 'sold' | 'inventory' | 'limbo';
   chairish_auction_url: string | null;
 
   // ── Legacy single-value FKs (kept for backwards compat, do not use for display) ──
