@@ -35,14 +35,14 @@ const ProductCard = ({ product }: { product: Product }) => {
             on hold
           </span>
         )}
-{product.sale_price && product.status !== "at_auction" && (
+{product.sale_price && product.status !== "limbo" && (
           <span className="absolute top-2 left-2 bg-destructive text-white font-display text-[10px] tracking-[0.15em] px-2.5 py-1">
             sale
           </span>
         )}
-        {product.status === "at_auction" && (
+        {product.status === "limbo" && (
           <span className="absolute top-2 left-2 bg-white/90 text-black font-display text-[10px] tracking-[0.15em] px-2.5 py-1">
-            at auction
+            limbo
           </span>
         )}
       </div>
@@ -68,7 +68,7 @@ const ProductCard = ({ product }: { product: Product }) => {
     )}
   </p>
 )}
-{product.price && product.status !== "at_auction" && (
+{product.price && product.status !== "limbo" && (
         <p className="text-sm text-muted-foreground mt-1 font-display">
           {product.sale_price ? (
             <>
