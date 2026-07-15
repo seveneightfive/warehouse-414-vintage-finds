@@ -191,8 +191,8 @@ const { data: similar } = useSimilarProducts(product?.id, categoryIds, {
               {product.status === 'on_hold' && (
                 <span className="absolute top-3 left-3 bg-background text-foreground font-display text-xs tracking-[0.15em] px-3 py-1.5">on hold</span>
               )}
-              {product.status === 'at_auction' && (
-                <span className="absolute top-3 left-3 bg-background text-foreground font-display text-xs tracking-[0.15em] px-3 py-1.5">at auction</span>
+              {product.status === 'limbo' && (
+                <span className="absolute top-3 left-3 bg-background text-foreground font-display text-xs tracking-[0.15em] px-3 py-1.5">limbo</span>
               )}
               {allImages.length > 1 && (
                 <>
@@ -224,7 +224,7 @@ const { data: similar } = useSimilarProducts(product?.id, categoryIds, {
 
           {/* Basic Info */}
           <div className="min-w-0">
-            {product.status === 'at_auction' && (
+            {product.status === 'limbo' && (
               <div className="mb-4 border border-border bg-secondary/50 rounded-sm px-4 py-3 flex items-center gap-2">
                 <span className="font-display text-sm tracking-wide text-foreground">
                   This item is currently at auction on Chairish
@@ -314,7 +314,7 @@ const { data: similar } = useSimilarProducts(product?.id, categoryIds, {
 )}
 
             {/* ── Price ── */}
-            {product.price && product.status !== 'at_auction' && (
+            {product.price && product.status !== 'limbo' && (
               <p className="font-display text-xl md:text-2xl text-muted-foreground mt-4">
                 {product.sale_price ? (
                   <>
