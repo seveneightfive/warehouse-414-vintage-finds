@@ -188,7 +188,7 @@ const AdminConsignorDetail = () => {
 
   const available = products?.filter(p => p.status === 'available') ?? [];
   const onHold = products?.filter(p => p.status === 'on_hold') ?? [];
-  const atAuction = products?.filter(p => p.status === 'at_auction') ?? [];
+  const limboItems = products?.filter(p => p.status === 'limbo') ?? [];
   const sold = products?.filter(p => p.status === 'sold') ?? [];
 
   const fullName = [consignor.first_name, consignor.last_name].filter(Boolean).join(' ') || '—';
@@ -250,7 +250,7 @@ const AdminConsignorDetail = () => {
         <Badge variant="secondary" className="text-sm px-3 py-1">{products?.length ?? 0} total</Badge>
         <Badge variant="outline" className="text-sm px-3 py-1">{available.length} available</Badge>
         <Badge variant="outline" className="text-sm px-3 py-1">{onHold.length} on hold</Badge>
-        <Badge variant="outline" className="text-sm px-3 py-1">{atAuction.length} at auction</Badge>
+        <Badge variant="outline" className="text-sm px-3 py-1">{limboItems.length} limbo</Badge>
         <Badge variant="default" className="text-sm px-3 py-1">{sold.length} sold</Badge>
       </div>
 
@@ -270,13 +270,13 @@ const AdminConsignorDetail = () => {
         <ProductTable products={onHold} />
       </section>
 
-      {/* At Auction */}
-      {atAuction.length > 0 && (
+      {/* Limbo */}
+      {limboItems.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-lg font-semibold border-b border-border pb-2">
-            At Auction <span className="text-muted-foreground font-normal text-sm">({atAuction.length})</span>
+            Limbo <span className="text-muted-foreground font-normal text-sm">({limboItems.length})</span>
           </h2>
-          <ProductTable products={atAuction} />
+          <ProductTable products={limboItems} />
         </section>
       )}
 

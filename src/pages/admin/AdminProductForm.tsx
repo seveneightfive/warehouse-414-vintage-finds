@@ -23,7 +23,7 @@ const STATUS_OPTIONS = [
   { value: 'draft',      label: 'Draft'       },
   { value: 'available',  label: 'Available'   },
   { value: 'on_hold',    label: 'On Hold'     },
-  { value: 'at_auction', label: 'At Auction'  },
+  { value: 'limbo',      label: 'Limbo'       },
   { value: 'sold',       label: 'Sold'        },
   { value: 'inventory',  label: 'Inventory'   },
 ];
@@ -67,7 +67,7 @@ const schema = z.object({
   long_description: z.string().nullable().optional(),
   price: z.coerce.number().nullable().optional(),
   sale_price: z.coerce.number().nullable().optional(),
-  status: z.enum(['draft', 'available', 'on_hold', 'sold', 'inventory', 'at_auction']).default('draft'),
+  status: z.enum(['draft', 'available', 'on_hold', 'sold', 'inventory', 'limbo']).default('draft'),
   designer_id: z.string().nullable().optional(),
   maker_id: z.string().nullable().optional(),
   category_id: z.string().nullable().optional(),
@@ -247,7 +247,7 @@ const AdminProductForm = () => {
   const watchStatus = form.watch('status');
   const auctionUrlRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (watchStatus === 'at_auction') {
+    if (watchStatus === 'limbo') {
       setTimeout(() => auctionUrlRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
     }
   }, [watchStatus]);
@@ -546,7 +546,7 @@ const AdminProductForm = () => {
               </p>
             )}
 
-            {watchStatus === 'at_auction' && (
+            {watchStatus === 'limbo' && (
               <p className="text-xs text-muted-foreground">
                 Don't forget to add the{' '}
                 <button type="button" className="underline text-primary" onClick={() => auctionUrlRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>Chairish Auction URL</button>{' '}below.

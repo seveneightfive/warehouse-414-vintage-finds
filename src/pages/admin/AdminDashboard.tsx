@@ -5,7 +5,7 @@ import {
   Plus,
   Package,
   Pencil,
-  Gavel,
+  HelpCircle,
   CheckCircle2,
   Clock,
   MessageSquare,
@@ -17,7 +17,7 @@ import {
 
 /* ---------- types ---------- */
 
-type StatusKey = "available" | "draft" | "at_auction" | "sold" | "on_hold";
+type StatusKey = "available" | "draft" | "limbo" | "sold" | "on_hold";
 
 type Stat = { key: StatusKey; label: string; count: number; href: string; icon: any };
 
@@ -114,7 +114,7 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<Stat[]>([
   { key: "available", label: "Available", count: 0, href: "/admin/products?status=available", icon: Package },
   { key: "draft", label: "Draft", count: 0, href: "/admin/products?status=draft", icon: Pencil },
-  { key: "at_auction", label: "At Auction", count: 0, href: "/admin/products?status=at_auction", icon: Gavel },
+  { key: "limbo", label: "Limbo", count: 0, href: "/admin/products?status=limbo", icon: HelpCircle },
   { key: "sold", label: "Sold", count: 0, href: "/admin/products?status=sold", icon: CheckCircle2 },
   { key: "on_hold", label: "On Hold", count: 0, href: "/admin/holds", icon: Clock },
 ]);
@@ -140,7 +140,7 @@ export default function AdminDashboard() {
     setLoading(true);
     try {
       // ---- Stats: count products by status ----
-      const statusKeys: StatusKey[] = ["available", "draft", "at_auction", "sold", "on_hold"];
+      const statusKeys: StatusKey[] = ["available", "draft", "limbo", "sold", "on_hold"];
       const counts = await Promise.all(
         statusKeys.map((s) =>
           supabase

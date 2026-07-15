@@ -82,7 +82,7 @@ const STATUS_TABS: StatusTab[] = [
   { id: 'available', label: 'Available', subtitle: 'Ready to sell' },
   { id: 'draft', label: 'Draft', subtitle: 'Work in progress' },
   { id: 'on_hold', label: 'On Hold', subtitle: 'Held for customers' },
-  { id: 'at_auction', label: 'At Auction', subtitle: 'Listed on marketplaces' },
+  { id: 'limbo', label: 'Limbo', subtitle: 'Listed on marketplaces' },
   { id: 'sold', label: 'Sold', subtitle: 'Historical sales' },
   { id: 'inventory', label: 'Inventory', subtitle: 'Awaiting production' },
   { id: 'deactivated', label: 'Deactivated', subtitle: 'Hidden from site' },
@@ -91,21 +91,21 @@ const STATUS_TABS: StatusTab[] = [
 const STATUS_LABELS: Record<ProductStatusKey, string> = {
   available: 'Available',
   draft: 'Draft',
-  at_auction: 'At Auction',
+  limbo: 'Limbo',
   sold: 'Sold',
   on_hold: 'On Hold',
   inventory: 'Inventory',
   deactivated: 'Deactivated',
 };
 
-const STATUS_OPTIONS: ProductStatusKey[] = ['available', 'draft', 'on_hold', 'at_auction', 'sold', 'inventory', 'deactivated'];
+const STATUS_OPTIONS: ProductStatusKey[] = ['available', 'draft', 'on_hold', 'limbo', 'sold', 'inventory', 'deactivated'];
 
-const VALID_STATUSES: ProductStatusKey[] = ['available', 'draft', 'at_auction', 'sold', 'on_hold', 'inventory', 'deactivated'];
+const VALID_STATUSES: ProductStatusKey[] = ['available', 'draft', 'limbo', 'sold', 'on_hold', 'inventory', 'deactivated'];
 
 const defaultCounts: CountsMap = {
   available: 0,
   draft: 0,
-  at_auction: 0,
+  limbo: 0,
   sold: 0,
   on_hold: 0,
   inventory: 0,
@@ -171,7 +171,7 @@ const CrossListChips = ({ product }: { product: Product }) => {
 };
 
 const fetchStatusCounts = async () => {
-  const statuses: ProductStatusKey[] = ['available', 'draft', 'at_auction', 'sold', 'on_hold', 'inventory', 'deactivated'];
+  const statuses: ProductStatusKey[] = ['available', 'draft', 'limbo', 'sold', 'on_hold', 'inventory', 'deactivated'];
   const results = await Promise.all(statuses.map((status) =>
     supabase.from('products').select('*', { count: 'exact', head: true }).eq('status', status)
   ));
@@ -624,7 +624,7 @@ const AdminProducts = () => {
                           Release Hold
                         </button>
                       )}
-                      {selectedStatus === 'at_auction' && (
+                      {selectedStatus === 'limbo' && (
                         <button
                           type="button"
                           onClick={() => {
@@ -811,7 +811,7 @@ const AdminProducts = () => {
                                 <DropdownMenuSeparator />
                               </>
                             )}
-                            {selectedStatus === 'at_auction' && (
+                            {selectedStatus === 'limbo' && (
                               <DropdownMenuItem
                                 onClick={() => {
                                   if (confirm('Release this item from auction and move it back to Available?')) {
