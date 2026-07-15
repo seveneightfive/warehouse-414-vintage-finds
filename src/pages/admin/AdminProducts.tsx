@@ -48,7 +48,7 @@ const PAGE_SIZE = 25;
 
 const STALE_LISTING_MS = 360 * 24 * 60 * 60 * 1000;
 
-type ProductStatusKey = 'available' | 'draft' | 'at_auction' | 'sold' | 'on_hold' | 'inventory' | 'deactivated';
+type ProductStatusKey = 'available' | 'draft' | 'limbo' | 'sold' | 'on_hold' | 'inventory' | 'deactivated';
 
 type CountsMap = Record<ProductStatusKey, number>;
 
