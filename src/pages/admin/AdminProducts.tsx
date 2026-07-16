@@ -634,14 +634,10 @@ const AdminProducts = () => {
                       {selectedStatus === 'limbo' && (
                         <button
                           type="button"
-                          onClick={() => {
-                            if (confirm('Release from auction and move back to Available?')) {
-                              changeStatusMutation.mutate({ id: product.id, oldStatus: product.status as ProductStatusKey, newStatus: 'available', extraData: { chairish_auction_url: null } });
-                            }
-                          }}
+                          onClick={() => setSoldProduct(product)}
                           className="text-xs text-muted-foreground border border-border rounded px-2 py-1 hover:text-foreground transition-colors"
                         >
-                          Release
+                          Sold
                         </button>
                       )}
                       {/* Move to… dropdown on mobile */}
@@ -861,16 +857,12 @@ const AdminProducts = () => {
                               </>
                             )}
                             {selectedStatus === 'limbo' && (
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  if (confirm('Release this item from auction and move it back to Available?')) {
-                                    changeStatusMutation.mutate({ id: product.id, oldStatus: product.status as ProductStatusKey, newStatus: 'available', extraData: { chairish_auction_url: null } });
-                                  }
-                                }}
-                                className="flex items-center gap-2 cursor-pointer"
-                              >
-                                <ArrowLeft size={13} /> Release from Auction
-                              </DropdownMenuItem>
+                              <>
+                                <DropdownMenuItem onClick={() => setSoldProduct(product)} className="flex items-center gap-2 cursor-pointer">
+                                  <CircleDollarSign size={13} /> Mark as Sold
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                              </>
                             )}
                             {selectedStatus === 'sold' && (
                               <DropdownMenuItem
