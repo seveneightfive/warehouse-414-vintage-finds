@@ -139,7 +139,7 @@ export function useInfiniteProducts(filters?: ProductFilters) {
       if (filters?.status) {
         query = query.eq("status", filters.status);
       } else {
-        query = query.in("status", ["available", "on_hold", "sold", "limbo"]);
+        query = query.in("status", ["available", "on_hold", "sold"]);
       }
 
       // Keyset cursor pagination on (published_at, id). Returns rows strictly
@@ -221,7 +221,7 @@ export function useProducts(filters?: {
       if (filters?.status) {
         query = query.eq("status", filters.status);
       } else {
-        query = query.in("status", ["available", "on_hold", "sold", "limbo"]);
+        query = query.in("status", ["available", "on_hold", "sold"]);
       }
 
       if (filters?.designer_id) {
