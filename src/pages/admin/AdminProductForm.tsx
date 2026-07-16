@@ -12,8 +12,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
-import { ArrowLeft, Save, Check, ChevronsUpDown, Plus, X } from 'lucide-react';
+import { ArrowLeft, Save, Check, ChevronsUpDown, Plus, X, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ProductImageManager from '@/components/ProductImageManager';
 
@@ -67,6 +68,7 @@ const schema = z.object({
   long_description: z.string().nullable().optional(),
   price: z.coerce.number().nullable().optional(),
   sale_price: z.coerce.number().nullable().optional(),
+  sold_price: z.coerce.number().nullable().optional(),
   status: z.enum(['draft', 'available', 'on_hold', 'sold', 'inventory', 'limbo']).default('draft'),
   designer_id: z.string().nullable().optional(),
   maker_id: z.string().nullable().optional(),
@@ -91,12 +93,15 @@ const schema = z.object({
   chairish_url: z.string().url().nullable().optional().or(z.literal('')),
   ebay_url: z.string().url().nullable().optional().or(z.literal('')),
   chairish_auction_url: z.string().url().nullable().optional().or(z.literal('')),
-  sold_on:              z.string().nullable().optional(),
+  sale_platform:        z.string().nullable().optional(),
+  sale_date:            z.string().nullable().optional(),
   notes:                z.string().nullable().optional(),
   published_at:         z.string().nullable().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
+
+type DesignerMakerOption = { id: string; name: string; about?: string | null };
 
 const useTaxonomyOptions = () => {
   const fetch = (table: string) => async () => {
@@ -104,9 +109,14 @@ const useTaxonomyOptions = () => {
     if (error) throw error;
     return data as { id: string; name: string }[];
   };
+  const fetchWithAbout = (table: string) => async () => {
+    const { data, error } = await supabase.from(table).select('id, name, about').order('name');
+    if (error) throw error;
+    return data as DesignerMakerOption[];
+  };
   return {
-    designers:  useQuery({ queryKey: ['taxonomy-designers'],  queryFn: fetch('designers')  }).data,
-    makers:     useQuery({ queryKey: ['taxonomy-makers'],     queryFn: fetch('makers')     }).data,
+    designers:  useQuery({ queryKey: ['taxonomy-designers'],  queryFn: fetchWithAbout('designers')  }).data as DesignerMakerOption[] | undefined,
+    makers:     useQuery({ queryKey: ['taxonomy-makers'],     queryFn: fetchWithAbout('makers')     }).data as DesignerMakerOption[] | undefined,
     categories: useQuery({ queryKey: ['taxonomy-categories'], queryFn: fetch('categories') }).data,
     stylesPeriods: useQuery({ queryKey: ['taxonomy-styles-periods'], queryFn: fetch('styles_periods') }).data,
     countries:  useQuery({ queryKey: ['taxonomy-countries'],  queryFn: fetch('countries')  }).data,
@@ -149,6 +159,157 @@ const InlineCombobox = ({ value, onChange, options, placeholder, className }: {
         </Command>
       </PopoverContent>
     </Popover>
+  );
+};
+
+// Small modal for creating a new designer/maker inline, without leaving the product form.
+const CreateEntityModal = ({
+  open, onOpenChange, entityLabel, table, onCreated,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  entityLabel: 'designer' | 'maker';
+  table: 'designers' | 'makers';
+  onCreated: (opt: DesignerMakerOption) => void;
+}) => {
+  const queryClient = useQueryClient();
+  const [name, setName] = useState('');
+  const [about, setAbout] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const reset = () => { setName(''); setAbout(''); setError(null); };
+
+  const generateSlug = (value: string) =>
+    value.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+
+  const save = async () => {
+    if (!name.trim()) {
+      setError('Name is required');
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    const { data, error: dbError } = await supabase
+      .from(table)
+      .insert({ name: name.trim(), about: about.trim() || null, slug: generateSlug(name.trim()) })
+      .select('id, name, about')
+      .single();
+    setSaving(false);
+    if (dbError) {
+      // Most likely cause: a slug/name uniqueness constraint collision.
+      setError(dbError.message);
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: [table === 'designers' ? 'taxonomy-designers' : 'taxonomy-makers'] });
+    onCreated(data as DesignerMakerOption);
+    reset();
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => { if (!next) reset(); onOpenChange(next); }}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="capitalize">New {entityLabel}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <FieldLabel>Name *</FieldLabel>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={`${entityLabel} name`} />
+          </div>
+          <div className="space-y-1.5">
+            <FieldLabel>About</FieldLabel>
+            <Textarea rows={4} value={about} onChange={(e) => setAbout(e.target.value)} placeholder="Optional bio — can also be added later" />
+          </div>
+          {error && <p className="text-xs text-destructive">{error}</p>}
+        </div>
+        <DialogFooter className="mt-2">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
+          <Button type="button" onClick={save} disabled={saving}>
+            {saving ? 'Creating…' : `Create ${entityLabel}`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Designer/Maker combobox: adds an inline "create new" flow (so the admin never has to
+// leave the product form) and a small bio indicator showing whether the selected
+// designer/maker already has an `about` bio published.
+const DesignerMakerCombobox = ({
+  value, onChange, options, placeholder, entityLabel, className,
+}: {
+  value: string | null;
+  onChange: (id: string | null) => void;
+  options?: DesignerMakerOption[];
+  placeholder: string;
+  entityLabel: 'designer' | 'maker';
+  className?: string;
+}) => {
+  const [open, setOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const selected = options?.find((o) => o.id === value);
+  const hasBio = !!selected?.about?.trim();
+
+  return (
+    <div className={cn('flex items-center gap-1.5 min-w-0', className)}>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" role="combobox" className={cn('flex-1 justify-between font-normal min-w-0', !value && 'text-muted-foreground')}>
+            <span className="truncate">{selected?.name || placeholder}</span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-72 p-0">
+          <Command>
+            <CommandInput placeholder="Search…" />
+            <CommandList>
+              <CommandEmpty>No results.</CommandEmpty>
+              <CommandGroup>
+                <CommandItem value="__none" onSelect={() => { onChange(null); setOpen(false); }}>
+                  <Check className={cn('mr-2 h-4 w-4', !value ? 'opacity-100' : 'opacity-0')} /> None
+                </CommandItem>
+                {options?.map((o) => (
+                  <CommandItem key={o.id} value={o.name} onSelect={() => { onChange(o.id); setOpen(false); }}>
+                    <Check className={cn('mr-2 h-4 w-4', value === o.id ? 'opacity-100' : 'opacity-0')} />
+                    <span className="flex-1 truncate">{o.name}</span>
+                    {o.about?.trim() && (
+                      <CheckCircle2 size={12} className="text-emerald-600 shrink-0 ml-1" />
+                    )}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+            <div className="border-t border-border p-1">
+              <button
+                type="button"
+                onClick={() => { setCreateOpen(true); setOpen(false); }}
+                className="w-full flex items-center gap-1.5 px-2 py-1.5 text-sm text-primary hover:bg-muted rounded-sm transition-colors"
+              >
+                <Plus size={13} /> Add new {entityLabel}…
+              </button>
+            </div>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      {value && (
+        <span
+          title={hasBio ? 'Bio published' : 'No bio published yet'}
+          className={cn('shrink-0', hasBio ? 'text-emerald-600' : 'text-muted-foreground/25')}
+        >
+          <CheckCircle2 size={16} />
+        </span>
+      )}
+      <CreateEntityModal
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        entityLabel={entityLabel}
+        table={entityLabel === 'designer' ? 'designers' : 'makers'}
+        onCreated={(opt) => onChange(opt.id)}
+      />
+    </div>
   );
 };
 
@@ -284,6 +445,7 @@ const AdminProductForm = () => {
     }
     values.price        = product.price ?? undefined;
     values.sale_price   = (product as any).sale_price ?? undefined;
+    values.sold_price   = (product as any).sold_price ?? undefined;
     values.consignor_id = (product as any).consignor_id ?? undefined;
     values.line         = (product as any).line ?? undefined;
     // published_at: keep as-is (ISO string or null); don't coerce to ''
@@ -563,7 +725,7 @@ const AdminProductForm = () => {
               )} />
               <FormField control={form.control} name="sale_price" render={({ field }) => (
                 <FormItem>
-                  <FormLabel><FieldLabel>Sale Price</FieldLabel></FormLabel>
+                  <FormLabel><FieldLabel>Discounted Price</FieldLabel></FormLabel>
                   <FormControl><Input type="number" {...field} value={field.value ?? ''} /></FormControl>
                   <FormMessage />
                 </FormItem>
@@ -571,18 +733,41 @@ const AdminProductForm = () => {
             </div>
 
             {watchStatus === 'sold' && (
-              <FormField control={form.control} name="sold_on" render={({ field }) => (
-                <FormItem className="max-w-xs">
-                  <FormLabel><FieldLabel>Sold On</FieldLabel></FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value as string || ''}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Select platform" /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      {SOLD_ON_OPTIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
+              <div className="grid grid-cols-3 gap-4">
+                <FormField control={form.control} name="sold_price" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel><FieldLabel>Sold Price</FieldLabel></FormLabel>
+                    <FormControl><Input type="number" {...field} value={field.value ?? ''} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="sale_platform" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel><FieldLabel>Platform</FieldLabel></FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value as string || ''}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Select platform" /></SelectTrigger></FormControl>
+                      <SelectContent>
+                        {SOLD_ON_OPTIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="sale_date" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel><FieldLabel>Sale Date</FieldLabel></FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        {...field}
+                        value={field.value ? field.value.slice(0, 10) : ''}
+                        onChange={(e) => field.onChange(e.target.value || null)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
             )}
 
             {/* Published At */}
@@ -702,7 +887,7 @@ const AdminProductForm = () => {
                     <SelectTrigger className="w-[25%] shrink-0"><SelectValue /></SelectTrigger>
                     <SelectContent>{ATTRIBUTION_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                   </Select>
-                  <InlineCombobox value={row.designer_id} onChange={(val) => setDesigners((prev) => prev.map((r, j) => j === i ? { ...r, designer_id: val } : r))} options={taxonomy.designers} placeholder="Select designer…" className="flex-1" />
+                  <DesignerMakerCombobox value={row.designer_id} onChange={(val) => setDesigners((prev) => prev.map((r, j) => j === i ? { ...r, designer_id: val } : r))} options={taxonomy.designers} placeholder="Select designer…" entityLabel="designer" className="flex-1" />
                   <div className="w-[25%] flex justify-end items-center gap-1 shrink-0">
                     {i === designers.length - 1 && <Button type="button" variant="outline" size="sm" className="gap-1 text-xs whitespace-nowrap" onClick={() => setDesigners((prev) => [...prev, { designer_id: null, attribution_type: 'by' }])}><Plus size={12} /> Add</Button>}
                     {designers.length > 1 && <button type="button" onClick={() => setDesigners((prev) => prev.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-destructive transition-colors p-1"><X size={16} /></button>}
@@ -720,7 +905,7 @@ const AdminProductForm = () => {
                     <SelectTrigger className="w-[25%] shrink-0"><SelectValue /></SelectTrigger>
                     <SelectContent>{ATTRIBUTION_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                   </Select>
-                  <InlineCombobox value={row.maker_id} onChange={(val) => setMakers((prev) => prev.map((r, j) => j === i ? { ...r, maker_id: val } : r))} options={taxonomy.makers} placeholder="Select maker…" className="flex-1" />
+                  <DesignerMakerCombobox value={row.maker_id} onChange={(val) => setMakers((prev) => prev.map((r, j) => j === i ? { ...r, maker_id: val } : r))} options={taxonomy.makers} placeholder="Select maker…" entityLabel="maker" className="flex-1" />
                   <div className="w-[25%] flex justify-end items-center gap-1 shrink-0">
                     {i === makers.length - 1 && <Button type="button" variant="outline" size="sm" className="gap-1 text-xs whitespace-nowrap" onClick={() => setMakers((prev) => [...prev, { maker_id: null, attribution_type: 'by' }])}><Plus size={12} /> Add</Button>}
                     {makers.length > 1 && <button type="button" onClick={() => setMakers((prev) => prev.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-destructive transition-colors p-1"><X size={16} /></button>}
