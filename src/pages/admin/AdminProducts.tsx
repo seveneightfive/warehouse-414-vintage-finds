@@ -140,6 +140,13 @@ const daysSince = (dateString?: string | null) => {
   return Math.floor((Date.now() - new Date(dateString).getTime()) / (1000 * 60 * 60 * 24));
 };
 
+// Days between two dates (e.g. published_at -> sale_date), floored at 0.
+const daysBetween = (start?: string | null, end?: string | null) => {
+  if (!start || !end) return null;
+  const days = Math.round((new Date(end).getTime() - new Date(start).getTime()) / (1000 * 60 * 60 * 24));
+  return Math.max(0, days);
+};
+
 const CrossListChips = ({ product }: { product: Product }) => {
   const platforms: { label: string; key: 'firstdibs_url' | 'chairish_url' | 'ebay_url'; title: string }[] = [
     { label: '1D', key: 'firstdibs_url', title: '1stDibs' },
@@ -670,30 +677,34 @@ const AdminProducts = () => {
                     </button>
                   </TableHead>
                   <TableHead>Title</TableHead>
-                  <TableHead className="w-28">Cross-Listed</TableHead>
+                  {selectedStatus !== 'sold' && (
+                    <TableHead className="w-28">Cross-Listed</TableHead>
+                  )}
                   <TableHead className="w-28">
-                    <button
-                      type="button"
-                      onClick={() => cycleSort('price')}
-                      className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-                      title="Sort by price"
-                    >
-                      Price
-                      <SortIcon active={sortKey === 'price'} dir={sortDir} />
-                    </button>
+                    {selectedStatus === 'sold' ? (
+                      <button
+                        type="button"
+                        onClick={() => cycleSort('price')}
+                        className="inline-flex flex-col items-start hover:text-foreground transition-colors leading-tight"
+                        title="Sort by listed price"
+                      >
+                        <span>Sold Price</span>
+                        <span className="inline-flex items-center gap-1 text-[10px] font-normal normal-case text-muted-foreground">
+                          Listed Price <SortIcon active={sortKey === 'price'} dir={sortDir} />
+                        </span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => cycleSort('price')}
+                        className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                        title="Sort by price"
+                      >
+                        Price
+                        <SortIcon active={sortKey === 'price'} dir={sortDir} />
+                      </button>
+                    )}
                   </TableHead>
-                  <TableHead className="w-28">
-                    <button
-                      type="button"
-                      onClick={() => cycleSort('created_at')}
-                      className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-                      title="Sort by date published"
-                    >
-                      Published
-                      <SortIcon active={sortKey === 'created_at'} dir={sortDir} />
-                    </button>
-                  </TableHead>
-                  <TableHead className="w-20">Views</TableHead>
                   {selectedStatus === 'sold' && (
                     <TableHead className="w-28">
                       <button
@@ -706,6 +717,20 @@ const AdminProducts = () => {
                         <SortIcon active={sortKey === 'sale_date'} dir={sortDir} />
                       </button>
                     </TableHead>
+                  )}
+                  <TableHead className="w-28">
+                    <button
+                      type="button"
+                      onClick={() => cycleSort('created_at')}
+                      className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                      title={selectedStatus === 'sold' ? 'Sort by days listed' : 'Sort by date published'}
+                    >
+                      {selectedStatus === 'sold' ? 'Days Listed' : 'Published'}
+                      <SortIcon active={sortKey === 'created_at'} dir={sortDir} />
+                    </button>
+                  </TableHead>
+                  {selectedStatus !== 'sold' && (
+                    <TableHead className="w-20">Views</TableHead>
                   )}
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
@@ -740,7 +765,7 @@ const AdminProducts = () => {
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span>{product.name}</span>
-                          {stale && (
+                          {stale && selectedStatus !== 'sold' && (
                             <span
                               title={`Listed ${daysListed} days ago`}
                               className="inline-flex items-center text-amber-700 dark:text-amber-300"
@@ -755,24 +780,48 @@ const AdminProducts = () => {
                           )}
                         </div>
                       </TableCell>
+                      {selectedStatus !== 'sold' && (
+                        <TableCell>
+                          <CrossListChips product={product} />
+                        </TableCell>
+                      )}
                       <TableCell>
-                        <CrossListChips product={product} />
-                      </TableCell>
-                      <TableCell>{formatPrice(product)}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                        {formatDate((product as any).published_at ?? product.created_at)}
-                      </TableCell>
-                      <TableCell className="text-xs text-center">
-                        <span className={(product as any).view_count > 50
-                          ? 'text-foreground font-semibold'
-                          : 'text-muted-foreground'
-                        }>
-                          {(product as any).view_count ?? 0}
-                        </span>
+                        {selectedStatus === 'sold' ? (
+                          <div className="flex flex-col leading-tight">
+                            <span className="text-foreground">
+                              {(product as any).sold_price != null
+                                ? `$${Number((product as any).sold_price).toLocaleString()}`
+                                : '—'}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {product.price ? `$${product.price.toLocaleString()}` : '—'}
+                            </span>
+                          </div>
+                        ) : (
+                          formatPrice(product)
+                        )}
                       </TableCell>
                       {selectedStatus === 'sold' && (
                         <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                           {formatDate((product as any).sale_date)}
+                        </TableCell>
+                      )}
+                      <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                        {selectedStatus === 'sold'
+                          ? (() => {
+                              const days = daysBetween(publishedAt, (product as any).sale_date);
+                              return days !== null ? `${days} day${days === 1 ? '' : 's'}` : formatDate(publishedAt);
+                            })()
+                          : formatDate(publishedAt)}
+                      </TableCell>
+                      {selectedStatus !== 'sold' && (
+                        <TableCell className="text-xs text-center">
+                          <span className={(product as any).view_count > 50
+                            ? 'text-foreground font-semibold'
+                            : 'text-muted-foreground'
+                          }>
+                            {(product as any).view_count ?? 0}
+                          </span>
                         </TableCell>
                       )}
                       <TableCell>
