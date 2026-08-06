@@ -304,7 +304,7 @@ const AdminSidebar = () => {
               `}
             >
               <BookOpen size={18} />
-              Curated Sets
+              Homepage Banners
             </Link>
 
             <Link
