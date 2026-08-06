@@ -147,6 +147,24 @@ const daysBetween = (start?: string | null, end?: string | null) => {
   return Math.max(0, days);
 };
 
+// Builds a windowed list of page numbers (0-indexed) with '...' gap markers,
+// e.g. for current=5, total=10 -> [0, '...', 4, 5, 6, '...', 9]
+const getPageNumbers = (current: number, total: number): (number | '...')[] => {
+  const delta = 1;
+  const rangeStart = Math.max(0, current - delta);
+  const rangeEnd = Math.min(total - 1, current + delta);
+
+  const pages: (number | '...')[] = [0];
+  if (rangeStart > 1) pages.push('...');
+  for (let i = rangeStart; i <= rangeEnd; i++) {
+    if (i !== 0 && i !== total - 1) pages.push(i);
+  }
+  if (rangeEnd < total - 2) pages.push('...');
+  if (total > 1) pages.push(total - 1);
+
+  return pages;
+};
+
 const CrossListChips = ({ product }: { product: Product }) => {
   const platforms: { label: string; key: 'firstdibs_url' | 'chairish_url' | 'ebay_url'; title: string }[] = [
     { label: '1D', key: 'firstdibs_url', title: '1stDibs' },
@@ -933,14 +951,45 @@ const AdminProducts = () => {
           </div>
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center justify-between mt-4 flex-wrap gap-3">
               <p className="text-sm text-muted-foreground">Page {page + 1} of {totalPages} ({data?.total ?? 0} products)</p>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((current) => current - 1)}>
-                  <ChevronLeft size={14} className="mr-1" /> Previous
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 0}
+                  onClick={() => setPage((current) => current - 1)}
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft size={14} />
                 </Button>
-                <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage((current) => current + 1)}>
-                  Next <ChevronRight size={14} className="ml-1" />
+                {getPageNumbers(page, totalPages).map((p, idx) =>
+                  p === '...' ? (
+                    <span key={`ellipsis-${idx}`} className="px-1.5 text-sm text-muted-foreground select-none">
+                      …
+                    </span>
+                  ) : (
+                    <Button
+                      key={p}
+                      variant={p === page ? 'default' : 'outline'}
+                      size="sm"
+                      className="w-8 px-0"
+                      onClick={() => setPage(p)}
+                      aria-current={p === page ? 'page' : undefined}
+                      aria-label={`Page ${p + 1}`}
+                    >
+                      {p + 1}
+                    </Button>
+                  )
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages - 1}
+                  onClick={() => setPage((current) => current + 1)}
+                  aria-label="Next page"
+                >
+                  <ChevronRight size={14} />
                 </Button>
               </div>
             </div>
