@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -220,9 +220,12 @@ const AdminProducts = () => {
   const initialStatus: ProductStatusKey =
     urlStatus && VALID_STATUSES.includes(urlStatus) ? urlStatus : 'available';
 
+  const urlPageRaw = Number(searchParams.get('page'));
+  const initialPage = Number.isInteger(urlPageRaw) && urlPageRaw > 0 ? urlPageRaw : 0;
+
   const [selectedStatus, setSelectedStatus] = useState<ProductStatusKey>(initialStatus);
   const [searchQuery, setSearchQuery] = useState('');
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useState(initialPage);
   const [moveStatusProduct, setMoveStatusProduct] = useState<Product | null>(null);
   const [pendingStatus, setPendingStatus] = useState<ProductStatusKey>('available');
   const [soldProduct, setSoldProduct] = useState<Product | null>(null);
@@ -243,6 +246,8 @@ const AdminProducts = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [urlStatus]);
 
+  const hasHandledInitialStatusRef = useRef(false);
+
   useEffect(() => {
     if (selectedStatus === 'sold') {
       setSortKey('sale_date');
@@ -250,7 +255,16 @@ const AdminProducts = () => {
       setSortKey('default');
     }
     setSortDir('desc');
-    setPage(0);
+
+    // Skip the page reset on first mount so returning here from the product
+    // edit form (e.g. /admin/products?status=sold&page=6) lands back on the
+    // same page instead of snapping to page 1. A later, active tab switch
+    // should still restart the list at page 1.
+    if (hasHandledInitialStatusRef.current) {
+      setPage(0);
+    } else {
+      hasHandledInitialStatusRef.current = true;
+    }
 
     const current = searchParams.get('status');
     if (current !== selectedStatus) {
@@ -613,7 +627,7 @@ const AdminProducts = () => {
                         View
                       </Link>
                       <Link
-                        to={`/admin/products/${product.id}`}
+                        to={`/admin/products/${product.id}?from=${selectedStatus}&page=${page}`}
                         className="text-xs text-muted-foreground border border-border rounded px-2 py-1 hover:text-foreground transition-colors"
                       >
                         Edit
@@ -852,7 +866,7 @@ const AdminProducts = () => {
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem asChild>
-                              <Link to={`/admin/products/${product.id}`} className="flex items-center gap-2 cursor-pointer">
+                              <Link to={`/admin/products/${product.id}?from=${selectedStatus}&page=${page}`} className="flex items-center gap-2 cursor-pointer">
                                 <Pencil size={13} /> Edit Product
                               </Link>
                             </DropdownMenuItem>
