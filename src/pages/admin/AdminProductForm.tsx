@@ -354,8 +354,17 @@ const AdminProductForm = () => {
   const taxonomy = useTaxonomyOptions();
   const hasHydratedRef = useRef(false);
 
-  const returnStatus = new URLSearchParams(location.search).get('from') ?? null;
-  const backUrl = returnStatus ? `/admin/products?status=${returnStatus}` : '/admin/products';
+  // Where we should return to when saving/cancelling. Both the status tab
+  // ("from") and the page number ("page") are carried in from the admin
+  // products list so e.g. editing an item from Sold page 7 sends you back
+  // to that exact page instead of resetting to page 1.
+  const returnParams = new URLSearchParams(location.search);
+  const returnStatus = returnParams.get('from') ?? null;
+  const returnPageRaw = Number(returnParams.get('page'));
+  const returnPage = Number.isInteger(returnPageRaw) && returnPageRaw > 0 ? returnPageRaw : 0;
+  const backUrl = returnStatus
+    ? `/admin/products?status=${returnStatus}${returnPage ? `&page=${returnPage}` : ''}`
+    : '/admin/products';
 
   const [designers,  setDesigners]  = useState<DesignerRow[]>([{ designer_id: null, attribution_type: 'by' }]);
   const [makers,     setMakers]     = useState<MakerRow[]>([{ maker_id: null, attribution_type: 'by' }]);
@@ -588,7 +597,18 @@ const AdminProductForm = () => {
     if (isEditing) {
       queryClient.invalidateQueries({ queryKey: ['admin-product', newId] });
       toast.success('Product updated');
-      navigate(`/admin/products?highlight=${id}&status=${form.getValues('status')}`);
+
+      // Prefer the status tab/page we arrived from (e.g. Sold, page 7) so the
+      // admin lands back exactly where they were, even if this edit changed
+      // the item's own status and it no longer appears in that view. Fall
+      // back to the item's new status when there's no return context, e.g.
+      // a bookmarked or directly-visited edit URL.
+      const targetStatus = returnStatus ?? form.getValues('status');
+      const params = new URLSearchParams({ status: targetStatus, highlight: id! });
+      if (returnStatus && returnPage) {
+        params.set('page', String(returnPage));
+      }
+      navigate(`/admin/products?${params.toString()}`);
     } else {
       // After creating, send the user to the edit page so they can upload images.
       toast.success('Product created — now add images');
