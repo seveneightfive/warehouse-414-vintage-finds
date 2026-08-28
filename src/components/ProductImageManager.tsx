@@ -27,7 +27,94 @@ type ProductImageData = {
 };
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB — validated pre-compression
+
+// ── Client-side image compression ────────────────────────────────────────
+// Phone cameras routinely produce 5-15MB photos. Uploading those raw, one at
+// a time, is what makes bulk uploads feel like they're "taking forever".
+// We resize to a sane max dimension and re-encode as JPEG before upload,
+// which typically cuts file size by 85-95% with no visible quality loss for
+// product photography.
+const MAX_DIMENSION = 2400; // px on the longest side — plenty for zoomed product shots
+const JPEG_QUALITY = 0.82;
+const UPLOAD_CONCURRENCY = 4; // parallel uploads in flight at once
+
+const compressImage = (file: File): Promise<File> => {
+  return new Promise((resolve) => {
+    // Animated GIFs would lose their animation if we ran them through canvas;
+    // just pass those through untouched.
+    if (file.type === 'image/gif') {
+      resolve(file);
+      return;
+    }
+
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+
+      let { width, height } = img;
+      if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+        if (width > height) {
+          height = Math.round((height / width) * MAX_DIMENSION);
+          width = MAX_DIMENSION;
+        } else {
+          width = Math.round((width / height) * MAX_DIMENSION);
+          height = MAX_DIMENSION;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(file);
+        return;
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob || blob.size >= file.size) {
+            // Compression didn't help (e.g. already-small file) — keep original.
+            resolve(file);
+            return;
+          }
+          const newName = file.name.replace(/\.\w+$/, '') + '.jpg';
+          resolve(new File([blob], newName, { type: 'image/jpeg' }));
+        },
+        'image/jpeg',
+        JPEG_QUALITY,
+      );
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(file); // fall back to the original if it fails to decode
+    };
+
+    img.src = objectUrl;
+  });
+};
+
+// Runs `worker` over `items` with at most `limit` running concurrently,
+// instead of a plain sequential for-loop awaiting one upload at a time.
+async function runWithConcurrency<T>(
+  items: T[],
+  limit: number,
+  worker: (item: T, index: number) => Promise<void>,
+): Promise<void> {
+  let cursor = 0;
+  const lanes = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (cursor < items.length) {
+      const i = cursor++;
+      await worker(items[i], i);
+    }
+  });
+  await Promise.all(lanes);
+}
 
 const SortableImage = ({ img, isFeatured, onSetFeatured, onDelete }: {
   img: ProductImage;
@@ -190,30 +277,39 @@ const ProductImageManager = ({ productId, sku: skuProp }: ProductImageManagerPro
       return;
     }
 
-    let nextSort = images.length;
-    let successCount = 0;
-    const isFirstUpload = images.length === 0;
-
+    const validFiles: File[] = [];
     for (const file of Array.from(files)) {
       const validationError = validateFile(file);
       if (validationError) {
         toast.error(validationError);
         continue;
       }
+      validFiles.push(file);
+    }
+    if (validFiles.length === 0) return;
 
-      const tempId = `${file.name}-${Date.now()}-${Math.random()}`;
-      setUploadingFiles((prev) => [...prev, tempId]);
+    const startSort = images.length;
+    const isFirstUpload = images.length === 0;
+    let successCount = 0;
 
+    // Reserve sort_order slots up front (by original selection order) so
+    // uploading in parallel doesn't race on ordering.
+    const tempIds = validFiles.map((f) => `${f.name}-${Date.now()}-${Math.random()}`);
+    setUploadingFiles((prev) => [...prev, ...tempIds]);
+
+    await runWithConcurrency(validFiles, UPLOAD_CONCURRENCY, async (file, i) => {
+      const tempId = tempIds[i];
       try {
+        const uploadFile = await compressImage(file);
+
         const fd = new FormData();
-        fd.append('file', file);
+        fd.append('file', uploadFile);
         fd.append('productId', productId);
         fd.append('sku', sku);
-        fd.append('sort_order', String(nextSort));
+        fd.append('sort_order', String(startSort + i));
 
         const res = await supabase.functions.invoke('upload-product-images', { body: fd });
         if (res.error) throw new Error(res.error.message);
-        nextSort++;
         successCount++;
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
@@ -221,7 +317,7 @@ const ProductImageManager = ({ productId, sku: skuProp }: ProductImageManagerPro
       } finally {
         setUploadingFiles((prev) => prev.filter((f) => f !== tempId));
       }
-    }
+    });
 
     if (isFirstUpload && successCount > 0) {
       const { data: refreshed } = await supabase
