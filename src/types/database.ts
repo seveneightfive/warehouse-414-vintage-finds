@@ -27,8 +27,12 @@ export type Product = {
   price: number | null;
   sale_price: number | null;
   sold_price: number | null;
-  status: 'available' | 'on_hold' | 'sold' | 'inventory' | 'limbo';
+  status: 'available' | 'on_hold' | 'sold' | 'inventory' | 'limbo' | 'deactivated';
   chairish_auction_url: string | null;
+
+  // ── Lot (shared physical stock this listing draws from; null = one-off unique item) ──
+  lot_id: string | null;
+  quantity_in_listing: number;
 
   // ── Legacy single-value FKs (kept for backwards compat, do not use for display) ──
   designer_id: string | null;
@@ -80,6 +84,15 @@ export type Product = {
   country?: Country | null;
   product_images?: ProductImage[];
   product_colors?: ProductColor[];
+};
+
+export type Lot = {
+  id: string;
+  name: string;
+  total_quantity: number;
+  remaining_quantity: number;
+  consignor_id: number | null;
+  created_at: string;
 };
 
 export type Designer = {
