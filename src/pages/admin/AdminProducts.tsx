@@ -195,6 +195,28 @@ const CrossListChips = ({ product }: { product: Product }) => {
   );
 };
 
+// Small chip shown next to a product's name when it's attached to a lot,
+// e.g. "Burke Tulip Armchair · 8/12 left". Helps explain at a glance why a
+// listing might be sitting in the Deactivated tab (its lot ran short).
+const LotChip = ({ product }: { product: Product }) => {
+  const lot = (product as any).lots as { name: string; remaining_quantity: number; total_quantity: number } | null;
+  if (!lot) return null;
+  const short = product.status === 'deactivated';
+  return (
+    <span
+      title={`Lot: ${lot.name}`}
+      className={
+        'inline-flex items-center gap-1 text-[10px] font-semibold tracking-wider uppercase rounded-sm px-1.5 py-0.5 border whitespace-nowrap ' +
+        (short
+          ? 'border-destructive/40 text-destructive bg-destructive/5'
+          : 'border-border text-muted-foreground bg-muted/40')
+      }
+    >
+      Lot: {lot.remaining_quantity}/{lot.total_quantity} left
+    </span>
+  );
+};
+
 const fetchStatusCounts = async () => {
   const statuses: ProductStatusKey[] = ['available', 'draft', 'limbo', 'sold', 'on_hold', 'inventory', 'deactivated'];
   const results = await Promise.all(statuses.map((status) =>
@@ -287,7 +309,7 @@ const AdminProducts = () => {
       let countQuery = supabase.from('products').select('*', { count: 'exact', head: true }).eq('status', selectedStatus);
       let listQuery = supabase
         .from('products')
-        .select('*, product_images(image_url, sort_order)')
+        .select('*, product_images(image_url, sort_order), lots(name, total_quantity, remaining_quantity)')
         .eq('status', selectedStatus);
 
       if (sortKey === 'price') {
@@ -606,6 +628,10 @@ const AdminProducts = () => {
                       <p className="font-display text-sm text-foreground shrink-0">{formatPrice(product)}</p>
                     </div>
 
+                    <div className="flex items-center gap-2 flex-wrap mt-1">
+                      <LotChip product={product} />
+                    </div>
+
                     {stale && (
                       <p className="text-xs text-amber-700 dark:text-amber-300 mt-1 flex items-center gap-1">
                         <Clock size={11} /> Listed {daysListed} days ago
@@ -793,6 +819,7 @@ const AdminProducts = () => {
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span>{product.name}</span>
+                          <LotChip product={product} />
                           {stale && selectedStatus !== 'sold' && (
                             <span
                               title={`Listed ${daysListed} days ago`}
