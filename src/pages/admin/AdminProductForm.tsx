@@ -21,12 +21,13 @@ import ProductImageManager from '@/components/ProductImageManager';
 const SOLD_ON_OPTIONS = ['1stDibs', 'Chairish', 'eBay', 'Website', 'Direct', 'Other'];
 
 const STATUS_OPTIONS = [
-  { value: 'draft',      label: 'Draft'       },
-  { value: 'available',  label: 'Available'   },
-  { value: 'on_hold',    label: 'On Hold'     },
-  { value: 'limbo',      label: 'Limbo'       },
-  { value: 'sold',       label: 'Sold'        },
-  { value: 'inventory',  label: 'Inventory'   },
+  { value: 'draft',       label: 'Draft'                      },
+  { value: 'available',   label: 'Available'                  },
+  { value: 'on_hold',     label: 'On Hold'                    },
+  { value: 'limbo',       label: 'Limbo'                      },
+  { value: 'sold',        label: 'Sold'                       },
+  { value: 'inventory',   label: 'Inventory'                  },
+  { value: 'deactivated', label: 'Deactivated (Lot Sold Out)' },
 ];
 
 const ATTRIBUTION_OPTIONS = [
@@ -69,7 +70,9 @@ const schema = z.object({
   price: z.coerce.number().nullable().optional(),
   sale_price: z.coerce.number().nullable().optional(),
   sold_price: z.coerce.number().nullable().optional(),
-  status: z.enum(['draft', 'available', 'on_hold', 'sold', 'inventory', 'limbo']).default('draft'),
+  status: z.enum(['draft', 'available', 'on_hold', 'sold', 'inventory', 'limbo', 'deactivated']).default('draft'),
+  lot_id: z.string().nullable().optional(),
+  quantity_in_listing: z.coerce.number().min(1).default(1),
   designer_id: z.string().nullable().optional(),
   maker_id: z.string().nullable().optional(),
   category_id: z.string().nullable().optional(),
@@ -102,6 +105,16 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 type DesignerMakerOption = { id: string; name: string; about?: string | null };
+
+type LotOption = {
+  id: string;
+  name: string;
+  total_quantity: number;
+  remaining_quantity: number;
+  consignor_id: number | null;
+};
+
+type ConsignorOption = { id: number; first_name: string | null; last_name: string | null; consignor_code: string | null };
 
 const useTaxonomyOptions = () => {
   const fetch = (table: string) => async () => {
@@ -345,6 +358,167 @@ const SubSubcategoryCombobox = ({ subcategoryId, value, onChange }: {
   return <InlineCombobox value={value} onChange={onChange} options={data} placeholder="Specific type…" className="flex-1 min-w-[130px]" />;
 };
 
+// Modal for creating a new lot inline. A lot represents the physical stock of
+// identical items (e.g. "12 Burke Tulip Armchairs") that multiple listings
+// (single, set of 4, set of 8, etc.) can draw from. Consignor lives on the
+// lot and is synced down to every attached listing automatically by a DB
+// trigger (trg_sync_lot_consignor), so it only needs to be set here once.
+const CreateLotModal = ({
+  open, onOpenChange, consignors, onCreated,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  consignors?: ConsignorOption[];
+  onCreated: (lot: LotOption) => void;
+}) => {
+  const queryClient = useQueryClient();
+  const [name, setName] = useState('');
+  const [totalQuantity, setTotalQuantity] = useState('');
+  const [consignorId, setConsignorId] = useState<string>('__none');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const reset = () => { setName(''); setTotalQuantity(''); setConsignorId('__none'); setError(null); };
+
+  const consignorLabel = (c: ConsignorOption) => {
+    const cName = [c.first_name, c.last_name].filter(Boolean).join(' ');
+    return cName ? `${c.consignor_code} — ${cName}` : (c.consignor_code ?? '—');
+  };
+
+  const save = async () => {
+    const qty = Number(totalQuantity);
+    if (!name.trim()) { setError('Name is required'); return; }
+    if (!qty || qty < 1) { setError('Total quantity must be at least 1'); return; }
+
+    setSaving(true);
+    setError(null);
+    const { data, error: dbError } = await supabase
+      .from('lots')
+      .insert({
+        name: name.trim(),
+        total_quantity: qty,
+        remaining_quantity: qty,
+        consignor_id: consignorId === '__none' ? null : Number(consignorId),
+      })
+      .select('id, name, total_quantity, remaining_quantity, consignor_id')
+      .single();
+    setSaving(false);
+    if (dbError) { setError(dbError.message); return; }
+
+    queryClient.invalidateQueries({ queryKey: ['lots'] });
+    onCreated(data as LotOption);
+    reset();
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => { if (!next) reset(); onOpenChange(next); }}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>New Lot</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <FieldLabel>Lot Name *</FieldLabel>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder='e.g. "Burke Tulip Armchair No. 116 - White Shell / Black Cushion"' />
+          </div>
+          <div className="space-y-1.5">
+            <FieldLabel>Total Quantity *</FieldLabel>
+            <Input type="number" min={1} value={totalQuantity} onChange={(e) => setTotalQuantity(e.target.value)} placeholder="e.g. 12" />
+            <p className="text-xs text-muted-foreground">
+              Total physical units in this lot. Individual listings (single, set of 4, set of 8, etc.) will each draw from this count.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <FieldLabel>Consignor</FieldLabel>
+            <Select value={consignorId} onValueChange={setConsignorId}>
+              <SelectTrigger><SelectValue placeholder="Select consignor" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none">None</SelectItem>
+                {consignors?.map((c) => (
+                  <SelectItem key={c.id} value={String(c.id)}>{consignorLabel(c)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">Every listing attached to this lot will automatically use this consignor.</p>
+          </div>
+          {error && <p className="text-xs text-destructive">{error}</p>}
+        </div>
+        <DialogFooter className="mt-2">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
+          <Button type="button" onClick={save} disabled={saving}>{saving ? 'Creating…' : 'Create lot'}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Lot combobox: pick an existing lot (shown with remaining/total units) or
+// create a new one inline. Selecting "No lot" treats the product as a normal
+// one-off unique item, unaffected by any of the lot logic.
+const LotCombobox = ({
+  value, onChange, options, consignors,
+}: {
+  value: string | null;
+  onChange: (lot: LotOption | null) => void;
+  options?: LotOption[];
+  consignors?: ConsignorOption[];
+}) => {
+  const [open, setOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const selected = options?.find((o) => o.id === value);
+
+  return (
+    <div className="flex items-center gap-1.5 min-w-0">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" role="combobox" className={cn('flex-1 justify-between font-normal min-w-0', !value && 'text-muted-foreground')}>
+            <span className="truncate">
+              {selected ? `${selected.name} (${selected.remaining_quantity}/${selected.total_quantity} left)` : 'No lot — single unique item'}
+            </span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80 p-0">
+          <Command>
+            <CommandInput placeholder="Search lots…" />
+            <CommandList>
+              <CommandEmpty>No results.</CommandEmpty>
+              <CommandGroup>
+                <CommandItem value="__none" onSelect={() => { onChange(null); setOpen(false); }}>
+                  <Check className={cn('mr-2 h-4 w-4', !value ? 'opacity-100' : 'opacity-0')} /> No lot — single unique item
+                </CommandItem>
+                {options?.map((o) => (
+                  <CommandItem key={o.id} value={o.name} onSelect={() => { onChange(o); setOpen(false); }}>
+                    <Check className={cn('mr-2 h-4 w-4', value === o.id ? 'opacity-100' : 'opacity-0')} />
+                    <span className="flex-1 truncate">{o.name}</span>
+                    <span className="text-xs text-muted-foreground ml-2 shrink-0">{o.remaining_quantity}/{o.total_quantity} left</span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+            <div className="border-t border-border p-1">
+              <button
+                type="button"
+                onClick={() => { setCreateOpen(true); setOpen(false); }}
+                className="w-full flex items-center gap-1.5 px-2 py-1.5 text-sm text-primary hover:bg-muted rounded-sm transition-colors"
+              >
+                <Plus size={13} /> Add new lot…
+              </button>
+            </div>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      <CreateLotModal
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        consignors={consignors}
+        onCreated={(lot) => onChange(lot)}
+      />
+    </div>
+  );
+};
+
 const AdminProductForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -376,7 +550,19 @@ const AdminProductForm = () => {
     queryFn: async () => {
       const { data, error } = await supabase.from('consignors').select('id, first_name, last_name, consignor_code').order('consignor_code');
       if (error) throw error;
-      return data as { id: number; first_name: string | null; last_name: string | null; consignor_code: string | null }[];
+      return data as ConsignorOption[];
+    },
+  });
+
+  // Lots: physical stock groups that multiple listings can draw from (e.g. a
+  // single-chair listing and a set-of-4 listing both pointing at the same
+  // 12-chair lot). Selecting a lot below also syncs this product's consignor.
+  const { data: lots } = useQuery({
+    queryKey: ['lots'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('lots').select('id, name, total_quantity, remaining_quantity, consignor_id').order('name');
+      if (error) throw error;
+      return data as LotOption[];
     },
   });
 
@@ -384,7 +570,7 @@ const AdminProductForm = () => {
   // until images are uploaded.
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { name: '', status: 'draft' },
+    defaultValues: { name: '', status: 'draft', quantity_in_listing: 1 },
   });
   const draftKey = `product-draft-${id ?? 'new'}`;
 
@@ -415,6 +601,7 @@ const AdminProductForm = () => {
   }, []);
 
   const watchStatus = form.watch('status');
+  const watchLotId = form.watch('lot_id');
   const auctionUrlRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (watchStatus === 'limbo') {
@@ -457,6 +644,9 @@ const AdminProductForm = () => {
     values.sold_price   = (product as any).sold_price ?? undefined;
     values.consignor_id = (product as any).consignor_id ?? undefined;
     values.line         = (product as any).line ?? undefined;
+    // Lot fields: null lot_id means this is a normal one-off unique item.
+    values.lot_id               = (product as any).lot_id ?? undefined;
+    values.quantity_in_listing  = (product as any).quantity_in_listing ?? 1;
     // published_at: keep as-is (ISO string or null); don't coerce to ''
     values.published_at = (product as any).published_at ?? null;
     const rawTags = (product as any).tags;
@@ -508,10 +698,13 @@ const AdminProductForm = () => {
       ? tagsString.split(',').map((t) => t.trim()).filter(Boolean)
       : null;
 
-    // Empty strings → null for cleaner DB rows.
+    // Empty strings → null for cleaner DB rows. quantity_in_listing should
+    // never be nulled out this way since it always carries a numeric default.
     for (const [k, v] of Object.entries(payload)) {
+      if (k === 'quantity_in_listing') continue;
       if (v === '' || v === undefined) payload[k] = null;
     }
+    if (!payload.quantity_in_listing) payload.quantity_in_listing = 1;
 
     const firstD = designers.find((d) => d.designer_id);
     const firstM = makers.find((m) => m.maker_id);
@@ -592,6 +785,7 @@ const AdminProductForm = () => {
   const onSuccess = (newId: string) => {
     queryClient.invalidateQueries({ queryKey: ['admin-products'] });
     queryClient.invalidateQueries({ queryKey: ['admin-product-counts'] });
+    queryClient.invalidateQueries({ queryKey: ['lots'] });
     localStorage.removeItem(draftKey);
 
     if (isEditing) {
@@ -728,6 +922,12 @@ const AdminProductForm = () => {
               </p>
             )}
 
+            {watchStatus === 'deactivated' && (
+              <p className="text-xs text-muted-foreground">
+                This listing was likely auto-deactivated because another listing on the same lot sold and there aren't enough units left to cover it. Check the lot's remaining quantity below before reactivating.
+              </p>
+            )}
+
             {watchStatus === 'limbo' && (
               <p className="text-xs text-muted-foreground">
                 Don't forget to add the{' '}
@@ -831,11 +1031,56 @@ const AdminProductForm = () => {
               </FormItem>
             )} />
 
+            {/* Lot (for multi-quantity items sold under several listings, e.g. a single chair vs. a set of 4 vs. a set of 8, all drawn from one physical lot) */}
+            <FormField control={form.control} name="lot_id" render={({ field }) => (
+              <FormItem className="max-w-md">
+                <FormLabel><FieldLabel>Lot</FieldLabel></FormLabel>
+                <LotCombobox
+                  value={field.value ?? null}
+                  options={lots}
+                  consignors={consignors}
+                  onChange={(lot) => {
+                    field.onChange(lot?.id ?? null);
+                    // Keep the visible consignor field in sync with the lot's
+                    // consignor client-side; the DB trigger enforces this
+                    // authoritatively on save regardless.
+                    if (lot) form.setValue('consignor_id', lot.consignor_id ?? null);
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Attach this listing to a lot if it's one of several ways to buy the same physical stock (e.g. a single chair vs. a set of 4 from the same 12-chair lot). Selling one listing automatically deactivates sibling listings that need more units than remain. Consignor is inherited from the lot.
+                </p>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            {watchLotId && (
+              <FormField control={form.control} name="quantity_in_listing" render={({ field }) => (
+                <FormItem className="max-w-xs">
+                  <FormLabel><FieldLabel>Units in This Listing</FieldLabel></FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={1}
+                      {...field}
+                      value={field.value ?? 1}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
+                    />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    How many units from the lot this specific listing represents (e.g. 1 for a single, 4 for a set of 4).
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            )}
+
             {/* Consignor */}
             <FormField control={form.control} name="consignor_id" render={({ field }) => (
               <FormItem className="max-w-xs">
                 <FormLabel><FieldLabel>Consignor</FieldLabel></FormLabel>
                 <Select
+                  disabled={!!watchLotId}
                   onValueChange={(val) => field.onChange(val === '__none' ? null : Number(val))}
                   value={field.value != null ? String(field.value) : '__none'}
                 >
@@ -847,6 +1092,9 @@ const AdminProductForm = () => {
                     ))}
                   </SelectContent>
                 </Select>
+                {watchLotId && (
+                  <p className="text-xs text-muted-foreground">Synced from the selected lot — change the lot's consignor instead of editing this directly.</p>
+                )}
                 <FormMessage />
               </FormItem>
             )} />
