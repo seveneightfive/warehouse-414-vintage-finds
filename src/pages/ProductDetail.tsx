@@ -38,9 +38,14 @@ const ProductDetail = () => {
 useEffect(() => {
   if (!slug) return;
   const key = `viewed_${slug}`;
-  if (sessionStorage.getItem(key)) return; // already counted this session
+  if (sessionStorage.getItem(key)) return;
   sessionStorage.setItem(key, '1');
-  supabase.rpc('increment_view_count', { product_slug: slug });
+  supabase.rpc('increment_view_count', { product_slug: slug }).then(({ error }) => {
+    if (error) {
+      sessionStorage.removeItem(key); // allow retry next visit
+      console.error('View count RPC error:', error);
+    }
+  });
 }, [slug]);
 
   // Collect all category IDs this product belongs to (for similar products)
