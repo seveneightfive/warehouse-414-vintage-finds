@@ -196,11 +196,15 @@ export default function AdminDashboard() {
         setWeekProducts({});
       }
 
-      // ---- Recent inquiries (non-offer) and offers ----
+            // ---- Recent inquiries (non-offer, last 90 days) and offers ----
+      const ninetyDaysAgo = new Date();
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
       const { data: inqRows } = await supabase
         .from("purchase_inquiries")
         .select("id, customer_name, customer_email, inquiry_type, message, offer_amount, is_read, status, created_at, product_id, products(name)")
         .neq("inquiry_type", "offer")
+        .gte("created_at", ninetyDaysAgo.toISOString())
         .order("created_at", { ascending: false })
         .limit(5);
       setRecentInquiries((inqRows as any) ?? []);
