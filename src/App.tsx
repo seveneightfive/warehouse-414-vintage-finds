@@ -26,6 +26,7 @@ import AdminCollectionDetail from "./pages/admin/AdminCollectionDetail";
 import AdminConsignors from "./pages/admin/AdminConsignors";
 import AdminConsignorDetail from "./pages/admin/AdminConsignorDetail";
 import AdminInventory from "./pages/admin/AdminInventory";
+import AdminAccount from "./pages/admin/AdminAccount";
 import CollectionDetail from "./pages/CollectionDetail";
 import AdminSidebar from "./components/AdminSidebar";
 import ProtectedAdminRoute from "@/components/ProtectedAdminRoute";
@@ -156,6 +157,7 @@ const App = () => (
 
             {/* Inventory */}
             <Route path="/admin/inventory" element={<AdminLayout><AdminInventory /></AdminLayout>} />
+            <Route path="/admin/account" element={<ProtectedAdminRoute><AdminAccount /></ProtectedAdminRoute>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -347,15 +347,22 @@ const AdminSidebar = () => {
         <div className="px-4 py-4 border-t border-border space-y-3">
           {/* Signed-in user indicator */}
           {user ? (
-            <div className="flex items-center gap-2 px-4 py-2 rounded-md bg-muted/60">
+            <Link
+              to="/admin/account"
+              onClick={() => setIsOpen(false)}
+              title="Account settings"
+              className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors ${
+                isActive('/admin/account') ? 'bg-primary/10' : 'bg-muted/60 hover:bg-muted'
+              }`}
+            >
               <UserCircle2 size={16} className="text-primary shrink-0" />
               <div className="min-w-0">
                 <p className="text-xs font-display tracking-wide text-foreground truncate">
                   {displayName}
                 </p>
-                <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{user.email || user.phone}</p>
               </div>
-            </div>
+            </Link>
           ) : (
             <div className="flex items-center gap-2 px-4 py-2 rounded-md bg-destructive/10">
               <UserCircle2 size={16} className="text-destructive shrink-0" />
