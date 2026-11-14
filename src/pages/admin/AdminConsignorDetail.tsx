@@ -91,7 +91,7 @@ const ProductTable = ({ products, showSoldDetails = false }: { products: Product
             ) : (
               <TableCell>
                 <div>{p.price ? `$${p.price.toLocaleString()}` : '—'}</div>
-                {p.sale_price && <div className="text-xs text-destructive">${p.sale_price.toLocaleString()}</div>}
+                {Number(p.sale_price) > 0 && <div className="text-xs text-destructive">${p.sale_price.toLocaleString()}</div>}
               </TableCell>
             )}
             <TableCell className="text-xs text-muted-foreground whitespace-nowrap">

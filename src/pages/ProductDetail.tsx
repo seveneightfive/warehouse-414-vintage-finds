@@ -361,7 +361,7 @@ const { data: similar } = useSimilarProducts(product?.id, categoryIds, {
             {/* ── Price ── */}
             {product.price && product.status !== 'limbo' && (
               <p className="font-display text-xl md:text-2xl text-muted-foreground mt-4">
-                {product.sale_price ? (
+                {Number(product.sale_price) > 0 ? (
                   <>
                     <span className="line-through opacity-60 mr-2">${product.price.toLocaleString()}</span>
                     <span className="text-destructive">${product.sale_price.toLocaleString()}</span>
@@ -663,7 +663,7 @@ const { data: similar } = useSimilarProducts(product?.id, categoryIds, {
             </p>
             {product.price && (
               <p className="font-display text-sm text-muted-foreground shrink-0">
-                {product.sale_price ? (
+                {Number(product.sale_price) > 0 ? (
                   <>
                     <span className="line-through opacity-60 mr-1">${product.price.toLocaleString()}</span>
                     <span className="text-destructive">${product.sale_price.toLocaleString()}</span>
