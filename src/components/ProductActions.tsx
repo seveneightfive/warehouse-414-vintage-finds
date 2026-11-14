@@ -7,7 +7,7 @@ import { generateSpecSheet, type SpecSheetProduct } from '@/lib/generateSpecShee
 
 type ActionType = 'inquiry' | 'offer' | 'purchase' | 'hold' | 'specsheet' | null;
 
-interface DesignerRef { designer?: { name?: string } | null }
+interface DesignerRef { role?: string | null; designer?: { name?: string } | null }
 interface MakerRef { maker?: { name?: string } | null }
 interface StylePeriodRef { styles_periods?: { name?: string } | null }
 

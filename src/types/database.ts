@@ -2,7 +2,9 @@
 
 export type ProductDesigner = {
   attribution_type: string | null;
-  designer: Pick<Designer, 'id' | 'name' | 'slug'> | null;
+  /** How this person is credited on the product. Defaults to 'designer'. */
+  role?: 'designer' | 'artist';
+  designer: (Pick<Designer, 'id' | 'name' | 'slug'> & { about?: string | null }) | null;
 };
 
 export type ProductMaker = {
@@ -55,6 +57,14 @@ export type Product = {
   // Attribution strings (used with period; designer/maker attribution now lives in junction)
   designer_attribution: string | null;
   maker_attribution: string | null;
+
+  // ── Artwork ──
+  /** @deprecated Old free-text artist note; artists are now product_designers with role 'artist' */
+  artwork_artist?: string | null;
+  artwork_title?: string | null;
+  artwork_medium?: string | null;
+  artwork_signature?: 'signed' | 'signed_illegible' | 'monogrammed' | 'unsigned' | null;
+  artwork_signature_detail?: string | null;
 
   firstdibs_url: string | null;
   chairish_url: string | null;

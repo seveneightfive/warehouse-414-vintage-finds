@@ -8,7 +8,7 @@ const PAGE_SIZE = 50;
 
 const PRODUCT_DETAIL_SELECT = `
   *,
-  product_designers ( attribution_type, designer:designers(id, name, slug) ),
+  product_designers ( attribution_type, role, designer:designers(id, name, slug, about) ),
   product_makers    ( attribution_type, maker:makers(id, name, slug) ),
   product_categories(
     is_primary,
@@ -26,7 +26,7 @@ const PRODUCT_DETAIL_SELECT = `
 // it for display.
 const PRODUCT_CARD_SELECT = `
   id, name, slug, price, status, featured_image_url, created_at, published_at, sale_price,
-  product_designers ( attribution_type, designer:designers(id, name, slug) ),
+  product_designers ( attribution_type, role, designer:designers(id, name, slug) ),
   product_makers    ( attribution_type, maker:makers(id, name, slug) ),
   product_categories( is_primary, category:categories(id, name, slug) ),
   product_styles_periods ( attribution_type, styles_periods:styles_periods(id, name, slug) ),
@@ -39,7 +39,7 @@ const PRODUCT_CARD_SELECT = `
 // subcategory_id at the database level instead of pre-querying ids.
 const PRODUCT_CARD_SELECT_WITH_CATEGORY_FILTER = `
   id, name, slug, price, status, featured_image_url, created_at, published_at, sale_price,
-  product_designers ( attribution_type, designer:designers(id, name, slug) ),
+  product_designers ( attribution_type, role, designer:designers(id, name, slug) ),
   product_makers    ( attribution_type, maker:makers(id, name, slug) ),
   product_categories!inner ( is_primary, category_id, subcategory_id, category:categories(id, name, slug) ),
   product_styles_periods ( attribution_type, styles_periods:styles_periods(id, name, slug) ),
@@ -300,7 +300,7 @@ export function useFeaturedProducts() {
         .from("products")
         .select(`
           id, name, slug, price, status, featured_image_url, created_at, published_at, sale_price,
-          product_designers ( attribution_type, designer:designers(id, name, slug) ),
+          product_designers ( attribution_type, role, designer:designers(id, name, slug) ),
           product_images(*)
         `)
         .eq("status", "available")
@@ -408,7 +408,7 @@ export function useSimilarProducts(
         const { data, error } = await supabase
           .from("products")
           .select(`id, name, slug, price, status, featured_image_url, created_at, published_at, sale_price,
-            product_designers(attribution_type, designer:designers(id, name, slug)),
+            product_designers(attribution_type, role, designer:designers(id, name, slug)),
             product_images(image_url, sort_order)`)
           .neq("id", productId)
           .eq("status", "available")
@@ -421,7 +421,7 @@ export function useSimilarProducts(
       const { data, error } = await supabase
         .from("products")
         .select(`id, name, slug, price, status, featured_image_url, created_at, published_at, sale_price,
-          product_designers(attribution_type, designer:designers(id, name, slug)),
+          product_designers(attribution_type, role, designer:designers(id, name, slug)),
           product_images(image_url, sort_order)`)
         .in("id", topIds)
         .eq("status", "available");

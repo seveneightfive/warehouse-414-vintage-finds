@@ -270,7 +270,7 @@ const AdminSidebar = () => {
               `}
             >
               <Users size={18} />
-              Designers
+              Designers &amp; Artists
             </Link>
 
             <Link

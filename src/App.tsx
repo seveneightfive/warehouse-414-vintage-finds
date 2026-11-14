@@ -103,7 +103,8 @@ const App = () => (
             <Route path="/admin/designers" element={
   <ProtectedAdminRoute>
     <AdminCrudList
-      title="Designers"
+      title="Designers & Artists"
+      singular="Designer or Artist"
       tableName="designers"
       viewName="designers_with_stats"
       columns={[

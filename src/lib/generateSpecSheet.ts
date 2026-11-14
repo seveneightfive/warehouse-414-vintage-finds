@@ -3,7 +3,7 @@ import QRCode from "qrcode";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-interface DesignerRef { designer?: { name?: string } | null }
+interface DesignerRef { role?: string | null; designer?: { name?: string } | null }
 interface MakerRef { maker?: { name?: string } | null }
 interface StylePeriodRef { styles_periods?: { name?: string } | null }
 
@@ -288,7 +288,10 @@ export async function generateSpecSheet(
 
   // ── ATTRIBUTION DETAILS ──
   const designerName = joinNames(
-    (product.product_designers ?? []).map((pd) => pd.designer?.name)
+    (product.product_designers ?? []).filter((pd) => pd.role !== 'artist').map((pd) => pd.designer?.name)
+  );
+  const artistName = joinNames(
+    (product.product_designers ?? []).filter((pd) => pd.role === 'artist').map((pd) => pd.designer?.name)
   );
   const makerName = joinNames((product.product_makers ?? []).map((pm) => pm.maker?.name));
   const stylePeriodName = joinNames(
@@ -297,6 +300,7 @@ export async function generateSpecSheet(
 
   const details: [string, string][] = [];
   if (designerName) details.push(["Designer", designerName]);
+  if (artistName) details.push(["Artist", artistName]);
   if (makerName) details.push(["Maker", makerName]);
   if (stylePeriodName) details.push(["Style / Period", stylePeriodName]);
   if (product.country?.name) details.push(["Country of Origin", product.country.name]);

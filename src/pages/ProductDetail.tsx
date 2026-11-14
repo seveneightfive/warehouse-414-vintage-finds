@@ -17,6 +17,25 @@ const Attribution = ({ type }: { type?: string | null }) =>
     <span className="italic text-muted-foreground mr-1">{type}</span>
   ) : null;
 
+const SIGNATURE_LABELS: Record<string, string> = {
+  signed: 'Signed',
+  signed_illegible: 'Signed, illegible',
+  monogrammed: 'Monogrammed',
+  unsigned: 'Unsigned',
+};
+
+const capitalize = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+
+/** First ~240 characters of a bio, ending on a full sentence when one fits. */
+const bioExcerpt = (about: string, max = 240) => {
+  const text = about.replace(/\s+/g, ' ').trim();
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max);
+  const sentenceEnd = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '), cut.lastIndexOf('? '));
+  if (sentenceEnd >= 120) return cut.slice(0, sentenceEnd + 1);
+  return cut.slice(0, cut.lastIndexOf(' ')).replace(/[,;:\-–—]$/, '') + '…';
+};
+
 const formatDescription = (text: string) => {
   if (!text) return '';
   if (/<[a-z][\s\S]*>/i.test(text)) return text;
@@ -53,15 +72,19 @@ useEffect(() => {
     (pc: any) => pc.category?.id,
   ).filter(Boolean) ?? [];
 
-  // Collect all designer + maker IDs for "more by" sections
-  const designerIds = product?.product_designers?.map((pd: any) => pd.designer?.id).filter(Boolean) ?? [];
+  // Designers and artists share one list; `role` says how they're credited here.
+  const designerCredits = product?.product_designers?.filter((pd: any) => pd.role !== 'artist') ?? [];
+  const artistCredits   = product?.product_designers?.filter((pd: any) => pd.role === 'artist') ?? [];
+
+  // Collect all designer/artist + maker IDs for "more by" sections (designer first, then artist)
+  const designerIds = [...designerCredits, ...artistCredits].map((pd: any) => pd.designer?.id).filter(Boolean);
   const makerIds    = product?.product_makers?.map((pm: any) => pm.maker?.id).filter(Boolean) ?? [];
 
   // "More by" — use the first designer/maker for the section (most common case)
   // If a product has multiple, we only show one "more by" section to keep the page clean
   const primaryDesignerId = designerIds[0];
   const primaryMakerId    = makerIds[0];
-  const primaryDesignerName = product?.product_designers?.[0]?.designer?.name;
+  const primaryDesignerName = (designerCredits[0] ?? artistCredits[0])?.designer?.name;
   const primaryMakerName    = product?.product_makers?.[0]?.maker?.name;
 
   const { data: designerProductsRaw } = useProducts(
@@ -140,7 +163,12 @@ const { data: similar } = useSimilarProducts(product?.id, categoryIds, {
   }
 
   const hasDimensions = product.product_dimensions || product.box_dimensions;
-  const hasArtwork = product.artwork_artist || product.artwork_title || product.artwork_medium;
+  // Old free-text artist note — only shown for pieces not yet converted to a linked artist/signature.
+  const legacyArtist = artistCredits.length === 0 && !product.artwork_signature ? product.artwork_artist?.trim() : '';
+  const signatureText = product.artwork_signature
+    ? [SIGNATURE_LABELS[product.artwork_signature], product.artwork_signature_detail?.trim()].filter(Boolean).join(', ')
+    : '';
+  const hasArtwork = artistCredits.length > 0 || legacyArtist || signatureText || product.artwork_title || product.artwork_medium;
 
   // ── Detail rows (bottom table) ─────────────────────────────────────────────
   // Categories: show all, primary first
@@ -241,14 +269,17 @@ const { data: similar } = useSimilarProducts(product?.id, categoryIds, {
               {product.name}
             </h1>
 
-            {/* ── Designers (multiple) ── */}
-            {product.product_designers && product.product_designers.length > 0 && (
-              <div className="mb-2">
+            {/* ── Designers / Artists (multiple) ── */}
+            {[
+              { credits: designerCredits, one: 'designer', many: 'designers' },
+              { credits: artistCredits,   one: 'artist',   many: 'artists' },
+            ].map(({ credits, one, many }) => credits.length > 0 && (
+              <div key={one} className="mb-2">
                 <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-0.5">
-                  {product.product_designers.length === 1 ? 'designer' : 'designers'}
+                  {credits.length === 1 ? one : many}
                 </p>
                 <div className="flex flex-wrap gap-x-2 gap-y-0.5">
-                  {product.product_designers.map((pd: any, i: number) => (
+                  {credits.map((pd: any, i: number) => (
                     <span key={pd.designer?.id ?? i} className="text-base text-foreground flex items-center gap-1">
                       <Attribution type={pd.attribution_type} />
                       {pd.designer ? (
@@ -256,14 +287,14 @@ const { data: similar } = useSimilarProducts(product?.id, categoryIds, {
                           {pd.designer.name}
                         </Link>
                       ) : null}
-                      {i < product.product_designers.length - 1 && (
+                      {i < credits.length - 1 && (
                         <span className="text-muted-foreground">&</span>
                       )}
                     </span>
                   ))}
                 </div>
               </div>
-            )}
+            ))}
 
             {/* ── Makers (multiple) ── */}
             {product.product_makers && product.product_makers.length > 0 && (
@@ -448,9 +479,32 @@ const { data: similar } = useSimilarProducts(product?.id, categoryIds, {
           <div className="py-4 border-b border-border">
             <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-3">ARTWORK</p>
             <div className="space-y-1.5">
-              {product.artwork_artist && (
+              {artistCredits.length > 0 && (
                 <p className="text-base text-foreground">
-                  <span className="text-muted-foreground">Artist: </span>{product.artwork_artist}
+                  <span className="text-muted-foreground">Artist: </span>
+                  {artistCredits.map((pd: any, i: number) => (
+                    <span key={pd.designer?.id ?? i}>
+                      {pd.attribution_type && pd.attribution_type !== 'by' && (
+                        <span className="text-muted-foreground">{capitalize(pd.attribution_type)} </span>
+                      )}
+                      {pd.designer && (
+                        <Link to={`/designer/${pd.designer.slug}`} className="hover:text-primary transition-colors">
+                          {pd.designer.name}
+                        </Link>
+                      )}
+                      {i < artistCredits.length - 1 && ', '}
+                    </span>
+                  ))}
+                </p>
+              )}
+              {legacyArtist && (
+                <p className="text-base text-foreground">
+                  <span className="text-muted-foreground">Artist: </span>{legacyArtist}
+                </p>
+              )}
+              {signatureText && (
+                <p className="text-base text-foreground">
+                  <span className="text-muted-foreground">Signature: </span>{signatureText}
                 </p>
               )}
               {product.artwork_title && (
@@ -465,6 +519,23 @@ const { data: similar } = useSimilarProducts(product?.id, categoryIds, {
                 </p>
               )}
             </div>
+
+            {/* Short artist bio(s) with a link to the full bio page */}
+            {artistCredits
+              .filter((pd: any) => pd.designer?.about?.trim())
+              .map((pd: any) => (
+                <div key={pd.designer.id} className="mt-4">
+                  <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-1.5">
+                    about {pd.designer.name}
+                  </p>
+                  <p className="text-sm text-foreground/80 leading-relaxed">
+                    {bioExcerpt(pd.designer.about)}{' '}
+                    <Link to={`/designer/${pd.designer.slug}`} className="text-primary hover:underline whitespace-nowrap">
+                      read more
+                    </Link>
+                  </p>
+                </div>
+              ))}
           </div>
         )}
 
