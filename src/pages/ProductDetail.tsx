@@ -230,20 +230,10 @@ const { data: similar } = useSimilarProducts(product?.id, categoryIds, {
           {/* Basic Info */}
           <div className="min-w-0">
             {product.status === 'limbo' && (
-              <div className="mb-4 border border-border bg-secondary/50 rounded-sm px-4 py-3 flex items-center gap-2">
+              <div className="mb-4 border border-border bg-secondary/50 rounded-sm px-4 py-3">
                 <span className="font-display text-sm tracking-wide text-foreground">
-                  This item is currently at auction on Chairish
+                  Please send us a note if you are interested in this item
                 </span>
-                {(product as any).chairish_auction_url && (
-                  <a
-                    href={(product as any).chairish_auction_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline text-sm flex items-center gap-1"
-                  >
-                    View auction <ExternalLink size={12} />
-                  </a>
-                )}
               </div>
             )}
 
