@@ -28,7 +28,6 @@ import AdminConsignorDetail from "./pages/admin/AdminConsignorDetail";
 import AdminInventory from "./pages/admin/AdminInventory";
 import AdminAccount from "./pages/admin/AdminAccount";
 import CollectionDetail from "./pages/CollectionDetail";
-import AdminSidebar from "./components/AdminSidebar";
 import ProtectedAdminRoute from "@/components/ProtectedAdminRoute";
 import NotFound from "./pages/NotFound";
 import { useEffect } from "react";
@@ -45,18 +44,9 @@ function ScrollToTop() {
 
 const queryClient = new QueryClient();
 
-// Admin layout wrapper
+// Admin layout wrapper — sign-in guard + sidebar layout (see ProtectedAdminRoute)
 function AdminLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="flex h-screen overflow-hidden">
-      <AdminSidebar />
-      <main className="flex-1 overflow-y-auto bg-background">
-        <div className="container mx-auto px-6 py-8">
-          {children}
-        </div>
-      </main>
-    </div>
-  );
+  return <ProtectedAdminRoute>{children}</ProtectedAdminRoute>;
 }
 
 const STAT_COLUMNS = [

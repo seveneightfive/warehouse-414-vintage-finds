@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, requireSession, assertRowsWritten } from '@/integrations/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +37,8 @@ import {
   CircleDollarSign,
   ArrowLeft,
   ImagePlus,
+  DollarSign,
+  ExternalLink,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Product } from '@/types/database';
@@ -45,6 +47,11 @@ import AdminPlaceHoldDialog from '@/components/AdminPlaceHoldDialog';
 import QuickUploadImagesModal from '@/components/QuickUploadImagesModal';
 
 const PAGE_SIZE = 25;
+
+// Shared style for the phone card buttons: at least 40px tall so they're easy
+// to hit with a thumb, with an icon + label.
+const MOBILE_BTN =
+  'inline-flex min-h-10 items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground active:scale-[0.98] transition disabled:opacity-50';
 
 const STALE_LISTING_MS = 360 * 24 * 60 * 60 * 1000;
 
@@ -422,21 +429,39 @@ const AdminProducts = () => {
     setPendingStatus('available');
     setSoldProduct(null);
     setLinksProduct(null);
-    toast.success('Status updated');
+    toast.success('Status updated — live on the website');
+  };
+
+  // Always re-fetch from the database afterwards so the list shows what was
+  // really saved, not just the optimistic guess.
+  const statusChangeOnSettled = () => {
+    queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-product-counts'] });
+    queryClient.invalidateQueries({ queryKey: ['admin-holds'] });
   };
 
   const changeStatusMutation = useMutation({
     mutationFn: async ({ id, newStatus, extraData }: StatusChangeVariables) => {
-      const { error } = await supabase.from('products').update({ status: newStatus, ...extraData } as any).eq('id', id);
+      const { data, error } = await supabase
+        .from('products')
+        .update({ status: newStatus, ...extraData } as any)
+        .eq('id', id)
+        .select('id, status');
       if (error) throw error;
+      assertRowsWritten(data, 'Status change');
     },
     onMutate: statusChangeOnMutate,
     onError: statusChangeOnError,
     onSuccess: statusChangeOnSuccess,
+    onSettled: statusChangeOnSettled,
   });
 
   const placeHoldMutation = useMutation({
     mutationFn: async ({ productId, holdData }: { productId: string; holdData: HoldFormData }) => {
+      // Holds can be inserted by anyone (the public "hold this" form), so a
+      // signed-out insert would "succeed" without marking the product on
+      // hold. Make sure the admin is really signed in first.
+      await requireSession();
       const { error } = await supabase.from('product_holds').insert({
         product_id: productId,
         customer_name: holdData.customer_name,
@@ -521,13 +546,13 @@ const AdminProducts = () => {
     if (!linksProduct) return;
     setIsSavingLinks(true);
     try {
-      const { error } = await supabase.from('products').update({
+      const { data, error } = await supabase.from('products').update({
         firstdibs_url: linksState.firstdibs_url || null,
         chairish_url: linksState.chairish_url || null,
         ebay_url: linksState.ebay_url || null,
-      } as any).eq('id', linksProduct.id);
-      if (error) {
-        toast.error(error.message);
+      } as any).eq('id', linksProduct.id).select('id');
+      if (error || !data?.length) {
+        toast.error(error?.message ?? 'Links were not saved. Refresh and try again.');
         return;
       }
       toast.success('External links updated');
@@ -545,7 +570,7 @@ const AdminProducts = () => {
       <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
         <div>
           <h1 className="font-display text-2xl tracking-wide text-foreground">Products</h1>
-          <p className="text-sm text-muted-foreground mt-1">One unified product table with live status filters</p>
+          <p className="hidden md:block text-sm text-muted-foreground mt-1">One unified product table with live status filters</p>
         </div>
         <Link to="/admin/products/new" className="hidden md:inline-flex">
           <Button className="text-xs tracking-[0.1em] uppercase">Add Product</Button>
@@ -553,7 +578,7 @@ const AdminProducts = () => {
       </div>
 
       {/* Status tabs — scrollable on mobile */}
-      <div className="mb-6 flex items-center gap-3 overflow-x-auto pb-1 -mx-5 px-5 md:flex-wrap md:overflow-visible md:mx-0 md:px-0">
+      <div className="mb-6 flex items-center gap-3 overflow-x-auto pb-1 -mx-3 px-3 sm:-mx-4 sm:px-4 md:flex-wrap md:overflow-visible md:mx-0 md:px-0">
         {STATUS_TABS.map((tab) => (
           <button
             key={tab.id}
@@ -644,68 +669,69 @@ const AdminProducts = () => {
                       </p>
                     )}
 
-                    {/* Quick actions */}
-                    <div className="flex items-center gap-2 mt-2 flex-wrap">
-                      <Link
-                        to={`/product/${product.slug}`}
-                        className="text-xs text-muted-foreground border border-border rounded px-2 py-1 hover:text-foreground transition-colors"
-                      >
-                        View
-                      </Link>
-                      <Link
-                        to={`/admin/products/${product.id}?from=${selectedStatus}&page=${page}`}
-                        className="text-xs text-muted-foreground border border-border rounded px-2 py-1 hover:text-foreground transition-colors"
-                      >
-                        Edit
-                      </Link>
-                      {selectedStatus === 'available' && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => setHoldProduct(product)}
-                            className="text-xs text-muted-foreground border border-border rounded px-2 py-1 hover:text-foreground transition-colors"
-                          >
-                            Hold
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setSoldProduct(product)}
-                            className="text-xs text-muted-foreground border border-border rounded px-2 py-1 hover:text-foreground transition-colors"
-                          >
-                            Sold
-                          </button>
-                        </>
-                      )}
-                      {selectedStatus === 'on_hold' && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (confirm('Release hold and move back to Available?')) {
-                              changeStatusMutation.mutate({ id: product.id, oldStatus: product.status as ProductStatusKey, newStatus: 'available' });
-                            }
-                          }}
-                          className="text-xs text-muted-foreground border border-border rounded px-2 py-1 hover:text-foreground transition-colors"
-                        >
-                          Release Hold
-                        </button>
-                      )}
-                      {selectedStatus === 'limbo' && (
+                    {/* Quick actions — big, thumb-friendly targets */}
+                    <div className="grid grid-cols-2 gap-2 mt-3">
+                      {(selectedStatus === 'available' || selectedStatus === 'limbo') && (
                         <button
                           type="button"
                           onClick={() => setSoldProduct(product)}
-                          className="text-xs text-muted-foreground border border-border rounded px-2 py-1 hover:text-foreground transition-colors"
+                          className={`${MOBILE_BTN} bg-primary text-primary-foreground border-primary`}
                         >
-                          Sold
+                          <DollarSign size={15} /> Mark Sold
                         </button>
                       )}
-                      {/* Move to… dropdown on mobile */}
+                      {selectedStatus === 'available' && (
+                        <button
+                          type="button"
+                          onClick={() => setHoldProduct(product)}
+                          className={`${MOBILE_BTN} border-amber-500/60 text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/30`}
+                        >
+                          <Clock size={15} /> Put on Hold
+                        </button>
+                      )}
+                      {selectedStatus === 'on_hold' && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setSoldProduct(product)}
+                            className={`${MOBILE_BTN} bg-primary text-primary-foreground border-primary`}
+                          >
+                            <DollarSign size={15} /> Mark Sold
+                          </button>
+                          <button
+                            type="button"
+                            disabled={changeStatusMutation.isPending}
+                            onClick={() => {
+                              if (confirm('Release hold and move back to Available?')) {
+                                changeStatusMutation.mutate({ id: product.id, oldStatus: product.status as ProductStatusKey, newStatus: 'available' });
+                              }
+                            }}
+                            className={MOBILE_BTN}
+                          >
+                            Release Hold
+                          </button>
+                        </>
+                      )}
+                      <Link
+                        to={`/admin/products/${product.id}?from=${selectedStatus}&page=${page}`}
+                        className={MOBILE_BTN}
+                      >
+                        <Pencil size={15} /> Edit
+                      </Link>
                       <button
                         type="button"
                         onClick={() => { setMoveStatusProduct(product); setPendingStatus('available'); }}
-                        className="text-xs text-muted-foreground border border-border rounded px-2 py-1 hover:text-foreground transition-colors"
+                        className={MOBILE_BTN}
                       >
                         Move to…
                       </button>
+                      <Link
+                        to={`/product/${product.slug}`}
+                        target="_blank"
+                        className={`${MOBILE_BTN} col-span-2 text-muted-foreground`}
+                      >
+                        <ExternalLink size={15} /> View on website
+                      </Link>
                     </div>
                   </div>
                 </div>

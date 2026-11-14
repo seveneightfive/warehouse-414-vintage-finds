@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, assertRowsWritten } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
@@ -723,8 +723,9 @@ const AdminProductForm = () => {
 
     let productId: string;
     if (isEditing) {
-      const { error } = await supabase.from('products').update(payload).eq('id', id!);
+      const { data: updated, error } = await supabase.from('products').update(payload).eq('id', id!).select('id');
       if (error) throw error;
+      assertRowsWritten(updated, 'Product');
       productId = id!;
     } else {
       const { data, error } = await supabase.from('products').insert(payload).select('id').single();
@@ -870,7 +871,7 @@ const AdminProductForm = () => {
 
   return (
     <div className="max-w-4xl">
-      <div className="flex items-center gap-3 mb-8">
+      <div className="flex items-center gap-3 mb-4 lg:mb-8">
         <Button variant="ghost" size="icon" onClick={() => navigate(backUrl)}>
           <ArrowLeft size={18} />
         </Button>
@@ -880,7 +881,20 @@ const AdminProductForm = () => {
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit((v) => saveMutation.mutate(v))} className="space-y-0">
+        <form
+          onSubmit={form.handleSubmit(
+            (v) => saveMutation.mutate(v),
+            // On a phone the field with the problem is usually off-screen, so
+            // pressing Save looked like it did nothing. Say what's wrong and
+            // scroll to it.
+            (errors) => {
+              const [field, err] = Object.entries(errors)[0] ?? [];
+              toast.error(`Not saved — check "${String(field).replace(/_/g, ' ')}": ${err?.message ?? 'invalid value'}`);
+              if (field) form.setFocus(field as keyof FormValues);
+            },
+          )}
+          className="space-y-0"
+        >
 
           {/* ── BASIC INFO ── */}
           <section className="pb-8 space-y-4">
@@ -953,7 +967,7 @@ const AdminProductForm = () => {
             </div>
 
             {watchStatus === 'sold' && (
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <FormField control={form.control} name="sold_price" render={({ field }) => (
                   <FormItem>
                     <FormLabel><FieldLabel>Sold Price</FieldLabel></FormLabel>
@@ -1371,8 +1385,9 @@ const AdminProductForm = () => {
           </section>
 
           {/* ── ACTION BUTTONS ── */}
-          <div className="flex flex-wrap gap-3 pt-6 border-t border-border">
-            <Button type="submit" disabled={isBusy} className="gap-2">
+          {/* Sticks to the bottom of the screen on phones so Save is always in reach. */}
+          <div className="sticky bottom-0 z-10 -mx-3 sm:-mx-4 lg:mx-0 px-3 sm:px-4 lg:px-0 py-3 lg:py-0 lg:pt-6 lg:static flex flex-wrap gap-3 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+            <Button type="submit" disabled={isBusy} className="gap-2 flex-1 sm:flex-none min-h-11">
               <Save size={16} />
               {saveMutation.isPending ? 'Saving…' : isEditing ? 'Update Product' : 'Create Product'}
             </Button>
