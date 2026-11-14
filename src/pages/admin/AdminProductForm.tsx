@@ -95,7 +95,6 @@ const schema = z.object({
   firstdibs_url: z.string().url().nullable().optional().or(z.literal('')),
   chairish_url: z.string().url().nullable().optional().or(z.literal('')),
   ebay_url: z.string().url().nullable().optional().or(z.literal('')),
-  chairish_auction_url: z.string().url().nullable().optional().or(z.literal('')),
   sale_platform:        z.string().nullable().optional(),
   sale_date:            z.string().nullable().optional(),
   notes:                z.string().nullable().optional(),
@@ -602,12 +601,6 @@ const AdminProductForm = () => {
 
   const watchStatus = form.watch('status');
   const watchLotId = form.watch('lot_id');
-  const auctionUrlRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (watchStatus === 'limbo') {
-      setTimeout(() => auctionUrlRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
-    }
-  }, [watchStatus]);
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['admin-product', id],
@@ -939,13 +932,6 @@ const AdminProductForm = () => {
             {watchStatus === 'deactivated' && (
               <p className="text-xs text-muted-foreground">
                 This listing was likely auto-deactivated because another listing on the same lot sold and there aren't enough units left to cover it. Check the lot's remaining quantity below before reactivating.
-              </p>
-            )}
-
-            {watchStatus === 'limbo' && (
-              <p className="text-xs text-muted-foreground">
-                Don't forget to add the{' '}
-                <button type="button" className="underline text-primary" onClick={() => auctionUrlRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>Chairish Auction URL</button>{' '}below.
               </p>
             )}
 
@@ -1352,15 +1338,6 @@ const AdminProductForm = () => {
                 <FormMessage />
               </FormItem>
             )} />
-            <div ref={auctionUrlRef}>
-              <FormField control={form.control} name="chairish_auction_url" render={({ field }) => (
-                <FormItem>
-                  <FormLabel><FieldLabel>Chairish Auction URL</FieldLabel></FormLabel>
-                  <FormControl><Input type="url" placeholder="https://www.chairish.com/..." {...field} value={field.value ?? ''} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            </div>
           </section>
 
           {/* ── NOTES ── */}

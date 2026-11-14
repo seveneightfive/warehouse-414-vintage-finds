@@ -28,7 +28,6 @@ export type Product = {
   sale_price: number | null;
   sold_price: number | null;
   status: 'available' | 'on_hold' | 'sold' | 'inventory' | 'limbo' | 'deactivated';
-  chairish_auction_url: string | null;
 
   // ── Lot (shared physical stock this listing draws from; null = one-off unique item) ──
   lot_id: string | null;
