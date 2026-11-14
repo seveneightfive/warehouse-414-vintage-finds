@@ -24,7 +24,7 @@ const Footer = () => {
               href="https://www.facebook.com/people/Warehouse-414-new/61574405447016"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-white/50 hover:text-primary transition-colors"
+              className="text-white/50 hover:text-white transition-colors"
               aria-label="Facebook"
             >
               <Facebook size={20} />
@@ -33,7 +33,7 @@ const Footer = () => {
               href="https://www.instagram.com/warehouse4one4"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-white/50 hover:text-primary transition-colors"
+              className="text-white/50 hover:text-white transition-colors"
               aria-label="Instagram"
             >
               <Instagram size={20} />

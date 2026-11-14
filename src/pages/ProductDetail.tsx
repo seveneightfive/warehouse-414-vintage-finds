@@ -5,7 +5,7 @@ import { useState, useRef, useCallback } from 'react';
 import { useProduct, useSimilarProducts, useProducts } from '@/hooks/use-products';
 import ProductCard from '@/components/ProductCard';
 import ProductActions from '@/components/ProductActions';
-import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import ImageLightbox from '@/components/ImageLightbox';
 import firstdibsLogo from '@/assets/1stdibs-logo.png';
 import ebayLogo from '@/assets/ebay-logo.png';
@@ -85,6 +85,7 @@ useEffect(() => {
   const primaryDesignerId = designerIds[0];
   const primaryMakerId    = makerIds[0];
   const primaryDesignerName = (designerCredits[0] ?? artistCredits[0])?.designer?.name;
+  const primaryDesignerSlug = (designerCredits[0] ?? artistCredits[0])?.designer?.slug;
   const primaryMakerName    = product?.product_makers?.[0]?.maker?.name;
 
   const { data: designerProductsRaw } = useProducts(
@@ -278,18 +279,27 @@ const { data: similar } = useSimilarProducts(product?.id, categoryIds, {
                 <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-0.5">
                   {credits.length === 1 ? one : many}
                 </p>
-                <div className="flex flex-wrap gap-x-2 gap-y-0.5">
+                {/* Each name is an obvious link to the person's bio + their other pieces */}
+                <div className="flex flex-col gap-1">
                   {credits.map((pd: any, i: number) => (
-                    <span key={pd.designer?.id ?? i} className="text-base text-foreground flex items-center gap-1">
+                    <span key={pd.designer?.id ?? i} className="text-base text-foreground flex flex-wrap items-baseline gap-x-1">
                       <Attribution type={pd.attribution_type} />
                       {pd.designer ? (
-                        <Link to={`/designer/${pd.designer.slug}`} className="hover:text-primary transition-colors">
-                          {pd.designer.name}
-                        </Link>
+                        <>
+                          <Link
+                            to={`/designer/${pd.designer.slug}`}
+                            className="underline decoration-foreground/30 underline-offset-4 hover:decoration-foreground transition-colors"
+                          >
+                            {pd.designer.name}
+                          </Link>
+                          <Link
+                            to={`/designer/${pd.designer.slug}`}
+                            className="ml-2 inline-flex items-center gap-1 text-xs tracking-wide text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            bio &amp; more pieces <ArrowRight size={12} />
+                          </Link>
+                        </>
                       ) : null}
-                      {i < credits.length - 1 && (
-                        <span className="text-muted-foreground">&</span>
-                      )}
                     </span>
                   ))}
                 </div>
@@ -302,18 +312,26 @@ const { data: similar } = useSimilarProducts(product?.id, categoryIds, {
                 <p className="font-display text-xs tracking-[0.2em] text-muted-foreground mb-0.5">
                   {product.product_makers.length === 1 ? 'maker' : 'makers'}
                 </p>
-                <div className="flex flex-wrap gap-x-2 gap-y-0.5">
+                <div className="flex flex-col gap-1">
                   {product.product_makers.map((pm: any, i: number) => (
-                    <span key={pm.maker?.id ?? i} className="text-base text-foreground flex items-center gap-1">
+                    <span key={pm.maker?.id ?? i} className="text-base text-foreground flex flex-wrap items-baseline gap-x-1">
                       <Attribution type={pm.attribution_type} />
                       {pm.maker ? (
-                        <Link to={`/maker/${pm.maker.slug}`} className="hover:text-primary transition-colors">
-                          {pm.maker.name}
-                        </Link>
+                        <>
+                          <Link
+                            to={`/maker/${pm.maker.slug}`}
+                            className="underline decoration-foreground/30 underline-offset-4 hover:decoration-foreground transition-colors"
+                          >
+                            {pm.maker.name}
+                          </Link>
+                          <Link
+                            to={`/maker/${pm.maker.slug}`}
+                            className="ml-2 inline-flex items-center gap-1 text-xs tracking-wide text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            about &amp; more pieces <ArrowRight size={12} />
+                          </Link>
+                        </>
                       ) : null}
-                      {i < product.product_makers.length - 1 && (
-                        <span className="text-muted-foreground">&</span>
-                      )}
                     </span>
                   ))}
                 </div>
@@ -598,6 +616,14 @@ const { data: similar } = useSimilarProducts(product?.id, categoryIds, {
           <h2 className="bg-foreground text-background font-display text-sm tracking-[0.2em] px-4 py-2 inline-block mb-8">
             more from {primaryDesignerName}
           </h2>
+          {primaryDesignerSlug && (
+            <Link
+              to={`/designer/${primaryDesignerSlug}`}
+              className="ml-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground underline underline-offset-4 decoration-foreground/30"
+            >
+              see all &amp; read bio <ArrowRight size={14} />
+            </Link>
+          )}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {designerProducts.slice(0, 4).map((p: any) => (
               <ProductCard key={p.id} product={p} />

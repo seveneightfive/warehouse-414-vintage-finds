@@ -38,8 +38,10 @@ const Navbar = () => {
               <Link
                 key={link.to}
                 to={link.to}
-                className={`font-display text-sm tracking-[0.15em] transition-colors hover:text-primary ${
-                  location.pathname === link.to ? 'text-red-500' : 'text-white/60'
+                className={`font-display text-sm tracking-[0.15em] transition-colors ${
+                  // Hover used to switch to the brand's near-black "primary" colour,
+                  // which vanished against the black bar.
+                  location.pathname === link.to ? 'text-red-500' : 'text-white/60 hover:text-white'
                 }`}
               >
                 {link.label}
@@ -88,7 +90,7 @@ const Navbar = () => {
               key={link.to}
               to={link.to}
               onClick={() => setOpen(false)}
-              className="font-display text-2xl tracking-[0.25em] uppercase text-white/70 hover:text-primary transition-colors"
+              className="font-display text-2xl tracking-[0.25em] uppercase text-white/70 hover:text-white transition-colors"
             >
               {link.label}
             </Link>

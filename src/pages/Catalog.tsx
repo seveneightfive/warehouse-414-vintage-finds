@@ -247,7 +247,7 @@ const Catalog = () => {
 
       {/* Filter Drawer */}
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetContent side="right" className="w-80 font-display">
+        <SheetContent side="right" className="w-[22rem] max-w-[90vw] px-6 py-6 sm:px-7 font-display flex flex-col overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="font-display lowercase font-bold">filters</SheetTitle>
           </SheetHeader>
@@ -264,19 +264,18 @@ const Catalog = () => {
             {filterSelect('Style / Period', 'style_period', stylePeriodId, filterOptions?.stylesPeriods)}
             {filterSelect('Country', 'country', countryId, filterOptions?.countries)}
           </div>
-          <div className="mt-6 flex items-center gap-3">
-            {activeFilterCount > 0 && (
-              <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-muted-foreground font-display">
-                <X size={14} /> Clear all filters
-              </Button>
-            )}
+          <div className="mt-8 flex flex-col gap-2">
             <Button
-              size="sm"
               onClick={() => setDrawerOpen(false)}
-              className="ml-auto font-display"
+              className="w-full h-12 font-display text-base"
             >
               View Products{products.length > 0 ? ` (${products.length}${hasNextPage ? '+' : ''})` : ''}
             </Button>
+            {activeFilterCount > 0 && (
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full gap-1 text-muted-foreground font-display">
+                <X size={14} /> Clear all filters
+              </Button>
+            )}
           </div>
         </SheetContent>
       </Sheet>
