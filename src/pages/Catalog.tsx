@@ -259,7 +259,7 @@ const Catalog = () => {
                           subSubcategoryId={subSubcategoryId}
                           onChange={setCategoryParams}
                         />
-            {filterSelect('Designer', 'designer', designerSlug, filterOptions?.designers?.map(d => ({ id: d.slug || d.id, name: d.name })))}
+            {filterSelect('Designer & Artist', 'designer', designerSlug, filterOptions?.designers?.map(d => ({ id: d.slug || d.id, name: d.name })))}
             {filterSelect('Maker', 'maker', makerSlug, filterOptions?.makers?.map(m => ({ id: m.slug || m.id, name: m.name })))}
             {filterSelect('Style / Period', 'style_period', stylePeriodId, filterOptions?.stylesPeriods)}
             {filterSelect('Country', 'country', countryId, filterOptions?.countries)}

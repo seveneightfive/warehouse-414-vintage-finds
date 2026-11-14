@@ -64,7 +64,7 @@ const AdminLayout = () => {
         <MessageSquare size={16} /> Inquiries
       </Link>
       <Link to="/admin/designers" onClick={onNavigate} className={linkClass(isActive('/admin/designers'))}>
-        <Users size={16} /> Designers
+        <Users size={16} /> Designers &amp; Artists
       </Link>
       <Link to="/admin/makers" onClick={onNavigate} className={linkClass(isActive('/admin/makers'))}>
         <ShoppingBag size={16} /> Makers

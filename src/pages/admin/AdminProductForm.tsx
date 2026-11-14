@@ -36,6 +36,13 @@ const ATTRIBUTION_OPTIONS = [
   { value: 'in the style of', label: 'in the style of' },
 ];
 
+const SIGNATURE_OPTIONS = [
+  { value: 'signed',           label: 'Signed' },
+  { value: 'signed_illegible', label: 'Signed, illegible' },
+  { value: 'monogrammed',      label: 'Monogrammed / initialed' },
+  { value: 'unsigned',         label: 'Unsigned' },
+];
+
 const STYLES_PERIODS_ATTRIBUTION_OPTIONS = [
   { value: 'in the style of', label: 'in the style of' },
   { value: 'of the period',   label: 'of the period'   },
@@ -89,6 +96,8 @@ const schema = z.object({
   artwork_artist: z.string().nullable().optional(),
   artwork_title:  z.string().nullable().optional(),
   artwork_medium: z.string().nullable().optional(),
+  artwork_signature: z.string().nullable().optional(),
+  artwork_signature_detail: z.string().nullable().optional(),
   period_designed: z.string().nullable().optional(),
   period_created: z.string().nullable().optional(),
   tags: z.string().nullable().optional(),
@@ -180,7 +189,7 @@ const CreateEntityModal = ({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  entityLabel: 'designer' | 'maker';
+  entityLabel: 'designer' | 'artist' | 'maker';
   table: 'designers' | 'makers';
   onCreated: (opt: DesignerMakerOption) => void;
 }) => {
@@ -257,7 +266,7 @@ const DesignerMakerCombobox = ({
   onChange: (id: string | null) => void;
   options?: DesignerMakerOption[];
   placeholder: string;
-  entityLabel: 'designer' | 'maker';
+  entityLabel: 'designer' | 'artist' | 'maker';
   className?: string;
 }) => {
   const [open, setOpen] = useState(false);
@@ -318,7 +327,7 @@ const DesignerMakerCombobox = ({
         open={createOpen}
         onOpenChange={setCreateOpen}
         entityLabel={entityLabel}
-        table={entityLabel === 'designer' ? 'designers' : 'makers'}
+        table={entityLabel === 'maker' ? 'makers' : 'designers'}
         onCreated={(opt) => onChange(opt.id)}
       />
     </div>
@@ -540,6 +549,9 @@ const AdminProductForm = () => {
     : '/admin/products';
 
   const [designers,  setDesigners]  = useState<DesignerRow[]>([{ designer_id: null, attribution_type: 'by' }]);
+  // Artists live in the same "Designers & Artists" list; they're just credited
+  // with role = 'artist' on this product.
+  const [artists,    setArtists]    = useState<DesignerRow[]>([{ designer_id: null, attribution_type: 'by' }]);
   const [makers,     setMakers]     = useState<MakerRow[]>([{ maker_id: null, attribution_type: 'by' }]);
   const [stylesPeriods, setStylesPeriods] = useState<StylesPeriodsRow[]>([{ style_period_id: null, attribution_type: 'of the period' }]);
   const [categories, setCategories] = useState<CategoryRow[]>([{ category_id: null, subcategory_id: null, sub_subcategory_id: null }]);
@@ -575,10 +587,10 @@ const AdminProductForm = () => {
 
   useEffect(() => {
     const sub = form.watch((values) => {
-      localStorage.setItem(draftKey, JSON.stringify({ form: values, designers, makers, stylesPeriods, categories }));
+      localStorage.setItem(draftKey, JSON.stringify({ form: values, designers, artists, makers, stylesPeriods, categories }));
     });
     return () => sub.unsubscribe();
-  }, [form, draftKey, designers, makers, stylesPeriods, categories]);
+  }, [form, draftKey, designers, artists, makers, stylesPeriods, categories]);
 
   useEffect(() => {
     if (isEditing) return;
@@ -588,6 +600,7 @@ const AdminProductForm = () => {
         const p = JSON.parse(saved);
         form.reset(p.form ?? p);
         if (p.designers)  setDesigners(p.designers);
+        if (p.artists)    setArtists(p.artists);
         if (p.makers)     setMakers(p.makers);
         if (p.stylesPeriods) setStylesPeriods(p.stylesPeriods);
         if (p.categories) setCategories(p.categories);
@@ -606,7 +619,7 @@ const AdminProductForm = () => {
     queryKey: ['admin-product', id],
     queryFn: async () => {
       const { data, error } = await supabase.from('products')
-        .select(`*, product_designers(designer_id, attribution_type), product_makers(maker_id, attribution_type), product_categories(category_id, subcategory_id, is_primary), product_styles_periods(style_period_id, attribution_type)`)
+        .select(`*, product_designers(designer_id, attribution_type, role), product_makers(maker_id, attribution_type), product_categories(category_id, subcategory_id, is_primary), product_styles_periods(style_period_id, attribution_type)`)
         .eq('id', id!).single();
       if (error) throw error;
       return data;
@@ -646,8 +659,12 @@ const AdminProductForm = () => {
     values.tags = Array.isArray(rawTags) ? (rawTags as string[]).join(', ') : '';
     form.reset(values as FormValues);
 
-    const dbD: DesignerRow[] = (product as any).product_designers?.map((r: any) => ({ designer_id: r.designer_id, attribution_type: r.attribution_type || 'by' })) ?? [];
+    const pdRows: any[] = (product as any).product_designers ?? [];
+    const toRow = (r: any): DesignerRow => ({ designer_id: r.designer_id, attribution_type: r.attribution_type || 'by' });
+    const dbD: DesignerRow[] = pdRows.filter((r) => r.role !== 'artist').map(toRow);
+    const dbA: DesignerRow[] = pdRows.filter((r) => r.role === 'artist').map(toRow);
     setDesigners(dbD.length > 0 ? dbD : [{ designer_id: null, attribution_type: 'by' }]);
+    setArtists(dbA.length > 0 ? dbA : [{ designer_id: null, attribution_type: 'by' }]);
 
     const dbM: MakerRow[] = (product as any).product_makers?.map((r: any) => ({ maker_id: r.maker_id, attribution_type: r.attribution_type || 'by' })) ?? [];
     setMakers(dbM.length > 0 ? dbM : [{ maker_id: null, attribution_type: 'by' }]);
@@ -699,6 +716,16 @@ const AdminProductForm = () => {
     }
     if (!payload.quantity_in_listing) payload.quantity_in_listing = 1;
 
+    // The same person can't be credited as both designer and artist on one piece.
+    const designerIds = new Set(designers.map((d) => d.designer_id).filter(Boolean));
+    if (artists.some((a) => a.designer_id && designerIds.has(a.designer_id))) {
+      throw new Error('The same person is listed as both Designer and Artist. Keep them in one place.');
+    }
+    // Once an artist or signature is set, the old free-text artist note is replaced.
+    if (artists.some((a) => a.designer_id) || payload.artwork_signature) {
+      payload.artwork_artist = null;
+    }
+
     const firstD = designers.find((d) => d.designer_id);
     const firstM = makers.find((m) => m.maker_id);
     const firstC = categories.find((c) => c.category_id);
@@ -730,12 +757,13 @@ const AdminProductForm = () => {
     // these tables, all of these should succeed.
     await supabase.from('product_designers').delete().eq('product_id', productId);
     const vD = designers.filter((d) => d.designer_id);
-    if (vD.length > 0) {
-      const { error } = await supabase.from('product_designers').insert(vD.map((d) => ({
-        product_id: productId,
-        designer_id: d.designer_id,
-        attribution_type: d.attribution_type || 'by',
-      })));
+    const vA = artists.filter((a) => a.designer_id);
+    const pdInsert = [
+      ...vD.map((d) => ({ product_id: productId, designer_id: d.designer_id, attribution_type: d.attribution_type || 'by', role: 'designer' })),
+      ...vA.map((a) => ({ product_id: productId, designer_id: a.designer_id, attribution_type: a.attribution_type || 'by', role: 'artist' })),
+    ];
+    if (pdInsert.length > 0) {
+      const { error } = await supabase.from('product_designers').insert(pdInsert);
       if (error) throw error;
     }
 
@@ -1149,6 +1177,7 @@ const AdminProductForm = () => {
             {/* Designers */}
             <div className="space-y-2">
               <p className="text-[11px] font-semibold tracking-[0.1em] uppercase text-foreground/70">Designers</p>
+              <p className="text-xs text-muted-foreground -mt-1">For artwork, credit the artist under Artwork Details instead.</p>
               {designers.map((row, i) => (
                 <div key={i} className="flex items-center gap-2">
                   <Select value={row.attribution_type || 'by'} onValueChange={(val) => setDesigners((prev) => prev.map((r, j) => j === i ? { ...r, attribution_type: val } : r))}>
@@ -1260,13 +1289,60 @@ const AdminProductForm = () => {
               Only fill these in for artwork pieces (paintings, prints, sculptures, etc.).
             </p>
 
-            <FormField control={form.control} name="artwork_artist" render={({ field }) => (
-              <FormItem>
-                <FormLabel><FieldLabel>Artist</FieldLabel></FormLabel>
-                <FormControl><Input {...field} value={field.value ?? ''} /></FormControl>
-                <FormMessage />
-              </FormItem>
-            )} />
+            {/* Artists — picked from the shared Designers & Artists list so their bio shows on the product page */}
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold tracking-[0.1em] uppercase text-foreground/70">Artist</p>
+              {artists.map((row, i) => (
+                <div key={i} className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+                  <Select value={row.attribution_type || 'by'} onValueChange={(val) => setArtists((prev) => prev.map((r, j) => j === i ? { ...r, attribution_type: val } : r))}>
+                    <SelectTrigger className="w-[40%] sm:w-[25%] shrink-0"><SelectValue /></SelectTrigger>
+                    <SelectContent>{ATTRIBUTION_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <DesignerMakerCombobox value={row.designer_id} onChange={(val) => setArtists((prev) => prev.map((r, j) => j === i ? { ...r, designer_id: val } : r))} options={taxonomy.designers} placeholder="Select artist…" entityLabel="artist" className="flex-1 min-w-[50%]" />
+                  <div className="sm:w-[25%] flex justify-end items-center gap-1 shrink-0">
+                    {i === artists.length - 1 && <Button type="button" variant="outline" size="sm" className="gap-1 text-xs whitespace-nowrap" onClick={() => setArtists((prev) => [...prev, { designer_id: null, attribution_type: 'by' }])}><Plus size={12} /> Add</Button>}
+                    {artists.length > 1 && <button type="button" onClick={() => setArtists((prev) => prev.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-destructive transition-colors p-1"><X size={16} /></button>}
+                  </div>
+                </div>
+              ))}
+              <p className="text-xs text-muted-foreground">
+                Artist unknown? Leave this empty and use Signature below.
+              </p>
+            </div>
+
+            {/* Old free-text artist note, only shown until it's been converted */}
+            {form.watch('artwork_artist') && !artists.some((a) => a.designer_id) && !form.watch('artwork_signature') && (
+              <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-900 dark:text-amber-100 flex items-start justify-between gap-3">
+                <span>
+                  Old artist note: <strong>{form.watch('artwork_artist')}</strong>. Pick the artist above or set a
+                  signature below. This note is removed when you save.
+                </span>
+                <button type="button" className="underline shrink-0" onClick={() => form.setValue('artwork_artist', '', { shouldDirty: true })}>Remove</button>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField control={form.control} name="artwork_signature" render={({ field }) => (
+                <FormItem>
+                  <FormLabel><FieldLabel>Signature</FieldLabel></FormLabel>
+                  <Select value={field.value || 'none'} onValueChange={(v) => field.onChange(v === 'none' ? '' : v)}>
+                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">— Not specified —</SelectItem>
+                      {SIGNATURE_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+              <FormField control={form.control} name="artwork_signature_detail" render={({ field }) => (
+                <FormItem>
+                  <FormLabel><FieldLabel>Signature detail</FieldLabel></FormLabel>
+                  <FormControl><Input {...field} value={field.value ?? ''} placeholder="e.g. lower right, verso, dated 1972" /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
 
             <FormField control={form.control} name="artwork_title" render={({ field }) => (
               <FormItem>

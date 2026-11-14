@@ -15,6 +15,8 @@ type StatColumn = { key: string; label: string };
 
 type AdminCrudListProps = {
   title: string;
+  /** Name of one item for "New …"/"Edit …". Defaults to the title minus its last letter. */
+  singular?: string;
   /** Table to write to (insert/update/delete). Always the base table. */
   tableName: string;
   /** Optional view to read from (must include `id`). Falls back to tableName. */
@@ -37,6 +39,7 @@ type AdminCrudListProps = {
 
 const AdminCrudList = ({
   title,
+  singular,
   tableName,
   viewName,
   columns = [{ key: 'name', label: 'Name' }],
@@ -204,7 +207,7 @@ const AdminCrudList = ({
         <DialogContent className="bg-card border-border">
           <DialogHeader>
             <DialogTitle className="font-display tracking-wide">
-              {editItem ? `Edit ${title.slice(0, -1)}` : `New ${title.slice(0, -1)}`}
+              {editItem ? `Edit ${singular ?? title.slice(0, -1)}` : `New ${singular ?? title.slice(0, -1)}`}
             </DialogTitle>
           </DialogHeader>
           <form

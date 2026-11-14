@@ -18,6 +18,10 @@ const pluralize = (word: string): string => {
   if (word.includes(' / ')) {
     return word.split(' / ').map(pluralize).join(' / ');
   }
+  // "designer & artist" -> "designers & artists"
+  if (word.includes(' & ')) {
+    return word.split(' & ').map(pluralize).join(' & ');
+  }
   if (word.endsWith('s')) return word;
   // consonant + y -> ies
   if (/[^aeiou]y$/i.test(word)) return word.slice(0, -1) + 'ies';

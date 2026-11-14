@@ -12,13 +12,16 @@ const DesignerDetail = () => {
   const { data: products } = useQuery({
     queryKey: ['designer-products', designer?.id],
     queryFn: async () => {
+      // Every piece this person is credited on — as designer or artist — via the
+      // junction table (the old products.designer_id only held the first designer).
       const { data, error } = await supabase
         .from('products')
-        .select('*, product_images(*)')
-        .eq('designer_id', designer!.id)
+        .select('*, product_images(*), product_designers!inner(designer_id, role)')
+        .eq('product_designers.designer_id', designer!.id)
+        .in('status', ['available', 'on_hold', 'sold'])
         .order('name');
       if (error) throw error;
-      return data as Product[];
+      return data as unknown as Product[];
     },
     enabled: !!designer?.id,
   });
@@ -28,7 +31,7 @@ const DesignerDetail = () => {
   }
 
   if (!designer) {
-    return <div className="container mx-auto px-4 py-20 text-center text-muted-foreground">Designer not found.</div>;
+    return <div className="container mx-auto px-4 py-20 text-center text-muted-foreground">Designer or artist not found.</div>;
   }
 
   return (
