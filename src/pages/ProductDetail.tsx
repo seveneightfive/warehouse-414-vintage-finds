@@ -5,11 +5,8 @@ import { useState, useRef, useCallback } from 'react';
 import { useProduct, useSimilarProducts, useProducts } from '@/hooks/use-products';
 import ProductCard from '@/components/ProductCard';
 import ProductActions from '@/components/ProductActions';
-import { ArrowRight, ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import ImageLightbox from '@/components/ImageLightbox';
-import firstdibsLogo from '@/assets/1stdibs-logo.png';
-import ebayLogo from '@/assets/ebay-logo.png';
-import chairishLogo from '@/assets/chairish-logo.png';
 
 // ─── Helper: render an attribution prefix ────────────────────────────────────
 const Attribution = ({ type }: { type?: string | null }) =>
@@ -577,32 +574,35 @@ const { data: similar } = useSimilarProducts(product?.id, categoryIds, {
   </section>
 )}
       
-      {/* Also Listed On */}
-      {(product.firstdibs_url || product.ebay_url || product.chairish_url) && (
-        <section className="container mx-auto px-5 py-10 border-t border-border">
-          <div className="flex items-center gap-6 flex-wrap">
-            <p className="text-muted-foreground text-sm italic">Also listed on:</p>
-            {product.firstdibs_url && (
-              <a href={product.firstdibs_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
-                <img src={firstdibsLogo} alt="1stDibs" className="h-5 object-contain" />
-                <ExternalLink size={14} className="text-muted-foreground" />
-              </a>
-            )}
-            {product.ebay_url && (
-              <a href={product.ebay_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
-                <img src={ebayLogo} alt="eBay" className="h-5 object-contain" />
-                <ExternalLink size={14} className="text-muted-foreground" />
-              </a>
-            )}
-            {product.chairish_url && (
-              <a href={product.chairish_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:opacity-70 transition-opacity">
-                <img src={chairishLogo} alt="Chairish" className="h-5 object-contain" />
-                <ExternalLink size={14} className="text-muted-foreground" />
-              </a>
-            )}
-          </div>
-        </section>
-      )}
+      {/* Also Listed On — full-width black band; only shown when there's at least one link */}
+      {(() => {
+        const listings = [
+          { name: '1stDibs',  url: product.firstdibs_url },
+          { name: 'Chairish', url: product.chairish_url },
+          { name: 'eBay',     url: product.ebay_url },
+        ].filter((l) => l.url?.trim());
+        if (listings.length === 0) return null;
+        return (
+          <section className="bg-foreground text-background">
+            <div className="container mx-auto px-5 py-8 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8">
+              <p className="font-display text-xs tracking-[0.2em] text-background/60">also listed on</p>
+              <div className="flex flex-wrap gap-3">
+                {listings.map((l) => (
+                  <a
+                    key={l.name}
+                    href={l.url!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 border border-background/40 px-4 py-2 font-display text-sm tracking-[0.1em] hover:bg-background hover:text-foreground transition-colors"
+                  >
+                    {l.name} <ArrowUpRight size={14} />
+                  </a>
+                ))}
+              </div>
+            </div>
+          </section>
+        );
+      })()}
 
       {/* Similar Products */}
       {similar && similar.length > 0 && (
