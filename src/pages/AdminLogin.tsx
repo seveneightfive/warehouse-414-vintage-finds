@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -30,6 +30,11 @@ const friendlyAuthError = (err: unknown, fallback: string) => {
 const AdminLogin = () => {
   const { user, isAdmin, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Where the user was headed before being asked to sign in (e.g. a hold
+  // link from an email), so they land back on it instead of the dashboard.
+  const from = (location.state as { from?: string } | null)?.from;
+  const returnTo = from && from.startsWith('/admin') && !from.startsWith('/admin/login') ? from : '/admin';
   const [mode, setMode] = useState<Mode>('email');
   const [submitting, setSubmitting] = useState(false);
 
@@ -46,11 +51,11 @@ const AdminLogin = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        navigate('/admin');
+        navigate(returnTo, { replace: true });
       }
     });
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, returnTo]);
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -59,7 +64,7 @@ const AdminLogin = () => {
   }, [cooldown]);
 
   if (loading) return <div className="flex items-center justify-center min-h-screen text-muted-foreground">Loading...</div>;
-  if (user && isAdmin) return <Navigate to="/admin" replace />;
+  if (user && isAdmin) return <Navigate to={returnTo} replace />;
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,6 +142,11 @@ const AdminLogin = () => {
         <h1 className="font-display text-2xl tracking-[0.3em] uppercase text-foreground text-center mb-8">Admin</h1>
         {user && !isAdmin && (
           <p className="text-destructive text-sm text-center mb-4">You do not have admin access.</p>
+        )}
+        {!user && from && (
+          <p className="text-sm text-muted-foreground text-center mb-4">
+            Please sign in on this device to make changes. You'll go right back to where you were.
+          </p>
         )}
 
         {!user && (
