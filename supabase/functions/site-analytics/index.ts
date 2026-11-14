@@ -32,15 +32,23 @@ type Row = Record<string, unknown> & { pageviews?: number; visitors?: number };
 
 const day = (d: Date) => d.toISOString().slice(0, 10);
 
+// Tolerate a token pasted with spaces, quotes or a leading "Bearer ".
+const token = () =>
+  (Deno.env.get("VERCEL_ANALYTICS_TOKEN") ?? "").trim().replace(/^["']|["']$/g, "").replace(/^Bearer\s+/i, "");
+
 async function vercel(path: "count" | "aggregate", params: Record<string, string>) {
-  const qs = new URLSearchParams({ projectId: Deno.env.get("VERCEL_PROJECT_ID")!, ...params });
-  const teamId = Deno.env.get("VERCEL_TEAM_ID");
+  const qs = new URLSearchParams({ projectId: Deno.env.get("VERCEL_PROJECT_ID")!.trim(), ...params });
+  const teamId = Deno.env.get("VERCEL_TEAM_ID")?.trim();
   if (teamId) qs.set("teamId", teamId);
   const res = await fetch(`${API}/${path}?${qs}`, {
-    headers: { Authorization: `Bearer ${Deno.env.get("VERCEL_ANALYTICS_TOKEN")}` },
+    headers: { Authorization: `Bearer ${token()}` },
   });
   if (!res.ok) {
-    throw new Error(`Vercel ${path} ${params.by ?? ""} failed: ${res.status} ${await res.text()}`);
+    const text = await res.text();
+    if (res.status === 403 && text.includes("invalidToken")) {
+      throw new Error("Vercel rejected the access token. Create a new token scoped to the seveneightfives-projects team and update VERCEL_ANALYTICS_TOKEN.");
+    }
+    throw new Error(`Vercel ${path} ${params.by ?? ""} failed: ${res.status} ${text}`);
   }
   return (await res.json()).data;
 }
