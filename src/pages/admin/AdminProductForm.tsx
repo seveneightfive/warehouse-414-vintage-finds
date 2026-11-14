@@ -8,6 +8,7 @@ import { supabase, assertRowsWritten } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -98,6 +99,8 @@ const schema = z.object({
   artwork_medium: z.string().nullable().optional(),
   artwork_signature: z.string().nullable().optional(),
   artwork_signature_detail: z.string().nullable().optional(),
+  // Form hydration turns missing values into '', so coerce anything but `true` to false.
+  artwork_artist_unknown: z.preprocess((v) => v === true, z.boolean()),
   period_designed: z.string().nullable().optional(),
   period_created: z.string().nullable().optional(),
   tags: z.string().nullable().optional(),
@@ -721,8 +724,11 @@ const AdminProductForm = () => {
     if (artists.some((a) => a.designer_id && designerIds.has(a.designer_id))) {
       throw new Error('The same person is listed as both Designer and Artist. Keep them in one place.');
     }
-    // Once an artist or signature is set, the old free-text artist note is replaced.
-    if (artists.some((a) => a.designer_id) || payload.artwork_signature) {
+    // A named artist and "artist unknown" can't both be true.
+    if (artists.some((a) => a.designer_id)) payload.artwork_artist_unknown = false;
+    payload.artwork_artist_unknown = payload.artwork_artist_unknown === true;
+    // Once an artist, "unknown" or a signature is set, the old free-text artist note is replaced.
+    if (artists.some((a) => a.designer_id) || payload.artwork_signature || payload.artwork_artist_unknown) {
       payload.artwork_artist = null;
     }
 
@@ -1305,13 +1311,27 @@ const AdminProductForm = () => {
                   </div>
                 </div>
               ))}
-              <p className="text-xs text-muted-foreground">
-                Artist unknown? Leave this empty and use Signature below.
-              </p>
+              <FormField control={form.control} name="artwork_artist_unknown" render={({ field }) => (
+                <FormItem className="flex items-center gap-2 space-y-0 pt-1">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value === true}
+                      onCheckedChange={(checked) => {
+                        field.onChange(checked === true);
+                        // "Unknown" replaces any picked artist
+                        if (checked === true) setArtists([{ designer_id: null, attribution_type: 'by' }]);
+                      }}
+                    />
+                  </FormControl>
+                  <FormLabel className="text-sm font-normal cursor-pointer">
+                    Artist unknown <span className="text-muted-foreground">(shows "Artist: Unknown")</span>
+                  </FormLabel>
+                </FormItem>
+              )} />
             </div>
 
             {/* Old free-text artist note, only shown until it's been converted */}
-            {form.watch('artwork_artist') && !artists.some((a) => a.designer_id) && !form.watch('artwork_signature') && (
+            {form.watch('artwork_artist') && !artists.some((a) => a.designer_id) && !form.watch('artwork_signature') && form.watch('artwork_artist_unknown') !== true && (
               <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-900 dark:text-amber-100 flex items-start justify-between gap-3">
                 <span>
                   Old artist note: <strong>{form.watch('artwork_artist')}</strong>. Pick the artist above or set a

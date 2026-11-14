@@ -165,11 +165,12 @@ const { data: similar } = useSimilarProducts(product?.id, categoryIds, {
 
   const hasDimensions = product.product_dimensions || product.box_dimensions;
   // Old free-text artist note — only shown for pieces not yet converted to a linked artist/signature.
-  const legacyArtist = artistCredits.length === 0 && !product.artwork_signature ? product.artwork_artist?.trim() : '';
+  const artistUnknown = artistCredits.length === 0 && product.artwork_artist_unknown === true;
+  const legacyArtist = artistCredits.length === 0 && !artistUnknown && !product.artwork_signature ? product.artwork_artist?.trim() : '';
   const signatureText = product.artwork_signature
     ? [SIGNATURE_LABELS[product.artwork_signature], product.artwork_signature_detail?.trim()].filter(Boolean).join(', ')
     : '';
-  const hasArtwork = artistCredits.length > 0 || legacyArtist || signatureText || product.artwork_title || product.artwork_medium;
+  const hasArtwork = artistCredits.length > 0 || artistUnknown || legacyArtist || signatureText || product.artwork_title || product.artwork_medium;
 
   // ── Detail rows (bottom table) ─────────────────────────────────────────────
   // Categories: show all, primary first
@@ -513,6 +514,11 @@ const { data: similar } = useSimilarProducts(product?.id, categoryIds, {
                       {i < artistCredits.length - 1 && ', '}
                     </span>
                   ))}
+                </p>
+              )}
+              {artistUnknown && (
+                <p className="text-base text-foreground">
+                  <span className="text-muted-foreground">Artist: </span>Unknown
                 </p>
               )}
               {legacyArtist && (
