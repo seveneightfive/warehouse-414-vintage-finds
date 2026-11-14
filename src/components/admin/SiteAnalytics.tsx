@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { BarChart3, ExternalLink, Monitor, Smartphone, Tablet } from "lucide-react";
+import { ArrowUpRight, BarChart3, Monitor, Smartphone, Tablet } from "lucide-react";
 
 // Site traffic from Vercel Web Analytics, via the `site-analytics` edge function
 // (which holds the Vercel token and only answers admins).
@@ -20,8 +20,13 @@ type Analytics = {
   fetchedAt: string;
 };
 
-// Bounce rate is only available in Vercel's own dashboard.
-const VERCEL_ANALYTICS_URL = "https://vercel.com/seveneightfives-projects/warehouse414/analytics";
+// Vercel folds everything past the top N into one row named "Others".
+const SITE_URL = "https://www.warehouse414.com";
+
+const isOthers = (name: string) => name === "Others";
+
+const shortDate = (iso: string) =>
+  new Date(iso + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
 
 const fmt = (n: number) => n.toLocaleString();
 
@@ -36,29 +41,63 @@ function Change({ now, before }: { now: number; before: number }) {
   );
 }
 
-function TopList({ title, rows, label, empty }: { title: string; rows: Item[]; label: (n: string) => string; empty: string }) {
-  const max = Math.max(1, ...rows.map((r) => r.visitors));
+function TopList({
+  title, rows, label, othersLabel, empty, href,
+}: {
+  title: string;
+  rows: Item[];
+  label: (n: string) => string;
+  othersLabel: string;
+  empty: string;
+  /** When given, each row (except "Others") links to this URL in a new tab. */
+  href?: (n: string) => string;
+}) {
+  const ordered = [...rows.filter((r) => !isOthers(r.name)), ...rows.filter((r) => isOthers(r.name))];
+  const max = Math.max(1, ...rows.filter((r) => !isOthers(r.name)).map((r) => r.visitors));
   return (
     <div className="border rounded-lg p-4 bg-card">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-xs uppercase tracking-wide text-muted-foreground">{title}</h3>
         <span className="text-[11px] uppercase tracking-wide text-muted-foreground">visitors</span>
       </div>
-      {rows.length === 0 ? (
+      {ordered.length === 0 ? (
         <p className="text-sm text-muted-foreground">{empty}</p>
       ) : (
         <ul className="space-y-1.5">
-          {rows.map((r) => (
-            <li key={r.name} className="relative flex items-center justify-between gap-3 text-sm px-2 py-1">
-              <span
-                className="absolute inset-y-0 left-0 rounded bg-muted"
-                style={{ width: `${(r.visitors / max) * 100}%` }}
-                aria-hidden
-              />
-              <span className="relative truncate" title={label(r.name)}>{label(r.name)}</span>
-              <span className="relative tabular-nums">{fmt(r.visitors)}</span>
-            </li>
-          ))}
+          {ordered.map((r) => {
+            const others = isOthers(r.name);
+            const text = others ? othersLabel : label(r.name);
+            const link = !others && href ? href(r.name) : null;
+            return (
+              <li
+                key={r.name}
+                className={`relative flex items-center justify-between gap-3 text-sm px-2 py-1 ${others ? "text-muted-foreground border-t pt-2 mt-1" : ""}`}
+              >
+                {!others && (
+                  <span
+                    className="absolute inset-y-0 left-0 rounded bg-muted"
+                    style={{ width: `${Math.min(100, (r.visitors / max) * 100)}%` }}
+                    aria-hidden
+                  />
+                )}
+                {link ? (
+                  <a
+                    href={link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="relative truncate inline-flex items-center gap-1 hover:underline underline-offset-2"
+                    title={`Open ${text}`}
+                  >
+                    <span className="truncate">{text}</span>
+                    <ArrowUpRight size={12} className="shrink-0 text-muted-foreground" />
+                  </a>
+                ) : (
+                  <span className={`relative truncate ${others ? "italic" : ""}`} title={text}>{text}</span>
+                )}
+                <span className="relative tabular-nums">{fmt(r.visitors)}</span>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
@@ -70,6 +109,7 @@ const deviceIcon = (name: string) =>
 
 export default function SiteAnalytics() {
   const [days, setDays] = useState<7 | 30>(30);
+  const [hover, setHover] = useState<number | null>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["site-analytics", days],
@@ -120,7 +160,7 @@ export default function SiteAnalytics() {
       ) : (
         <>
           {/* Headline numbers */}
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div className="border rounded-lg p-4 bg-card">
               <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Visitors</div>
               <div className="text-2xl font-medium">{isLoading ? "—" : fmt(data!.totals.visitors)}</div>
@@ -131,37 +171,47 @@ export default function SiteAnalytics() {
               <div className="text-2xl font-medium">{isLoading ? "—" : fmt(data!.totals.pageviews)}</div>
               {data && <Change now={data.totals.pageviews} before={data.previous.pageviews} />}
             </div>
-            <a
-              href={VERCEL_ANALYTICS_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="col-span-2 lg:col-span-1 border rounded-lg p-4 bg-card hover:bg-muted/50 transition"
-            >
-              <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Bounce rate</div>
-              <div className="text-sm inline-flex items-center gap-1">
-                View in Vercel <ExternalLink size={13} />
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">Vercel doesn't share bounce rate outside its own dashboard.</div>
-            </a>
           </div>
 
           {/* Daily visitors */}
           {data && data.daily.length > 0 && (
             <div className="border rounded-lg p-4 bg-card">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground mb-3">Visitors per day</div>
-              <div className="flex items-end gap-[2px] h-28">
-                {data.daily.map((d) => (
-                  <div
+              <div className="flex items-baseline justify-between gap-3 mb-3 min-h-[1.25rem]">
+                <div className="text-xs uppercase tracking-wide text-muted-foreground">Visitors per day</div>
+                {/* Hover (or tap) a bar to see that day's numbers */}
+                <div className="text-sm tabular-nums">
+                  {hover !== null && data.daily[hover] ? (
+                    <>
+                      <span className="text-muted-foreground">{shortDate(data.daily[hover].date)}: </span>
+                      <strong className="font-medium">{fmt(data.daily[hover].visitors)}</strong> visitors
+                      <span className="text-muted-foreground"> · {fmt(data.daily[hover].pageviews)} page views</span>
+                    </>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Hover a bar for the day's numbers</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-end gap-[2px] h-28" onMouseLeave={() => setHover(null)}>
+                {data.daily.map((d, i) => (
+                  <button
+                    type="button"
                     key={d.date}
-                    className="flex-1 bg-foreground/80 hover:bg-foreground rounded-t-sm min-h-[2px]"
-                    style={{ height: `${(d.visitors / maxDaily) * 100}%` }}
-                    title={`${new Date(d.date + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" })}: ${fmt(d.visitors)} visitors, ${fmt(d.pageviews)} page views`}
-                  />
+                    onMouseEnter={() => setHover(i)}
+                    onFocus={() => setHover(i)}
+                    onClick={() => setHover(i)}
+                    aria-label={`${shortDate(d.date)}: ${fmt(d.visitors)} visitors, ${fmt(d.pageviews)} page views`}
+                    className="relative flex-1 h-full flex items-end group focus:outline-none"
+                  >
+                    <span
+                      className={`w-full rounded-t-sm min-h-[2px] transition-colors ${hover === i ? "bg-foreground" : "bg-foreground/70 group-hover:bg-foreground"}`}
+                      style={{ height: `${(d.visitors / maxDaily) * 100}%` }}
+                    />
+                  </button>
                 ))}
               </div>
               <div className="flex justify-between text-[11px] text-muted-foreground mt-1">
-                <span>{new Date(data.since + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
-                <span>{new Date(data.until + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+                <span>{shortDate(data.since)}</span>
+                <span>{shortDate(data.until)}</span>
               </div>
             </div>
           )}
@@ -169,11 +219,19 @@ export default function SiteAnalytics() {
           {/* Breakdowns */}
           {data && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-              <TopList title="Top pages" rows={data.topPages} label={(n) => n || "/"} empty="No page views yet" />
+              <TopList
+                title="Top pages"
+                rows={data.topPages}
+                label={(n) => (n === "/" || !n ? "/ (home)" : n)}
+                othersLabel="All other pages combined"
+                empty="No page views yet"
+                href={(n) => `${SITE_URL}${n || "/"}`}
+              />
               <TopList
                 title="Top referrers"
                 rows={data.topReferrers}
                 label={(n) => n || "Direct / none"}
+                othersLabel="All other sites combined"
                 empty="No referrers yet"
               />
               <div className="border rounded-lg p-4 bg-card">
