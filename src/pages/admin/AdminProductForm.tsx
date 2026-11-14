@@ -37,6 +37,14 @@ const ATTRIBUTION_OPTIONS = [
   { value: 'in the style of', label: 'in the style of' },
 ];
 
+// Price boxes: an empty box means "no price" (null), not $0. Plain z.coerce.number()
+// turned a cleared box into 0, which is how sale prices of $0 got saved.
+const money = (n: z.ZodNumber) =>
+  z.preprocess(
+    (v) => (v === '' || v === null || v === undefined ? null : Number(v)),
+    n.nullable(),
+  ).optional();
+
 const SIGNATURE_OPTIONS = [
   { value: 'signed',           label: 'Signed' },
   { value: 'signed_illegible', label: 'Signed, illegible' },
@@ -75,9 +83,10 @@ const schema = z.object({
   line: z.string().nullable().optional(),
   short_description: z.string().nullable().optional(),
   long_description: z.string().nullable().optional(),
-  price: z.coerce.number().nullable().optional(),
-  sale_price: z.coerce.number().nullable().optional(),
-  sold_price: z.coerce.number().nullable().optional(),
+  price: money(z.number().min(0, 'Price can\'t be negative')),
+  // Sale price is a markdown while the piece is still for sale — never $0.
+  sale_price: money(z.number().positive('A sale price must be more than $0. Leave it blank for no markdown.')),
+  sold_price: money(z.number().min(0, 'Sold price can\'t be negative')),
   status: z.enum(['draft', 'available', 'on_hold', 'sold', 'inventory', 'limbo', 'deactivated']).default('draft'),
   lot_id: z.string().nullable().optional(),
   quantity_in_listing: z.coerce.number().min(1).default(1),

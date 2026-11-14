@@ -35,7 +35,7 @@ const ProductCard = ({ product }: { product: Product }) => {
             on hold
           </span>
         )}
-{product.sale_price && product.status !== "limbo" && (
+{Number(product.sale_price) > 0 && product.status !== "limbo" && (
           <span className="absolute top-2 left-2 bg-destructive text-white font-display text-[10px] tracking-[0.15em] px-2.5 py-1">
             sale
           </span>
@@ -70,7 +70,7 @@ const ProductCard = ({ product }: { product: Product }) => {
 )}
 {product.price && product.status !== "limbo" && (
         <p className="text-sm text-muted-foreground mt-1 font-display">
-          {product.sale_price ? (
+          {Number(product.sale_price) > 0 ? (
             <>
               <span className="line-through opacity-60 mr-2">${product.price.toLocaleString()}</span>
               <span className="text-destructive">${product.sale_price.toLocaleString()}</span>
