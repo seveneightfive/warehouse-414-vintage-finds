@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import SiteAnalytics from "@/components/admin/SiteAnalytics";
 import {
   Plus,
   Package,
@@ -273,6 +274,9 @@ export default function AdminDashboard() {
           );
         })}
       </div>
+
+      {/* Website traffic (Vercel Web Analytics) */}
+      <SiteAnalytics />
 
       {/* Production weeks */}
       <section className="space-y-3">
