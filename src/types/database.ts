@@ -65,6 +65,8 @@ export type Product = {
   artwork_medium?: string | null;
   artwork_signature?: 'signed' | 'signed_illegible' | 'monogrammed' | 'unsigned' | null;
   artwork_signature_detail?: string | null;
+  /** Show "Artist: Unknown" */
+  artwork_artist_unknown?: boolean;
 
   firstdibs_url: string | null;
   chairish_url: string | null;
