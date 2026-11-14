@@ -9,3 +9,7 @@ verify_jwt = false
 
 [functions.send-inquiry-email]
 verify_jwt = false
+
+[functions.site-analytics]
+# Signed-in users only (the function also checks the admin role itself)
+verify_jwt = true
